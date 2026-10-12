@@ -11,9 +11,10 @@ export const ICONS = {
   mute: '<path d="m11 4-6 5H2v6h3l6 5zM16 9l6 6m0-6-6 6"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9 8a3 3 0 0 1 6 1c0 2-3 2-3 5m0 3v.1"/>',
   arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>', close: '<path d="m6 6 12 12M18 6 6 18"/>',
+  plus: '<path d="M5 12h14m-7-7v14"/>', minus: '<path d="M5 12h14"/>',
 };
 export function icon(name: keyof typeof ICONS): string { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`; }
-export interface Actions { select: (kind: TowerKind) => void; pause: () => void; speed: () => void; sound: () => boolean; nextWave: () => void; upgrade: () => void; sell: () => void; cancel: () => void; mission: (index: number) => void; campaign: () => void; resume: () => void; nextMission: () => void; help: () => void; closeHelp: () => void; restart: () => void; resetCamera: () => void; }
+export interface Actions { select: (kind: TowerKind) => void; pause: () => void; speed: () => void; sound: () => boolean; nextWave: () => void; upgrade: () => void; sell: () => void; cancel: () => void; mission: (index: number) => void; campaign: () => void; resume: () => void; nextMission: () => void; help: () => void; closeHelp: () => void; restart: () => void; resetCamera: () => void; zoom: (delta: number) => void; }
 export class UI {
   readonly board: HTMLElement; selectedId: number | null = null; selectedKind: TowerKind | null = null;
   private toastTimer = 0; private lastPanel = ''; private lastWave = -1;
@@ -28,7 +29,7 @@ export class UI {
         </header>
         <div id="board" class="board"></div>
         <div class="map-caption"><span class="status-dot"></span> <span id="map-name">ALDEA DE LOS PINOS</span> <span class="caption-separator">/</span><span>Defiende las murallas del reino</span></div>
-        <div class="map-tools"><button id="camera-reset" class="text-button">Restablecer vista</button><span>Rueda para acercar · Arrastra para explorar</span></div>
+        <div class="map-tools"><button id="zoom-out" class="text-button" aria-label="Alejar vista" title="Alejar">${icon('minus')}</button><button id="zoom-in" class="text-button" aria-label="Acercar vista" title="Acercar">${icon('plus')}</button><button id="camera-reset" class="text-button">Restablecer vista</button></div>
         <aside id="tower-panel" class="tower-panel" hidden></aside>
         <div id="placement-hint" class="placement-hint" hidden></div>
         <div id="pause-tag" class="pause-tag" hidden>PARTIDA EN PAUSA <span>Puedes planificar tus defensas</span></div>
@@ -37,8 +38,8 @@ export class UI {
           <div class="build-heading"><span class="tiny-label">CONSTRUYE TU DEFENSA</span><span id="build-tip">Elige una torre y colócala sobre el césped</span><button id="cancel" class="text-button" hidden>Cancelar ${icon('close')}</button></div>
           <div class="defense-row"><div class="tower-cards">${(Object.keys(TOWERS) as TowerKind[]).map((kind, i) => `<button class="tower-card ${kind}" data-tower="${kind}" aria-label="Construir torre ${TOWERS[kind].name}, ${TOWERS[kind].cost} oro"><span class="shortcut">${i + 1}</span><img id="icon-${kind}" alt=""/><span class="card-copy"><strong>${TOWERS[kind].name}</strong><span>${TOWERS[kind].description.split(' · ')[0]}</span></span><span class="card-cost">${icon('coin')}${TOWERS[kind].cost}</span></button>`).join('')}</div>
           <div class="wave-action"><span id="next-label">La horda se aproxima</span><button id="next-wave" class="primary">Iniciar oleada ${icon('arrow')}</button><small id="next-countdown">Preparación: 20 s</small></div></div>
-          <div class="footer-meta"><span>DEFIENDE EL CASTILLO. RECUPERA EL REINO.</span><span>1–4 elegir · Esc cancelar · Espacio pausa <span class="footer-diamond">◆</span> <button id="campaign" class="text-button" aria-label="Abrir campaña">Campaña · <span id="record">0 / 9 ★</span></button></span></div>
         </footer>
+        <div class="campaign-access"><button id="campaign" class="text-button" aria-label="Abrir campaña">${icon('shield')} Campaña · <span id="record">0 / 9 ★</span></button></div>
         <section id="overlay" class="overlay" aria-modal="true" role="dialog" aria-labelledby="dialog-title"><div id="dialog" class="dialog"></div></section>
       </main>`;
     this.board = this.el('board');
@@ -46,6 +47,7 @@ export class UI {
     this.el('pause').onclick = actions.pause; this.el('speed').onclick = actions.speed;
     this.el('sound').onclick = () => { const muted = actions.sound(); this.el('sound').innerHTML = icon(muted ? 'mute' : 'sound'); this.el('sound').setAttribute('aria-label', muted ? 'Activar sonido' : 'Silenciar'); };
     this.el('next-wave').onclick = actions.nextWave; this.el('help').onclick = actions.help; this.el('cancel').onclick = actions.cancel; this.el('camera-reset').onclick = actions.resetCamera;
+    this.el('zoom-in').onclick = () => actions.zoom(-180); this.el('zoom-out').onclick = () => actions.zoom(180);
     root.querySelectorAll<HTMLButtonElement>('[data-tower]').forEach(button => { button.onclick = () => actions.select(button.dataset.tower as TowerKind); });
     this.el('tower-panel').onclick = event => { const target = (event.target as HTMLElement).closest('button'); if (target?.id === 'upgrade') actions.upgrade(); if (target?.id === 'sell') actions.sell(); if (target?.id === 'deselect') actions.cancel(); };
     this.el('dialog').onclick = event => {
@@ -80,7 +82,7 @@ export class UI {
   help(): void {
     this.el('overlay').hidden = false;
     this.el('dialog').classList.remove('campaign-dialog');
-    this.el('dialog').innerHTML = `<span class="tiny-label">GUÍA DEL COMANDANTE</span><h2 id="dialog-title">Cada posición importa.</h2><p>Los enemigos salen del portal inferior derecho y siguen el único camino hasta tu castillo. Si destruyen el castillo, la partida termina.</p><ul class="help-list"><li><b>Construye sobre el césped.</b> Elige una torre; verde significa válido, rojo significa bloqueado. Evita el camino, árboles y otras torres.</li><li><b>Cubre las curvas.</b> El círculo muestra el alcance real. Comienza con arqueros rápidos y ballestas contra armadura. En nuevas misiones desbloqueas cañones de área y magia.</li><li><b>Invierte en tus defensas.</b> Haz clic en una torre para mejorarla hasta nivel 3 o venderla por el 70% de lo invertido.</li><li><b>Prepárate para la horda.</b> Hay 20 segundos entre oleadas. Resiste todas las de tu misión para ganar. Las estrellas dependen de la salud del castillo: 90% para tres, 60% para dos.</li></ul><p class="key-guide">1–4: elegir torre · Esc / clic derecho: cancelar<br>Espacio: pausa · M: sonido · Rueda: zoom · Arrastrar: desplazar</p><button id="close-help" class="primary">Volver al valle ${icon('arrow')}</button>`;
+    this.el('dialog').innerHTML = `<span class="tiny-label">GUÍA DEL COMANDANTE</span><h2 id="dialog-title">Cada posición importa.</h2><p>Los enemigos salen del portal inferior derecho y siguen el único camino hasta tu castillo. Si destruyen el castillo, la partida termina.</p><ul class="help-list"><li><b>Construye sobre el césped.</b> Elige una torre; verde significa válido, rojo significa bloqueado. Evita el camino, árboles y otras torres.</li><li><b>Cubre las curvas.</b> El círculo muestra el alcance real. Comienza con arqueros rápidos y ballestas contra armadura. En nuevas misiones desbloqueas cañones de área y magia.</li><li><b>Invierte en tus defensas.</b> Haz clic en una torre para mejorarla hasta nivel 3 o venderla por el 70% de lo invertido.</li><li><b>Prepárate para la horda.</b> Hay 20 segundos entre oleadas. Resiste todas las de tu misión para ganar. Las estrellas dependen de la salud del castillo: 90% para tres, 60% para dos.</li></ul><p class="key-guide">1–4: elegir torre · Esc / clic derecho: cancelar<br>Espacio: pausa · M: sonido · Rueda o + / −: zoom · Arrastrar: desplazar</p><button id="close-help" class="primary">Volver al valle ${icon('arrow')}</button>`;
   }
   hideOverlay(): void { this.el('overlay').hidden = true; }
   gameOver(sim: Simulation): void {

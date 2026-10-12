@@ -6,7 +6,7 @@ const geos = new Map<string, THREE.BufferGeometry>();
 const templates = new Map<string, THREE.Group>();
 export function material(color: number, emissive = 0): THREE.MeshStandardMaterial {
   const key = `${color}:${emissive}`; let m = mats.get(key);
-  if (!m) { m = new THREE.MeshStandardMaterial({ color, roughness: .83, flatShading: true, emissive, emissiveIntensity: emissive ? .9 : 0 }); mats.set(key, m); } return m;
+  if (!m) { m = new THREE.MeshStandardMaterial({ color, roughness: color === 0xe9b849 ? .38 : .83, metalness: color === 0xe9b849 ? .45 : 0, flatShading: true, emissive, emissiveIntensity: emissive ? .9 : 0 }); mats.set(key, m); } return m;
 }
 function geometry<T extends THREE.BufferGeometry>(key: string, make: () => T): T {
   if (!geos.has(key)) { const g = make(); g.userData.shared = true; geos.set(key, g); } return geos.get(key) as T;
@@ -157,7 +157,7 @@ function makeEnemy(kind: EnemyKind): THREE.Group {
     mesh(g, cylinder(.045, .7), WOOD, .47, .4, .16); mesh(g, box(.29, .26, .10), 0x9692a4, .47, .78, .16);
     const badge = mesh(g, octa(.09), 0xa35df1, 0, .56, .38, 0x622fc1); badge.scale.y = 1.3;
   }
-  compact(g, ['legL', 'legR']); g.scale.setScalar(ENEMIES[kind].scale * 1.10); g.userData.healthHeight = kind === 'guardian' ? 1.55 : 1.22;
+  compact(g, ['legL', 'legR']); g.scale.setScalar(ENEMIES[kind].scale * 1.35); g.userData.healthHeight = kind === 'guardian' ? 1.55 : 1.22;
   return g;
 }
 export function enemyModel(kind: EnemyKind): THREE.Group {
@@ -165,7 +165,24 @@ export function enemyModel(kind: EnemyKind): THREE.Group {
 }
 export function pine(scale = 1): THREE.Group {
   const g = new THREE.Group(); mesh(g, cylinder(.09, .86, 5), WOOD, 0, .43, 0);
-  for (let i = 0; i < 4; i++) { const foliage = mesh(g, cone(.55 - i * .10, 1.12 - i * .09, 7), [0x2e6139, 0x367546, 0x40894e, 0x519457][i], Math.sin(i * 3) * .055, 1.01 + i * .40, Math.cos(i * 3) * .04); foliage.rotation.y = i * .53; foliage.scale.z = .91; }
+  const greens = [0x245d37, 0x2c773d, 0x3e9145, 0x64a447];
+  for (let i = 0; i < 4; i++) {
+    const crown = geometry(`pine-crown-${i}`, () => {
+      const geo = new THREE.ConeGeometry(.55 - i * .10, 1.12 - i * .09, 10);
+      const positions = geo.getAttribute('position');
+      for (let j = 0; j < positions.count; j++) {
+        const x = positions.getX(j), z = positions.getZ(j), angle = Math.atan2(z, x);
+        const lobe = 1 + .14 * Math.cos(angle * 5 + i);
+        positions.setXYZ(j, x * lobe, positions.getY(j), z * lobe);
+      }
+      geo.computeVertexNormals(); return geo;
+    });
+    const foliage = mesh(g, crown, greens[i], Math.sin(i * 3) * .035, 1.01 + i * .40, Math.cos(i * 3) * .04); foliage.rotation.y = i * .53; foliage.scale.z = .93;
+    if (i < 3) for (const side of [-1, 1]) {
+      const branch = mesh(g, cone(.20 - i * .04, .60 - i * .07, 7), greens[i], side * (.30 - i * .055), .95 + i * .43, side * .15);
+      branch.rotation.z = -side * .18; branch.rotation.y = i * .9;
+    }
+  }
   g.scale.setScalar(scale); return g;
 }
 export function castleModel(): THREE.Group {

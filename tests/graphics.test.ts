@@ -26,5 +26,10 @@ for (const mission of MISSIONS) test(`rendered terrain matches road and complete
     }
   }
   assert.ok(checked >= 10, 'Check enough independent locations to exercise both sides of the road');
+  // Ground continues beyond all four old board edges, including the former corners.
+  for (const [x, z] of [[-18, 0], [18, 0], [0, -16], [0, 16], [-22, -20], [22, 20]]) {
+    assert.ok(Number.isFinite(height(x, z)), 'The valley must extend beyond the playable rectangle');
+    assert.ok(placementError({ x, z }, [], 10000, 100, mission.map), 'Background land must not extend construction rules');
+  }
   land.group.traverse(o => { if (o instanceof THREE.Mesh) { o.geometry.dispose(); (o.material as THREE.Material).dispose(); } });
 });

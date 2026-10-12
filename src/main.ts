@@ -37,7 +37,7 @@ const ui = new UI(root, {
   sell: () => { if (ui.selectedId !== null) { const refund = sim.sell(ui.selectedId); ui.toast(`Torre vendida · +${refund} oro`); cancel(); } },
   help: () => { if (sim.finished || overlay === 'campaign') return; overlay = 'help'; ui.help(); },
   closeHelp: () => { overlay = null; ui.hideOverlay(); },
-  restart: () => startMission(missionIndex), resetCamera: () => view.resetCamera(),
+  restart: () => startMission(missionIndex), resetCamera: () => view.resetCamera(), zoom: delta => view.zoom(delta),
 }, progress);
 try { view = new GameView(ui.board, sim.map); ui.setIcons(view.towerIcons()); }
 catch (error) {
@@ -102,4 +102,4 @@ function frame(now: number): void {
   if (uiAccumulator >= .08) { ui.update(sim, paused, speed, view.placementMessage(sim), progress); uiAccumulator = 0; }
 }
 ui.update(sim, paused, speed, view.placementMessage(sim), progress); requestAnimationFrame(frame);
-export { sim as simulation };
+export { sim as simulation, view as battlefield };

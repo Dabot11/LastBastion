@@ -98,7 +98,9 @@ src/
   scene/
     models.ts       Geometría y materiales reutilizables
     terrain.ts      Decoración, vegetación, castillo y portal
-    landscape.ts    Plataformas continuas y paredes de cañón por contornos
+    landscape.ts    Valle continuo y paredes de cañón por contornos
+    scenery.ts      Bosque, colinas, crestas rocosas y atalayas de fondo
+    surfaces.ts     Relieve exterior, pigmento y sombras de contacto generados
     effects.ts      Partículas agrupadas, destellos y anillos de impacto
     view.ts         Renderizado, cámara, raycasting, vista previa y efectos
   audio.ts          Sonidos sintéticos con Web Audio
@@ -112,15 +114,17 @@ tests/
   browser/game.spec.ts
 ```
 
-La simulación no depende de Three.js ni del DOM. Usa pasos de 20 ms y tiempo transcurrido, con límite de recuperación para evitar saltos después de una interrupción prolongada. El renderizado agrupa escenario y cuerpos por material, reutiliza modelos y geometrías, construye plataformas continuas por contornos e instancia las rocas y hasta 200 partículas. Las sombras del escenario se actualizan al construir, vender o cambiar de mapa. Los enemigos usan sombras de contacto móviles; las antorchas y hechizos usan un único mapa de brillo generado en el navegador. No se descargan texturas ni modelos externos.
+La simulación no depende de Three.js ni del DOM. Usa pasos de 20 ms y tiempo transcurrido, con límite de recuperación para evitar saltos después de una interrupción prolongada. El renderizado agrupa escenario y cuerpos por material, reutiliza modelos y geometrías, construye el valle por contornos e instancia las rocas y hasta 200 partículas. El muestreo del suelo es más fino junto al camino y más espaciado en el paisaje lejano. Las sombras del escenario se actualizan al construir, vender o cambiar de mapa. El pigmento del terreno, las sombras de contacto y el mapa de brillo de antorchas y hechizos se generan con pequeñas texturas reutilizables. No se descargan texturas ni modelos externos.
 
 ## Aspecto visual
 
-El terreno tiene bordes orgánicos, césped con variaciones suaves de color, paredes facetadas y un camino de tierra continuo. Los tres escenarios conservan sus rutas y zonas de construcción originales. Árboles, flores, vallas y edificios refuerzan el carácter de cada región.
+El campo de batalla forma parte de un valle que continúa más allá de la zona de construcción. No tiene una base rectangular ni paredes exteriores de tablero: el fondo incluye laderas con bosque, crestas rocosas, atalayas y niebla azul que suaviza la distancia. El suelo del área jugable sigue siendo llano y conserva las rutas y reglas de construcción de cada misión. Los pinos tienen ramas y copas irregulares; arbustos, flores, vallas y edificios añaden detalle a cada región.
+
+El escenario ocupa toda la pantalla. Los recursos, controles y tarjetas de defensas aparecen en paneles flotantes. La cámara muestra más cerca el castillo y la entrada enemiga, con un ángulo que deja el recorrido fuera de las tarjetas en desktop. Se puede acercar o alejar con los botones **+ / −** o la rueda, arrastrar para explorar y **Restablecer vista** para recuperar el encuadre inicial.
 
 El castillo y las torres tienen mampostería, banderas, almenas y armas reconocibles. Las torres reaccionan a los disparos y sus mejoras añaden adornos. Las flechas y virotes tienen puntas y plumas; los magos disparan orbes con estela; los cañones tienen destellos y ondas de explosión correspondientes al radio real de daño. Los enemigos se distinguen por sus cuerpos, armaduras, cuernos y tamaños.
 
-Las pruebas geométricas usan raycasting sobre la superficie renderizada para comprobar que toda la ruta sigue hundida y que la base completa de una torre legal descansa sobre terreno elevado, en cada misión.
+Las pruebas geométricas usan raycasting sobre la superficie renderizada para comprobar que toda la ruta sigue hundida, que la base completa de una torre legal descansa sobre terreno elevado y que el valle continúa por los cuatro lados sin ampliar el área de construcción. Las pruebas de navegador comprueban además que ningún punto de las tres rutas quede detrás de un control en resoluciones de 900×700, 1280×720, 1440×960 y 1920×1080, y que el zoom y el restablecimiento funcionen.
 
 ## Validación y alcance
 

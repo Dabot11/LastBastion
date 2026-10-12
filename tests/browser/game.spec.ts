@@ -10,9 +10,8 @@ async function buildPoint(page: Page, index: number, y = 1.7): Promise<{ x: numb
       const p = { x, z }; if (!placementError(p, [], 1000, 100) && distance(p, PATH[0]) < 4.2 && (!candidates.length || distance(p, candidates[0]) > 1.9)) candidates.push(p);
     }
     const p = index < 0 ? PATH[0] : candidates[index]; if (!p) throw new Error('No placement candidate');
-    const canvas = document.querySelector('canvas')!, rect = canvas.getBoundingClientRect(), aspect = rect.width / rect.height, height = Math.max(29, 39 / aspect);
-    const camera = new THREE.OrthographicCamera(-height * aspect / 2, height * aspect / 2, height / 2, -height / 2, .1, 160);
-    camera.position.set(9, 30, 24); camera.lookAt(0, 0, 0); camera.updateMatrixWorld(); camera.updateProjectionMatrix();
+    const { battlefield } = await importModule(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
+    const canvas = document.querySelector('canvas')!, rect = canvas.getBoundingClientRect(), camera = battlefield.camera;
     const projected = new THREE.Vector3(p.x, y, p.z).project(camera);
     return { x: rect.left + (projected.x + 1) / 2 * rect.width, y: rect.top + (1 - projected.y) / 2 * rect.height };
   }, { index, y });
@@ -55,11 +54,44 @@ test('responsive interface fits small desktop and keeps controls usable', async 
   await page.screenshot({ animations: 'disabled', path: 'test-results/bastion-small.png' });
 });
 
+test('full-screen valley keeps every route visible on desktop and camera controls restore the view', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.addInitScript(() => localStorage.setItem('last-bastion-campaign-v1', JSON.stringify({ pines: { stars: 3, score: 1000 }, market: { stars: 3, score: 1000 } })));
+  await page.goto('/');
+  for (const viewport of [{ width: 1440, height: 960 }, { width: 1920, height: 1080 }, { width: 900, height: 700 }, { width: 1280, height: 720 }]) {
+    await page.setViewportSize(viewport);
+    for (const name of ['Aldea de los pinos', 'Villa del mercado', 'Ciudadela real']) {
+      await page.getByRole('button', { name: `Jugar: ${name}`, exact: true }).click();
+      await page.getByRole('button', { name: 'Pausar', exact: true }).click();
+      const result = await page.evaluate(async () => {
+        const load = (url: string): Promise<any> => import(/* @vite-ignore */ url);
+        const { simulation, battlefield } = await load(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
+        const canvas = battlefield.renderer.domElement, rect = canvas.getBoundingClientRect();
+        const missing: unknown[] = [];
+        for (const point of simulation.map.path) {
+          const world = battlefield.camera.position.clone().set(point.x, .13, point.z).project(battlefield.camera);
+          const x = rect.left + (world.x + 1) / 2 * rect.width, y = rect.top + (1 - world.y) / 2 * rect.height;
+          if (document.elementFromPoint(x, y) !== canvas) missing.push({ point, x, y, element: document.elementFromPoint(x, y)?.outerHTML.slice(0, 90) });
+        }
+        return { width: rect.width, height: rect.height, missing };
+      });
+      expect(result.width).toBe(viewport.width); expect(result.height).toBe(viewport.height); expect(result.missing, `${name} at ${viewport.width}×${viewport.height}`).toEqual([]);
+      if (name === 'Ciudadela real') await page.screenshot({ animations: 'disabled', path: `test-results/valley-${viewport.width}.png` });
+      await page.getByRole('button', { name: 'Abrir campaña', exact: true }).click();
+    }
+  }
+  await page.getByRole('button', { name: 'Jugar: Aldea de los pinos', exact: true }).click();
+  async function zoom(): Promise<number> { return page.evaluate(async () => { const load = (url: string): Promise<any> => import(/* @vite-ignore */ url); return (await load(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src)).battlefield.camera.zoom; }); }
+  await page.getByRole('button', { name: 'Acercar vista', exact: true }).click(); expect(await zoom()).toBeGreaterThan(1);
+  await page.getByRole('button', { name: 'Restablecer vista', exact: true }).click(); expect(await zoom()).toBe(1);
+  await page.getByRole('button', { name: 'Alejar vista', exact: true }).click(); expect(await zoom()).toBeLessThan(1);
+});
+
 test('real defeat without unlocking and restart restore the complete game', async ({ page }) => {
   await page.goto('/'); await page.getByRole('button', { name: 'Jugar: Aldea de los pinos', exact: true }).click();
   const outcome = await page.evaluate(async () => {
     const importModule = (url: string): Promise<any> => import(/* @vite-ignore */ url);
-    const module = await importModule('/src/main.ts');
+    const module = await importModule(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
     // Advance real gameplay, with no towers or invented damage, until the enemies reach the castle.
     const sim = module.simulation;
     for (let i = 0; i < 100000 && sim.phase !== 'gameover'; i++) sim.update(.02);
@@ -75,7 +107,7 @@ test('real defeat without unlocking and restart restore the complete game', asyn
   await expect(page.getByRole('button', { name: 'Iniciar oleada 1' })).toBeEnabled();
   expect(await page.evaluate(async () => {
     const importModule = (url: string): Promise<any> => import(/* @vite-ignore */ url);
-    const { simulation } = await importModule('/src/main.ts');
+    const { simulation } = await importModule(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
     return { towers: simulation.towers.length, enemies: simulation.enemies.length, kills: simulation.kills, score: simulation.score };
   })).toEqual({ towers: 0, enemies: 0, kills: 0, score: 0 });
   await page.reload(); await expect(page.getByRole('button', { name: 'Bloqueada: Villa del mercado', exact: true })).toBeDisabled();
@@ -95,7 +127,7 @@ test('campaign victory unlocks maps and weapons, preserves progress on reload an
   async function win(): Promise<void> {
     await page.evaluate(async () => {
       const importModule = (url: string): Promise<any> => import(/* @vite-ignore */ url);
-      const { simulation: sim } = await importModule('/src/main.ts');
+      const { simulation: sim } = await importModule(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
       for (let i = 0; i < 100000 && !sim.finished; i++) { sim.update(.02); for (const enemy of sim.enemies) sim.hit(enemy, 100000, 'magic'); }
     });
     await expect(page.getByRole('heading', { name: '¡Castillo defendido!', exact: true })).toBeVisible();
@@ -105,7 +137,7 @@ test('campaign victory unlocks maps and weapons, preserves progress on reload an
   await page.getByRole('button', { name: 'Siguiente misión', exact: true }).click();
   await expect(page.locator('#mission-title')).toHaveText('VILLA DEL MERCADO'); await expect(page.locator('#gold')).toHaveText('300'); await expect(page.locator('#hp')).toHaveText('1000');
   await expect(page.locator('[data-tower="cannon"]')).toBeEnabled(); await expect(page.locator('[data-tower="mage"]')).toBeDisabled();
-  expect(await page.evaluate(async () => { const importModule = (url: string): Promise<any> => import(/* @vite-ignore */ url); const module = await importModule('/src/main.ts'); return { towers: module.simulation.towers.length, wave: module.simulation.wave, map: module.simulation.map.theme }; })).toEqual({ towers: 0, wave: 0, map: 'village' });
+  expect(await page.evaluate(async () => { const importModule = (url: string): Promise<any> => import(/* @vite-ignore */ url); const module = await importModule(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); return { towers: module.simulation.towers.length, wave: module.simulation.wave, map: module.simulation.map.theme }; })).toEqual({ towers: 0, wave: 0, map: 'village' });
   await page.getByRole('button', { name: 'Pausar', exact: true }).click(); await page.screenshot({ animations: 'disabled', path: 'test-results/campaign-village.png' });
   await win(); await page.getByRole('button', { name: 'Siguiente misión', exact: true }).click();
   await expect(page.locator('#mission-title')).toHaveText('CIUDADELA REAL'); await expect(page.locator('[data-tower="mage"]')).toBeEnabled();

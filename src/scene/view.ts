@@ -9,7 +9,7 @@ import { Effects } from './effects';
 export class GameView {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
-  readonly camera = new THREE.OrthographicCamera(-20, 20, 16, -16, .1, 160);
+  readonly camera = new THREE.OrthographicCamera(-20, 20, 16, -16, .1, 260);
   readonly raycaster = new THREE.Raycaster();
   readonly pointer = new THREE.Vector2();
   readonly enemies = new Map<number, EnemyVisual>();
@@ -23,18 +23,19 @@ export class GameView {
   readonly range: THREE.Mesh;
   ghost: THREE.Group | null = null; ghostKind: TowerKind | null = null; hover: Point | null = null;
   selectedId: number | null = null; private ghostValid: boolean | null = null;
-  private pan = new THREE.Vector3(); private observer: ResizeObserver;
+  private pan = new THREE.Vector3(); private observer: ResizeObserver; private framingY = 0;
   constructor(readonly container: HTMLElement, map: GameMap) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.setClearColor(0xdbe4cf); this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.setClearColor(0xb8d0db); this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.05;
     this.renderer.domElement.setAttribute('aria-label', 'Campo de batalla 3D: construye defensas en las plataformas verdes');
     container.append(this.renderer.domElement);
-    this.scene.fog = new THREE.Fog(0xcbd8c8, 65, 130);
-    this.scene.add(new THREE.HemisphereLight(0xe7f2ff, 0x718357, 1.3));
-    const sun = new THREE.DirectionalLight(0xffeed2, 2.65); sun.position.set(-16, 32, 12); sun.castShadow = true;
+    this.scene.fog = new THREE.Fog(0xb8d0db, 43, 94);
+    this.scene.add(new THREE.HemisphereLight(0xc8eaff, 0x5e7435, 1.6));
+    const rim = new THREE.DirectionalLight(0xbadcf9, .7); rim.position.set(20, 15, -24); this.scene.add(rim);
+    const sun = new THREE.DirectionalLight(0xffe1a3, 3.1); sun.position.set(-18, 32, 14); sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = -25; sun.shadow.camera.right = 25;
     sun.shadow.camera.top = 25; sun.shadow.camera.bottom = -25; sun.shadow.camera.far = 80; sun.shadow.normalBias = .06; sun.shadow.bias = .00025; this.scene.add(sun); this.renderer.shadowMap.autoUpdate = false; this.renderer.shadowMap.needsUpdate = true;
     this.effects = new Effects(this.scene);
@@ -49,17 +50,32 @@ export class GameView {
   resize(): void {
     const w = this.container.clientWidth, h = this.container.clientHeight; if (!w || !h) return;
     this.renderer.setSize(w, h); const aspect = w / h;
-    const height = Math.max(29, 39 / aspect); this.camera.left = -height * aspect / 2; this.camera.right = height * aspect / 2;
-    this.camera.top = height / 2; this.camera.bottom = -height / 2; this.updateCamera();
+    const height = Math.max(w < 700 ? 32 : 28, 40 / aspect); this.camera.left = -height * aspect / 2; this.camera.right = height * aspect / 2;
+    this.camera.top = height / 2; this.camera.bottom = -height / 2;
+    // Fit the default route above the actual floating dock, without zooming the whole world out.
+    // A separate camera makes this independent of the player's current pan and zoom.
+    const base = this.camera.clone(); base.zoom = 1; base.position.set(-9, 29.7, 24); base.lookAt(0, 0, 0); base.updateProjectionMatrix(); base.updateMatrixWorld();
+    const dock = this.container.parentElement?.querySelector('.tower-cards')?.getBoundingClientRect(), board = this.container.getBoundingClientRect();
+    let shift = 0;
+    if (dock) for (const p of this.map.path) {
+      const projected = new THREE.Vector3(p.x, .13, p.z).project(base);
+      const x = board.left + (projected.x + 1) / 2 * w, y = board.top + (1 - projected.y) / 2 * h;
+      if (x > dock.left - 16 && x < dock.right + 16) shift = Math.max(shift, y - dock.top + 24);
+    }
+    const up = new THREE.Vector3().setFromMatrixColumn(base.matrixWorld, 1);
+    this.framingY = -shift * height / (h * up.y); this.updateCamera();
   }
   private updateCamera(): void {
-    this.camera.position.set(9 + this.pan.x, 30, 24 + this.pan.z); this.camera.lookAt(this.pan.x, 0, this.pan.z); this.camera.updateProjectionMatrix(); this.camera.updateMatrixWorld();
+    this.camera.position.set(-9 + this.pan.x, 29.7 + this.framingY, 24 + this.pan.z); this.camera.lookAt(this.pan.x, this.framingY, this.pan.z); this.camera.updateProjectionMatrix(); this.camera.updateMatrixWorld();
   }
-  zoom(delta: number): void { this.camera.zoom = THREE.MathUtils.clamp(this.camera.zoom * Math.exp(-delta * .001), .8, 1.65); this.camera.updateProjectionMatrix(); }
+  zoom(delta: number): void { this.camera.zoom = THREE.MathUtils.clamp(this.camera.zoom * Math.exp(-delta * .001), .8, 1.8); this.camera.updateProjectionMatrix(); }
   panBy(dx: number, dy: number): void {
-    this.pan.x = THREE.MathUtils.clamp(this.pan.x - dx * .025, -3, 3); this.pan.z = THREE.MathUtils.clamp(this.pan.z - dy * .025, -3, 3); this.updateCamera();
+    const worldPerPixel = (this.camera.top - this.camera.bottom) / (this.container.clientHeight * this.camera.zoom);
+    const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 1);
+    this.pan.addScaledVector(right, -dx * worldPerPixel).addScaledVector(up, dy * worldPerPixel / (up.x * up.x + up.z * up.z));
+    this.pan.x = THREE.MathUtils.clamp(this.pan.x, -6, 6); this.pan.z = THREE.MathUtils.clamp(this.pan.z, -6, 6); this.pan.y = 0; this.updateCamera();
   }
-  resetCamera(): void { this.pan.set(0, 0, 0); this.camera.zoom = 1; this.updateCamera(); }
+  resetCamera(): void { this.pan.set(0, 0, 0); this.camera.zoom = 1; this.resize(); }
   setPointer(event: PointerEvent): void {
     const rect = this.renderer.domElement.getBoundingClientRect(); this.pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
     this.raycaster.setFromCamera(this.pointer, this.camera);

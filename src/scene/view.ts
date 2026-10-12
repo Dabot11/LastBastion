@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { TOWERS, WORLD, towerStats, type TowerKind } from '../game/config';
-import { placementError, type Point } from '../game/path';
+import { placementError, type GameMap, type Point } from '../game/path';
 import { type Simulation, type Tower } from '../game/simulation';
 import { createTerrain } from './terrain';
 import { box, circle, enemyModel, material, orb, towerModel } from './models';
@@ -16,13 +16,14 @@ export class GameView {
   readonly towers = new Map<number, THREE.Group>();
   readonly projectiles = new Map<number, THREE.Mesh>();
   readonly particles: Particle[] = [];
-  readonly surfaces: THREE.Object3D[];
-  readonly crystal: THREE.Mesh;
+  surfaces: THREE.Object3D[] = [];
+  private readonly terrainRoot = new THREE.Group();
+  private map: GameMap;
   readonly range: THREE.Mesh;
   ghost: THREE.Group | null = null; ghostKind: TowerKind | null = null; hover: Point | null = null;
-  selectedId: number | null = null; private ghostValid: boolean | null = null; private flash = 0;
+  selectedId: number | null = null; private ghostValid: boolean | null = null;
   private pan = new THREE.Vector3(); private observer: ResizeObserver;
-  constructor(readonly container: HTMLElement) {
+  constructor(readonly container: HTMLElement, map: GameMap) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -35,7 +36,8 @@ export class GameView {
     const sun = new THREE.DirectionalLight(0xffefd2, 2.4); sun.position.set(-12, 28, 15); sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = -25; sun.shadow.camera.right = 25;
     sun.shadow.camera.top = 25; sun.shadow.camera.bottom = -25; sun.shadow.camera.far = 80; sun.shadow.normalBias = .08; sun.shadow.bias = .00015; this.scene.add(sun); this.renderer.shadowMap.autoUpdate = false; this.renderer.shadowMap.needsUpdate = true;
-    const terrain = createTerrain(this.scene); this.surfaces = terrain.surfaces; this.crystal = terrain.crystal;
+    this.map = map; this.scene.add(this.terrainRoot);
+    this.surfaces = createTerrain(this.terrainRoot, map).surfaces;
     const rangeMat = new THREE.MeshBasicMaterial({ color: 0xbdeaaa, transparent: true, opacity: .13, depthWrite: false, side: THREE.DoubleSide });
     this.range = new THREE.Mesh(new THREE.CircleGeometry(1, 80), rangeMat); this.range.rotation.x = -Math.PI / 2; this.range.visible = false;
     const ring = new THREE.Mesh(new THREE.RingGeometry(.982, 1, 80), new THREE.MeshBasicMaterial({ color: 0xe1fbd3, transparent: true, opacity: .85, side: THREE.DoubleSide, depthWrite: false }));
@@ -77,7 +79,7 @@ export class GameView {
   }
   placementMessage(sim: Simulation): string | null {
     if (!this.ghostKind) return null; if (!this.hover) return 'Apunta a una plataforma de césped';
-    return placementError(this.hover, sim.towers, sim.gold, TOWERS[this.ghostKind].cost);
+    return placementError(this.hover, sim.towers, sim.gold, TOWERS[this.ghostKind].cost, sim.map);
   }
   private createEnemy(id: number, kind: Parameters<typeof enemyModel>[0]): EnemyVisual {
     const group = enemyModel(kind);
@@ -103,7 +105,8 @@ export class GameView {
       this.particles.push({ mesh: m, life: duration, duration, velocity: new THREE.Vector3((Math.random() - .5) * 3, 1 + Math.random() * 3, (Math.random() - .5) * 3) });
     }
   }
-  update(sim: Simulation, visualDt: number, time: number): void {
+  update(sim: Simulation, visualDt: number, _time: number): void {
+    if (sim.map !== this.map) this.loadMap(sim.map);
     const enemyIds = new Set(sim.enemies.filter(e => e.hp > 0).map(e => e.id));
     for (const [id, v] of this.enemies) if (!enemyIds.has(id)) { this.scene.remove(v.group); this.enemies.delete(id); }
     for (const e of sim.enemies) {
@@ -135,18 +138,13 @@ export class GameView {
       if (event.type === 'impact') this.effect(event.x, event.z, event.kind === 'mage' ? 0x70efff : event.kind === 'cannon' ? 0xffa94c : 0xe6d09d, event.kind === 'cannon' ? 16 : 4, .6);
       if (event.type === 'kill') this.effect(event.x, event.z, 0xaa6ecc, 6, .4);
       if (event.type === 'build' || event.type === 'upgrade') this.effect(event.x, event.z, 0xfbd584, 12, 2.5);
-      if (event.type === 'leak') this.flash = .4;
+      if (event.type === 'leak') { this.effect(event.x, event.z, 0xff7b57, 15, 2); }
     }
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i]; p.life -= visualDt;
       if (p.life <= 0) { this.scene.remove(p.mesh); this.particles.splice(i, 1); }
       else { p.mesh.position.addScaledVector(p.velocity, visualDt); p.velocity.y -= visualDt * 5; p.mesh.scale.setScalar(p.life / p.duration); }
     }
-    this.flash = Math.max(0, this.flash - visualDt);
-    this.crystal.rotation.y = time * .35; this.crystal.position.y = 2.02 + Math.sin(time * 1.5) * .07;
-    const crystalMat = this.crystal.material as THREE.MeshStandardMaterial;
-    crystalMat.emissiveIntensity = .55;
-    crystalMat.emissive.setHex(this.flash > 0 ? 0xff3e3e : 0x089add);
     let rangeCenter: Point | null = null, radius = 0;
     if (this.ghost && this.ghostKind) {
       this.ghost.visible = !!this.hover;
@@ -171,6 +169,20 @@ export class GameView {
     const icons = {} as Record<TowerKind, string>;
     for (const kind of Object.keys(TOWERS) as TowerKind[]) { const g = towerModel(kind); scene.add(g); renderer.render(scene, camera); icons[kind] = renderer.domElement.toDataURL(); scene.remove(g); }
     renderer.dispose(); return icons;
+  }
+  loadMap(map: GameMap): void {
+    this.setGhost(null); this.hover = null; this.selectedId = null;
+    for (const v of this.enemies.values()) { v.health.parent?.removeFromParent(); this.scene.remove(v.group); }
+    for (const group of this.towers.values()) this.scene.remove(group);
+    for (const projectile of this.projectiles.values()) this.scene.remove(projectile);
+    this.enemies.clear(); this.towers.clear(); this.projectiles.clear();
+    for (const p of this.particles) this.scene.remove(p.mesh); this.particles.length = 0;
+    // Terrain geometry and cloned materials belong to this map and can be released safely.
+    const geometries = new Set<THREE.BufferGeometry>();
+    this.terrainRoot.traverse(o => { if (o instanceof THREE.Mesh) { geometries.add(o.geometry); const materials = Array.isArray(o.material) ? o.material : [o.material]; materials.filter(m => m.userData.owned).forEach(m => m.dispose()); if (o instanceof THREE.InstancedMesh) o.dispose(); } });
+    geometries.forEach(g => g.dispose()); this.terrainRoot.clear();
+    this.map = map; this.surfaces = createTerrain(this.terrainRoot, map).surfaces;
+    this.range.visible = false; this.renderer.shadowMap.needsUpdate = true; this.resetCamera();
   }
   dispose(): void { this.observer.disconnect(); this.renderer.dispose(); }
 }

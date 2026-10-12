@@ -1,6 +1,6 @@
 # The Last Bastion
 
-Juego Tower Defense 3D de fantasía medieval, con construcción libre y supervivencia infinita. Three.js genera todo el escenario y los personajes mediante geometría low-poly. No requiere recursos externos, cuentas ni claves API.
+Juego Tower Defense 3D de fantasía medieval, con construcción libre y una campaña de tres misiones. Three.js genera todo el escenario y los personajes mediante geometría low-poly. No requiere recursos externos, cuentas ni claves API.
 
 ## Ejecutar
 
@@ -43,7 +43,7 @@ Si no ves **Settings**, entra con una cuenta administradora del repositorio. Si 
 
 ## Cómo jugar
 
-Defiende un cristal de **1000 puntos de salud** usando tus **300 monedas iniciales**. Todos los enemigos salen del portal inferior derecho y siguen el mismo camino serpentino hasta el castillo superior izquierdo. El camino está hundido entre plataformas elevadas y no tiene bifurcaciones. No hay agua.
+Defiende un castillo de **1000 puntos de salud** usando tus **300 monedas iniciales**. Todos los enemigos salen del portal inferior derecho y siguen el mismo camino serpentino hasta el castillo superior izquierdo. El camino está hundido entre plataformas elevadas y no tiene bifurcaciones. No hay agua.
 
 Selecciona una torre y mueve el cursor sobre el césped. La vista previa verde permite construir; la roja indica un obstáculo, el camino, falta de espacio o falta de oro. No hay casillas ni espacios de construcción predeterminados. El círculo muestra el alcance real.
 
@@ -56,9 +56,23 @@ Selecciona una torre y mueve el cursor sobre el césped. La vista previa verde p
 
 Haz clic en una torre construida para ver sus estadísticas, mejorarla hasta **nivel 3** o venderla por **el 70%** de lo invertido. Las mejoras aumentan daño, alcance y frecuencia; las del cañón también aumentan su radio de explosión.
 
-Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardianes con resistencia física y mágica. Cada cinco oleadas aparece un desafío de élite. Las oleadas son infinitas, aumentan la salud y mezclan amenazas; el número simultáneo de unidades se limita para mantener el rendimiento. Tienes 20 segundos de preparación entre oleadas y puedes iniciar la siguiente antes de tiempo. Al completar una oleada recibes una bonificación de oro.
+Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardianes con resistencia física y mágica. Cada misión tiene una composición propia y un final definido. Tienes 20 segundos de preparación entre oleadas y puedes iniciar la siguiente antes de tiempo. Al completar una oleada recibes una bonificación de oro.
 
-Cuando el cristal pierde toda su salud aparece **Game Over**, con oleada, enemigos derrotados, puntuación y récord local. Reiniciar restablece toda la partida y conserva tu récord. El almacenamiento privado o bloqueado no impide jugar.
+Cuando el castillo pierde toda su salud aparece **Game Over**. Resiste la última oleada y elimina todos los enemigos para ganar: verás estrellas, puntuación y el siguiente destino desbloqueado. Cada misión comienza de nuevo con 300 de oro, 1000 de salud y ninguna torre; el progreso de campaña permanece.
+
+### Campaña y recompensas
+
+| Misión | Oleadas | Escenario y defensas |
+| --- | ---: | --- |
+| Aldea de los pinos | 5 | Bosque; arqueros y ballestas |
+| Villa del mercado | 6 | Camino vertical entre viviendas; añade cañones; un guardián final |
+| Ciudadela real | 7 | Edificios de piedra, pinos y otra ruta; añade magos y varios guardianes |
+
+Ganar una misión desbloquea la siguiente. Las estrellas premian el estado del castillo: **una** por ganar, **dos** conservando al menos 60% de salud y **tres** conservando al menos 90%. Puedes repetir cualquier misión desbloqueada para mejorar el resultado. El menú de campaña conserva la mejor puntuación y cantidad de estrellas de cada misión; una repetición peor no reduce tus marcas ni suma estrellas duplicadas.
+
+El progreso se guarda en `localStorage` bajo `last-bastion-campaign-v1`. Sin almacenamiento disponible se conserva en memoria durante la sesión. No se sincroniza entre dispositivos. El antiguo récord de supervivencia, si existía, queda intacto en su clave anterior; las estrellas de campaña empiezan desde cero.
+
+El oro solo sirve para construir y mejorar durante cada misión. XP, niveles de comandante y monedas persistentes se reservan para futuras iteraciones. El alcance y criterio de esas iteraciones están en [DESIGN.md](DESIGN.md).
 
 ### Controles
 
@@ -78,17 +92,20 @@ src/
   game/
     config.ts       Balance centralizado: costos, enemigos, daño y niveles
     path.ts         Ruta ordenada, distancias, obstáculos y construcción
-    simulation.ts   Enemigos, oleadas, torres, proyectiles y economía
+    simulation.ts   Enemigos, oleadas, torres, proyectiles, victoria y economía
+    missions.ts     Las tres misiones, mapas, armas y composición de oleadas
+    progress.ts     Estrellas, desbloqueos y guardado de campaña
   scene/
     models.ts       Geometría y materiales reutilizables
     terrain.ts      Cañón, plataformas, vegetación, castillo y portal
     view.ts         Renderizado, cámara, raycasting, vista previa y efectos
   audio.ts          Sonidos sintéticos con Web Audio
   ui.ts             HUD, tarjetas, mejoras, guía y pantalla de derrota
-  main.ts           Controles, ciclo de pasos fijos y récord persistente
+  main.ts           Controles, ciclo de pasos fijos y campaña persistente
   style.css         Interfaz adaptable
 tests/
   simulation.test.ts
+  campaign.test.ts
   browser/game.spec.ts
 ```
 
@@ -96,10 +113,10 @@ La simulación no depende de Three.js ni del DOM. Usa pasos de 20 ms y tiempo tr
 
 ## Validación y alcance
 
-Las pruebas comprueban continuidad y ausencia de cruces de la ruta, movimiento a diferentes FPS, construcción válida a ambos lados, obstáculos, economía, niveles, venta, resistencias, adquisición de objetivos, disparos de las cuatro defensas, daño en área, recompensas únicas, oleadas avanzadas, daño al cristal, derrota y estado de una nueva partida.
+Las pruebas comprueban continuidad y ausencia de cruces de la ruta, movimiento a diferentes FPS, construcción válida a ambos lados, obstáculos, economía, niveles, venta, resistencias, adquisición de objetivos, disparos de las cuatro defensas, daño en área, recompensas únicas, oleadas finitas, daño al castillo, derrota, victoria, estrellas, persistencia, desbloqueos y estado de una nueva misión.
 
-Las pruebas de navegador comprueban WebGL real, colocación con cursor, selección, mejoras, venta, falta de oro, pausa, velocidad, guía, combate con recompensa, adaptación a una ventana de escritorio pequeña, derrota real, guardado del récord y reinicio completo.
+Las pruebas de navegador comprueban WebGL real, colocación con cursor, selección, mejoras, venta, falta de oro, pausa, velocidad, guía, combate con recompensa, adaptación a una ventana de escritorio pequeña, derrota real, victoria, guardado de las estrellas, desbloqueo de todas las misiones y defensas, cambio de mapa y reinicio completo.
 
-Los gráficos son una interpretación procedural de la referencia; los personajes y animaciones son deliberadamente sencillos. El equilibrio de oleadas muy avanzadas necesita sesiones prolongadas de juego. No hay campaña, multijugador ni sincronización del récord entre dispositivos. La experiencia está diseñada para escritorio, aunque la interfaz se adapta a ventanas pequeñas. El rendimiento depende de la GPU y WebGL disponibles.
+Los gráficos son una interpretación procedural de la referencia; los personajes y animaciones son deliberadamente sencillos. El equilibrio de las tres misiones necesita sesiones reales de juego. No hay multijugador ni sincronización de progreso entre dispositivos. La experiencia está diseñada para escritorio, aunque la interfaz se adapta a ventanas pequeñas. El rendimiento depende de la GPU y WebGL disponibles.
 
 Posibles mejoras: nuevos mapas con un único camino, efectos de estados, variedad de guardianes, opciones de calidad gráfica, accesibilidad adicional y un balance afinado con partidas reales.

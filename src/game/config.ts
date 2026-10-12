@@ -18,7 +18,7 @@ export const ENEMIES: Record<EnemyKind, EnemyStats> = {
   beast: { name: 'Bestia acorazada', hp: 190, speed: .9, armor: .6, magicResist: .05, reward: 30, leak: 75, scale: 1.05 },
   guardian: { name: 'Guardián maldito', hp: 500, speed: .75, armor: .38, magicResist: .35, reward: 70, leak: 160, scale: 1.4 },
 };
-export const WORLD = { width: 30, depth: 26, elevation: 1.65, roadHalfWidth: 1.15, towerRadius: .72, preparation: 20, initialGold: 300, crystalHp: 1000 };
+export const WORLD = { width: 30, depth: 26, elevation: 1.65, roadHalfWidth: 1.15, towerRadius: .72, preparation: 20, initialGold: 300, castleHp: 1000 };
 export function towerStats(kind: TowerKind, level: number): TowerStats {
   const base = TOWERS[kind];
   return { ...base, damage: Math.round(base.damage * (1 + (level - 1) * .65)), range: base.range + (level - 1) * .45, interval: base.interval * Math.pow(.87, level - 1), splash: base.splash + (base.splash ? (level - 1) * .25 : 0) };

@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { WORLD } from '../game/config';
-import { FENCES, OBSTACLES, PATH, PATH_LENGTH, TORCHES, roadDistance, samplePath } from '../game/path';
-import { box, castleModel, material, mesh, pine, portalModel, torch } from './models';
-export function createTerrain(scene: THREE.Scene): { surfaces: THREE.Object3D[]; crystal: THREE.Mesh } {
+import { DEFAULT_MAP, roadDistance, samplePath, type GameMap } from '../game/path';
+import { box, castleModel, cottage, material, mesh, pine, portalModel, torch } from './models';
+export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): { surfaces: THREE.Object3D[] } {
+  const { path: PATH, length: PATH_LENGTH, obstacles: OBSTACLES, fences: FENCES, torches: TORCHES } = map;
   const group = new THREE.Group(); scene.add(group);
   const step = .6, cells: { x: number; z: number; h: number }[] = [];
   for (let x = -14.7; x < 15; x += step) for (let z = -12.7; z < 13; z += step) {
-    const low = roadDistance({ x, z }) < 1.08 || Math.hypot(x - PATH[0].x, z - PATH[0].z) < 1.55 || (Math.abs(x - PATH.at(-1)!.x) < 2.15 && z < PATH.at(-1)!.z + .7 && z > PATH.at(-1)!.z - 2.6);
+    const low = roadDistance({ x, z }, map) < 1.08 || Math.hypot(x - PATH[0].x, z - PATH[0].z) < 1.55 || (Math.abs(x - PATH.at(-1)!.x) < 2.15 && z < PATH.at(-1)!.z + .7 && z > PATH.at(-1)!.z - 2.6);
     cells.push({ x, z, h: low ? .1 : WORLD.elevation });
   }
   const columns = new THREE.InstancedMesh(box(step + .008, 1, step + .008), material(0xffffff), cells.length);
@@ -16,7 +17,7 @@ export function createTerrain(scene: THREE.Scene): { surfaces: THREE.Object3D[];
   cells.forEach((p, i) => {
     transform.position.set(p.x, (p.h - 1.7) / 2, p.z); transform.scale.set(1, p.h + 1.7, 1); transform.updateMatrix(); columns.setMatrixAt(i, transform.matrix);
     color.setHex([0x9f9787, 0xb2aa96, 0x8f8c80, 0xa79c87][i % 4]); columns.setColorAt(i, color);
-    color.setHex(p.h < .2 ? 0xc7a575 : 0x8fa965);
+    color.setHex(p.h < .2 ? map.sand : map.grass);
     const y = p.h + .05, half = step / 2, vertex = topPositions.length / 3;
     topPositions.push(p.x - half, y, p.z - half, p.x + half, y, p.z - half, p.x + half, y, p.z + half, p.x - half, y, p.z + half);
     for (let j = 0; j < 4; j++) topColors.push(color.r, color.g, color.b);
@@ -25,7 +26,7 @@ export function createTerrain(scene: THREE.Scene): { surfaces: THREE.Object3D[];
   const topGeometry = new THREE.BufferGeometry();
   topGeometry.setAttribute('position', new THREE.Float32BufferAttribute(topPositions, 3));
   topGeometry.setAttribute('color', new THREE.Float32BufferAttribute(topColors, 3)); topGeometry.setIndex(topIndices); topGeometry.computeVertexNormals();
-  const grass = material(0xffffff).clone(); grass.vertexColors = true;
+  const grass = material(0xffffff).clone(); grass.vertexColors = true; grass.userData.owned = true;
   const tops = new THREE.Mesh(topGeometry, grass);
   columns.receiveShadow = true; columns.castShadow = false; tops.receiveShadow = true; tops.castShadow = false; group.add(columns, tops);
   // Continuous ribbon: the very same ordered waypoints used by all enemies.
@@ -37,14 +38,14 @@ export function createTerrain(scene: THREE.Scene): { surfaces: THREE.Object3D[];
     if (i) { const j = i * 2; indices.push(j - 2, j, j - 1, j - 1, j, j + 1); }
   });
   const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3)); geometry.setIndex(indices); geometry.computeVertexNormals();
-  const roadMat = material(0xcba876).clone(); roadMat.side = THREE.DoubleSide;
+  const roadMat = material(map.sand).clone(); roadMat.side = THREE.DoubleSide; roadMat.userData.owned = true;
   const road = new THREE.Mesh(geometry, roadMat); road.receiveShadow = true; group.add(road);
   // Faceted stones along the canyon walls. Their footprint stays inside the road setback.
   const cliffCount = Math.floor(PATH_LENGTH / .65) * 2;
   const cliffs = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), material(0xa6a394), cliffCount);
   let cliffIndex = 0;
   for (let progress = .4; progress < PATH_LENGTH - .4; progress += .65) {
-    const p = samplePath(progress), normal = { x: Math.cos(p.angle), z: -Math.sin(p.angle) };
+    const p = samplePath(progress, map), normal = { x: Math.cos(p.angle), z: -Math.sin(p.angle) };
     for (const side of [-1, 1]) {
       if (cliffIndex >= cliffCount) break;
       transform.position.set(p.x + normal.x * 1.52 * side, .87, p.z + normal.z * 1.52 * side);
@@ -55,6 +56,7 @@ export function createTerrain(scene: THREE.Scene): { surfaces: THREE.Object3D[];
   cliffs.count = cliffIndex; cliffs.receiveShadow = true; cliffs.castShadow = true; group.add(cliffs);
   OBSTACLES.forEach((o, i) => {
     if (o.type === 'tree') { const tree = pine(.68 + (i % 7) * .075); tree.position.set(o.x, WORLD.elevation, o.z); tree.rotation.y = i * 2.4; group.add(tree); }
+    else if (o.type === 'house') { const house = cottage(map.theme === 'citadel'); house.position.set(o.x, WORLD.elevation, o.z); house.rotation.y = i * .8; group.add(house); }
     else { const rock = mesh(group, new THREE.DodecahedronGeometry(.49, 0), i % 2 ? 0x9d9b8d : 0xc0b5a0, o.x, WORLD.elevation + .3, o.z); rock.scale.set(1.2, .8, 1); rock.rotation.set(.1, i, .2); }
   });
   // Delicate fences and braziers frame the canyon without marking build slots.
@@ -74,13 +76,12 @@ export function createTerrain(scene: THREE.Scene): { surfaces: THREE.Object3D[];
   const base = mesh(group, box(30.7, 1.2, 26.4), 0x736e63, 0, -1.55, .05);
   base.receiveShadow = true;
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), material(0xc5d3b9)); ground.rotation.x = -Math.PI / 2; ground.position.y = -2.18; ground.receiveShadow = true; scene.add(ground);
-  const crystal = castle.getObjectByName('crystal') as THREE.Mesh;
-  // Bake static props by material into a few draw calls; keep animated crystal and terrain raycasts separate.
+  // Bake static props by material into a few draw calls; keep terrain raycasts separate.
   group.updateMatrixWorld(true);
   const batches = new Map<THREE.Material, THREE.BufferGeometry[]>();
   const baked: THREE.Mesh[] = [];
   group.traverse(object => {
-    if (!(object instanceof THREE.Mesh) || object instanceof THREE.InstancedMesh || object === crystal || object === road || object === tops) return;
+    if (!(object instanceof THREE.Mesh) || object instanceof THREE.InstancedMesh || object === road || object === tops) return;
     const geo = object.geometry.index ? object.geometry.toNonIndexed() : object.geometry.clone(); geo.applyMatrix4(object.matrixWorld);
     const mat = object.material as THREE.Material; const list = batches.get(mat) ?? []; list.push(geo); batches.set(mat, list); baked.push(object);
   });
@@ -90,5 +91,5 @@ export function createTerrain(scene: THREE.Scene): { surfaces: THREE.Object3D[];
     const batch = new THREE.Mesh(geometry, mat); batch.castShadow = true; batch.receiveShadow = true; scene.add(batch);
     geometries.forEach(geo => geo.dispose());
   }
-  return { surfaces: [tops], crystal };
+  return { surfaces: [tops] };
 }

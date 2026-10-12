@@ -135,9 +135,14 @@ export function castleModel(): THREE.Group {
   }
   for (const x of [-1.5, 1.5]) mesh(g, box(.4, 1.5, 1.8), STONE, x, .8, -.95);
   mesh(g, box(2.8, 1.6, .5), STONE, 0, .85, -1.9);
-  mesh(g, box(1.45, .43, 1.45), EDGE, 0, .68, -1.05);
-  const crystal = mesh(g, octa(.75), 0x18bdde, 0, 2.02, -1.05, 0x006c99); crystal.scale.y = 1.65; crystal.name = 'crystal';
-  for (const x of [-.62, .62]) { const shard = mesh(g, octa(.3), 0x30bce7, x, 1.27, -.95, 0x006ba6); shard.scale.y = 1.65; shard.rotation.z = -x / 2; }
+  // The central keep is the heart of the fortress; the objective is the castle itself.
+  mesh(g, box(1.35, 1.85, 1.2), STONE, 0, 1.23, -1.05);
+  mesh(g, box(1.52, .18, 1.4), EDGE, 0, 2.19, -1.05);
+  const roof = mesh(g, cone(1.05, .72, 4), BLUE, 0, 2.65, -1.05); roof.rotation.y = Math.PI / 4;
+  mesh(g, cylinder(.035, .9), GOLD, 0, 3.22, -1.05);
+  mesh(g, box(.45, .28, .025), BLUE, .2, 3.5, -1.05);
+  mesh(g, box(.04, .21, .04), GOLD, .2, 3.5, -1.025);
+  for (const x of [-.32, .32]) mesh(g, box(.14, .3, .025), DARK, x, 1.6, -.437);
   return g;
 }
 export function portalModel(): THREE.Group {
@@ -147,5 +152,15 @@ export function portalModel(): THREE.Group {
   mesh(g, box(1.37, 1.58, .15), 0x201c2b, 0, .78, -.25);
   for (const x of [-1.03, 1.03]) { banner(g, x, 1.05, .43); torch(g, x, 1.86, 0); }
   mesh(g, octa(.18), 0x8a48b3, 0, 1.81, .48, 0x512676);
+  return g;
+}
+
+export function cottage(city = false): THREE.Group {
+  const g = new THREE.Group();
+  mesh(g, box(1.1, .85, .9), city ? EDGE : 0xdfccaa, 0, .43, 0);
+  const roof = mesh(g, cone(.92, .65, 4), city ? BLUE : 0x9b5945, 0, 1.08, 0); roof.rotation.y = Math.PI / 4; roof.scale.z = .9;
+  mesh(g, box(.25, .48, .03), WOOD, 0, .24, .465);
+  for (const x of [-.35, .35]) mesh(g, box(.17, .21, .035), 0x527886, x, .57, .467);
+  mesh(g, box(.18, .37, .18), STONE, -.3, 1.23, -.12);
   return g;
 }

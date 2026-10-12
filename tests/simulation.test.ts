@@ -1,11 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ENEMIES, TOWERS, WORLD, damageAfterResistance, towerStats } from '../src/game/config';
-import { FENCES, OBSTACLES, PATH, PATH_LENGTH, TORCHES, SEGMENTS, distance, placementError, roadDistance, samplePath, type Point } from '../src/game/path';
+import { DEFAULT_MAP, FENCES, OBSTACLES, PATH, PATH_LENGTH, TORCHES, SEGMENTS, distance, placementError, roadDistance, samplePath, type GameMap, type Point } from '../src/game/path';
+import { MISSIONS } from '../src/game/missions';
 import { Simulation } from '../src/game/simulation';
-function validPoint(towers: Point[] = []): Point {
+function validPoint(towers: Point[] = [], map: GameMap = DEFAULT_MAP): Point {
   for (let x = -13; x < 14; x += .5) for (let z = -11; z < 12; z += .5) {
-    const p = { x, z }; if (!placementError(p, towers, 1000, 100)) return p;
+    const p = { x, z }; if (!placementError(p, towers, 1000, 100, map)) return p;
   }
   throw new Error('No free build location');
 }
@@ -64,13 +65,13 @@ test('enemy rewards are awarded exactly once', () => {
 });
 test('all four towers fire and apply projectile damage', () => {
   for (const kind of Object.keys(TOWERS) as (keyof typeof TOWERS)[]) {
-    const sim = new Simulation(); sim.wave = 1; sim.phase = 'wave'; sim.gold = 1000;
-    const p = validPoint(); const t = sim.build(kind, p); assert.equal(typeof t, 'object');
-    const e = sim.spawn('guardian'); e.progress = 0; e.x = p.x + 2; e.z = p.z;
-    // Enemy movement places it on the path; use a real build position close to the spawn.
-    sim.enemies = [];
-    const near = { x: PATH[0].x - 2.4, z: PATH[0].z + 1 };
-    sim.towers[0].x = near.x; sim.towers[0].z = near.z;
+    const sim = new Simulation(MISSIONS[2]); sim.wave = 1; sim.phase = 'wave'; sim.gold = 1000;
+    let p: Point | null = null;
+    for (let x = 7; x < 14 && !p; x += .25) for (let z = 7; z < 12; z += .25) {
+      const candidate = { x, z };
+      if (!placementError(candidate, [], 1000, TOWERS[kind].cost, sim.map) && distance(candidate, sim.map.path[0]) < 3.9) { p = candidate; break; }
+    }
+    assert.ok(p); const t = sim.build(kind, p); assert.equal(typeof t, 'object');
     const target = sim.spawn('guardian'); const hp = target.hp;
     advance(sim, 2.5); assert.ok(target.hp < hp, `${kind} did not damage its target`);
   }
@@ -91,18 +92,19 @@ test('movement follows every waypoint and is independent of frame rate', () => {
   const ea = a.spawn('minion'), eb = b.spawn('minion'); advance(a, 20, 1 / 30); advance(b, 20, 1 / 144);
   assert.ok(distance(ea, eb) < .000001); assert.ok(roadDistance(ea) < 1e-8);
 });
-test('leaks damage crystal without gold or kills, defeat stops gameplay and new game resets', () => {
-  const sim = new Simulation(); sim.phase = 'wave'; sim.wave = 5; sim.crystalHp = 100;
+test('leaks damage castle without gold or kills, defeat stops gameplay and new game resets', () => {
+  const sim = new Simulation(); sim.phase = 'wave'; sim.wave = 5; sim.castleHp = 100;
   const e = sim.spawn('guardian'); e.progress = PATH_LENGTH - .01; sim.update(.1);
-  assert.equal(sim.crystalHp, 0); assert.equal(sim.phase, 'gameover'); assert.equal(Number(sim.gold), 300); assert.equal(sim.kills, 0);
+  assert.equal(sim.castleHp, 0); assert.equal(sim.phase, 'gameover'); assert.equal(Number(sim.gold), 300); assert.equal(sim.kills, 0);
   assert.equal(typeof sim.build('archer', validPoint()), 'string'); assert.equal(sim.sell(1), 0);
   const wave = sim.wave; sim.startWave(); sim.update(100); assert.equal(sim.wave, wave);
-  const reset = new Simulation(); assert.equal(reset.gold, 300); assert.equal(reset.crystalHp, 1000); assert.equal(reset.wave, 0); assert.equal(reset.towers.length, 0);
+  const reset = new Simulation(); assert.equal(reset.gold, 300); assert.equal(reset.castleHp, 1000); assert.equal(reset.wave, 0); assert.equal(reset.towers.length, 0);
 });
-test('waves grow, introduce enemy types, every fifth wave has a challenge and there is no final wave', () => {
-  const sim = new Simulation(); sim.startWave(); const initial = sim.waveTotal; assert.equal(sim.wave, 1);
-  sim.phase = 'preparation'; sim.wave = 4; sim.startWave(); assert.ok(sim.spawnQueue.includes('guardian')); assert.ok(sim.spawnQueue.includes('beast')); assert.ok(sim.spawnQueue.includes('runner')); assert.ok(sim.waveTotal > initial);
-  const weak = sim.spawn('minion').maxHp; sim.phase = 'preparation'; sim.wave = 99; sim.startWave(); assert.equal(sim.wave, 100); assert.ok(sim.spawn('minion').maxHp > weak);
+test('missions have finite waves, introduce challenges and stop at their final wave', () => {
+  const sim = new Simulation(MISSIONS[1]); sim.startWave(); const initial = sim.waveTotal;
+  sim.phase = 'preparation'; sim.wave = sim.mission.waves.length - 1; sim.startWave();
+  assert.ok(sim.spawnQueue.includes('guardian')); assert.ok(sim.spawnQueue.includes('beast')); assert.ok(sim.spawnQueue.includes('runner')); assert.ok(sim.waveTotal > initial);
+  sim.phase = 'preparation'; sim.startWave(); assert.equal(sim.wave, sim.mission.waves.length);
 });
 test('wave completion grants preparation, bonus gold and early start works', () => {
   const sim = new Simulation(); sim.startWave(); sim.spawnQueue = []; sim.update(.01);

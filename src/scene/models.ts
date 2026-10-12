@@ -1,20 +1,53 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { ENEMIES, TOWERS, type EnemyKind, type TowerKind } from '../game/config';
 const mats = new Map<string, THREE.MeshStandardMaterial>();
 const geos = new Map<string, THREE.BufferGeometry>();
 const templates = new Map<string, THREE.Group>();
+const skinTextures = new Map<string, THREE.DataTexture>();
+function grainTexture(wood: boolean): THREE.DataTexture {
+  const key = wood ? 'wood' : 'stone'; if (skinTextures.has(key)) return skinTextures.get(key)!;
+  const pixels = new Uint8Array(128 * 128 * 4); let seed = 731;
+  for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const vein = wood ? Math.sin(x * .6 + Math.sin(y * .07) * 1.8) * 15 + Math.sin(x * 1.4) * 6 : Math.sin(x * .25 + y * .3) * 6;
+    const value = Math.max(150, Math.min(255, 226 + vein + (seed >>> 24) / 255 * 19));
+    const i = (y * 128 + x) * 4; pixels[i] = pixels[i + 1] = pixels[i + 2] = value; pixels[i + 3] = 255;
+  }
+  const texture = new THREE.DataTexture(pixels, 128, 128); texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.magFilter = THREE.LinearFilter; texture.minFilter = THREE.LinearMipmapLinearFilter; texture.generateMipmaps = true; texture.needsUpdate = true;
+  skinTextures.set(key, texture); return texture;
+}
 export function material(color: number, emissive = 0): THREE.MeshStandardMaterial {
   const key = `${color}:${emissive}`; let m = mats.get(key);
-  if (!m) { m = new THREE.MeshStandardMaterial({ color, roughness: color === 0xe9b849 ? .38 : .83, metalness: color === 0xe9b849 ? .45 : 0, flatShading: true, emissive, emissiveIntensity: emissive ? .9 : 0 }); mats.set(key, m); } return m;
+  if (!m) {
+    const metal = [0xe9b849, 0x303f46, 0x626174, 0x9692a4, 0x454c4b].includes(color);
+    m = new THREE.MeshStandardMaterial({ color, roughness: metal ? .38 : .86, metalness: metal ? .55 : 0, flatShading: false, emissive, emissiveIntensity: emissive ? .9 : 0 });
+    const wood = [0x805737, 0xae8146, 0x513d2e, 0x674629, 0x93633b].includes(color);
+    if (wood || [0xbebdab, 0xe1dac0, 0x95988a, 0x858d82].includes(color)) { m.map = m.bumpMap = grainTexture(wood); m.bumpScale = wood ? .025 : .035; }
+    mats.set(key, m);
+  } return m;
 }
 function geometry<T extends THREE.BufferGeometry>(key: string, make: () => T): T {
   if (!geos.has(key)) { const g = make(); g.userData.shared = true; geos.set(key, g); } return geos.get(key) as T;
 }
 export const box = (w: number, h: number, d: number): THREE.BoxGeometry => geometry(`b${w},${h},${d}`, () => new THREE.BoxGeometry(w, h, d));
+export const softBox = (w: number, h: number, d: number): THREE.BufferGeometry => geometry(`soft${w},${h},${d}`, () => new RoundedBoxGeometry(w, h, d, 1, Math.min(w, h, d) * .12));
 export const cone = (r: number, h: number, sides = 6): THREE.ConeGeometry => geometry(`c${r},${h},${sides}`, () => new THREE.ConeGeometry(r, h, sides));
 export const cylinder = (r: number, h: number, sides = 8): THREE.CylinderGeometry => geometry(`y${r},${h},${sides}`, () => new THREE.CylinderGeometry(r, r, h, sides));
-export const orb = (r: number): THREE.IcosahedronGeometry => geometry(`orb${r}`, () => new THREE.IcosahedronGeometry(r, 0));
+export const orb = (r: number): THREE.IcosahedronGeometry => geometry(`orb${r}`, () => new THREE.IcosahedronGeometry(r, 1));
+export function weatheredRock(radius: number, variant = 0): THREE.BufferGeometry {
+  return geometry(`rock${radius},${variant}`, () => {
+    const geo = new THREE.IcosahedronGeometry(radius, 1), p = geo.getAttribute('position');
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const relief = 1 + .15 * Math.sin(x * 11 / radius + variant) * Math.cos(y * 8 / radius - z * 9 / radius) + .07 * Math.sin(z * 17 / radius + variant);
+      p.setXYZ(i, x * relief, y * relief, z * relief);
+    }
+    geo.computeVertexNormals(); return geo;
+  });
+}
 export const octa = (r: number): THREE.OctahedronGeometry => geometry(`octa${r}`, () => new THREE.OctahedronGeometry(r));
 export const circle = (r: number, segments = 12): THREE.CircleGeometry => geometry(`circle${r},${segments}`, () => new THREE.CircleGeometry(r, segments));
 export const torus = (r: number, tube: number, sides: number, segments: number, arc = Math.PI * 2): THREE.TorusGeometry => geometry(`torus${r},${tube},${sides},${segments},${arc}`, () => new THREE.TorusGeometry(r, tube, sides, segments, arc));
@@ -92,10 +125,11 @@ function person(g: THREE.Group, mage: boolean): void {
 function makeTower(kind: TowerKind, level: number): THREE.Group {
   const g = new THREE.Group();
   mesh(g, cylinder(.70, .14, 8), 0x858c80, 0, .07, 0);
-  mesh(g, box(.99, .17, .99), EDGE, 0, .22, 0);
+  mesh(g, softBox(.99, .17, .99), EDGE, 0, .22, 0);
   const height = kind === 'cannon' ? .9 : 1.5;
-  mesh(g, box(.86, height, .86), STONE, 0, .31 + height / 2, 0); stoneBands(g, .86, .86, .31, height);
-  for (const x of [-.44, .44]) for (const z of [-.44, .44]) mesh(g, box(.14, height, .14), EDGE, x, .31 + height / 2, z);
+  mesh(g, softBox(.86, height, .86), STONE, 0, .31 + height / 2, 0); stoneBands(g, .86, .86, .31, height);
+  for (const x of [-.44, .44]) for (const z of [-.44, .44]) mesh(g, softBox(.14, height, .14), EDGE, x, .31 + height / 2, z);
+  for (const x of [-.29, .29]) mesh(g, softBox(.17, .045, .017), 0x678562, x, .37, .447);
   crenellations(g, .87, height + .60);
   mesh(g, box(.16, .40, .025), DARK, 0, .93, .44);
   mesh(g, torus(.085, .025, 4, 8, Math.PI), EDGE, 0, 1.13, .45);
@@ -123,11 +157,18 @@ function makeTower(kind: TowerKind, level: number): THREE.Group {
     mesh(turret, box(.038, .038, .98), 0xa7aa9c, 0, .52, .16);
     mesh(turret, cone(.065, .15, 4), DARK, 0, .53, .72).rotation.x = Math.PI / 2;
   } else {
-    for (const x of [-.30, .30]) { const wheel = mesh(turret, cylinder(.24, .10), WOOD, x, .25, -.04); wheel.rotation.z = Math.PI / 2; const axle = mesh(turret, cylinder(.08, .115), GOLD, x, .25, -.04); axle.rotation.z = Math.PI / 2; }
-    mesh(turret, box(.56, .16, .68), WOOD_LIGHT, 0, .25, .02);
-    const barrel = mesh(turret, cylinder(.255, .90, 12), 0x303f46, 0, .52, .24); barrel.rotation.x = Math.PI / 2 - .12; barrel.name = 'barrel';
-    for (const z of [-.13, .55]) { const band = mesh(turret, torus(.258, .04, 5, 12), GOLD, 0, .52 + z * .1, z); band.rotation.x = -.12; }
-    mesh(turret, circle(.20, 12), 0x15232b, 0, .58, .70);
+    for (const x of [-.33, .33]) {
+      const wheel = mesh(turret, cylinder(.27, .10, 20), WOOD, x, .27, -.10); wheel.rotation.z = Math.PI / 2;
+      mesh(turret, torus(.255, .023, 6, 24), DARK, x * 1.15, .27, -.1).rotation.y = Math.PI / 2;
+      for (let i = 0; i < 4; i++) { const spoke = mesh(turret, softBox(.018, .45, .026), WOOD_LIGHT, x * 1.17, .27, -.1); spoke.rotation.x = i * Math.PI / 4; }
+      const axle = mesh(turret, cylinder(.067, .115, 12), GOLD, x * 1.18, .27, -.10); axle.rotation.z = Math.PI / 2;
+    }
+    mesh(turret, softBox(.56, .18, .83), WOOD, 0, .26, -.03);
+    for (const x of [-.23, .23]) { const brace = mesh(turret, softBox(.11, .34, .5), WOOD_LIGHT, x, .4, .015); brace.rotation.x = -.15; }
+    const barrel = mesh(turret, cylinder(.255, .90, 24), 0x303f46, 0, .52, .24); barrel.rotation.x = Math.PI / 2 - .12; barrel.name = 'barrel';
+    for (const z of [-.13, .12, .55, .69]) { const band = mesh(turret, torus(.258, .025, 6, 24), GOLD, 0, .52 + z * .1, z); band.rotation.x = -.12; }
+    mesh(turret, circle(.205, 24), 0x15232b, 0, .603, .697).rotation.x = -.12;
+    mesh(turret, torus(.19, .013, 6, 24), 0x626174, 0, .603, .710).rotation.x = -.12;
     torch(g, -.43, 1.04, -.4);
   }
   const muzzle = new THREE.Object3D(); muzzle.name = 'muzzle'; muzzle.position.set(kind === 'mage' ? .3 : kind === 'archer' ? .27 : 0, kind === 'mage' ? 1.03 : .52, kind === 'mage' ? .13 : .74); turret.add(muzzle);
@@ -155,25 +196,60 @@ export function towerModel(kind: TowerKind, level = 1): THREE.Group {
 }
 function makeEnemy(kind: EnemyKind): THREE.Group {
   const g = new THREE.Group(), heavy = kind === 'beast' || kind === 'guardian', runner = kind === 'runner';
-  const body = mesh(g, orb(heavy ? .41 : .34), heavy ? 0x454252 : 0x323242, 0, .47, runner ? -.08 : 0); body.scale.set(heavy ? 1.08 : 1, runner ? .75 : 1, runner ? 1.45 : 1);
-  mesh(g, orb(.23), 0x423240, 0, .64, .30);
-  mesh(g, box(.25, .11, .19), 0x692c40, 0, .50, .38);
-  for (const x of [-.11, .11]) { mesh(g, box(.067, .055, .035), 0xff4d5c, x, .67, .50, 0xc72545); const fang = mesh(g, cone(.027, .10, 4), 0xd3c8b3, x, .49, .50); fang.rotation.z = Math.PI; }
-  for (const x of [-.27, .27]) {
-    const arm = mesh(g, box(.16, .33, .18), heavy ? 0x675a66 : 0x3b303d, x, .34, .04); arm.rotation.z = -x * 1.4;
-    mesh(g, orb(heavy ? .18 : .12), heavy ? 0x782f45 : 0x513441, x, .56, -.02);
-    const leg = mesh(g, box(.15, .24, .21), 0x252a33, x * .68, .14, .04); leg.name = x < 0 ? 'legL' : 'legR';
-    mesh(g, cone(heavy ? .09 : .055, heavy ? .27 : .14, 4), 0xb48887, x * .62, .87, .20).rotation.z = -x * .8;
-    if (heavy) mesh(g, cone(.075, .21, 4), 0x99475b, x, .74, -.06);
+  const skin = runner ? 0x6d596b : heavy ? 0x687566 : 0x79916d, armor = heavy ? 0x626174 : 0x674629;
+  const torso = mesh(g, softBox(heavy ? .58 : .43, heavy ? .47 : .4, .33), armor, 0, .51, 0); torso.rotation.x = runner ? .16 : .035;
+  mesh(g, orb(.17), skin, 0, .87, .075).scale.set(1.12, 1.16, 1);
+  mesh(g, softBox(.3, .11, .13), skin, 0, .78, .18);
+  mesh(g, softBox(.22, .042, .016), 0x302d35, 0, .777, .252);
+  for (const x of [-.082, .082]) {
+    mesh(g, softBox(.054, .034, .025), 0xff704e, x, .89, .225, 0xc72545);
+    const brow = mesh(g, softBox(.12, .043, .06), skin, x, .931, .21); brow.rotation.z = -x * 1.3;
+    mesh(g, cone(.021, .08, 6), 0xe1dac0, x, .777, .26);
+    const ear = mesh(g, cone(.05, .14, 6), skin, x * 2.5, .90, .03); ear.rotation.z = -Math.sign(x) * 1.2;
   }
-  if (heavy) { mesh(g, box(.46, .30, .08), 0x626174, 0, .51, .31); mesh(g, box(.16, .12, .10), 0x9c3f5c, 0, .55, .37); }
-  if (kind === 'guardian') {
-    mesh(g, cone(.29, .29, 6), 0x693648, 0, .97, .12);
-    for (const x of [-.25, .25]) { const horn = mesh(g, cone(.09, .38, 4), 0xc9a6a0, x, 1.16, .16); horn.rotation.z = -x * 1.4; }
-    mesh(g, cylinder(.045, .7), WOOD, .47, .4, .16); mesh(g, box(.29, .26, .10), 0x9692a4, .47, .78, .16);
-    const badge = mesh(g, octa(.09), 0xa35df1, 0, .56, .38, 0x622fc1); badge.scale.y = 1.3;
+  mesh(g, softBox(.48, .055, .37), 0x303f46, 0, .35, 0);
+  mesh(g, softBox(.075, .075, .022), GOLD, .025, .35, .201);
+  for (const x of [-.12, .12]) {
+    const skirt = mesh(g, softBox(.17, .19, .08), runner ? 0x513d62 : 0x805737, x, .28, .14); skirt.rotation.z = -x * .3;
   }
-  compact(g, ['legL', 'legR']); g.scale.setScalar(ENEMIES[kind].scale * 1.35); g.userData.healthHeight = kind === 'guardian' ? 1.55 : 1.22;
+  for (const side of [-1, 1]) {
+    const arm = new THREE.Group(); arm.name = side < 0 ? 'armL' : 'armR'; arm.position.set(side * (heavy ? .36 : .29), .67, 0); g.add(arm);
+    mesh(arm, orb(heavy ? .15 : .10), armor, 0, -.01, 0);
+    mesh(arm, softBox(.12, .29, .14), skin, 0, -.18, .025);
+    mesh(arm, softBox(.14, .1, .17), 0x454c4b, 0, -.27, .055);
+    mesh(arm, orb(.071), skin, 0, -.34, .09);
+    if (side > 0) {
+      mesh(arm, cylinder(.025, .53, 8), WOOD, 0, -.17, .15);
+      if (kind === 'guardian' || kind === 'beast') {
+        mesh(arm, softBox(heavy ? .3 : .2, .2, .085), 0x9692a4, .09, .05, .15);
+        mesh(arm, cone(.065, .18, 6), 0xd3d6d1, .25, .05, .15).rotation.z = -Math.PI / 2;
+      } else if (runner) { mesh(arm, cone(.053, .37, 4), 0x9692a4, 0, .14, .15); }
+      else { mesh(arm, orb(.11), 0x674629, 0, .095, .15); }
+    } else if (heavy) {
+      mesh(arm, softBox(.23, .31, .075), 0x303f46, 0, -.2, .21);
+      mesh(arm, orb(.055), 0x9692a4, 0, -.2, .26);
+    }
+    const leg = new THREE.Group(); leg.name = side < 0 ? 'legL' : 'legR'; leg.position.set(side * .14, .34, 0); g.add(leg);
+    mesh(leg, softBox(.14, .24, .16), 0x343943, 0, -.12, 0);
+    mesh(leg, softBox(.18, .12, .25), 0x252a33, 0, -.285, .035);
+  }
+  if (heavy) {
+    mesh(g, softBox(.52, .34, .085), 0x626174, 0, .54, .18);
+    for (const x of [-.18, .18]) for (const y of [.41, .66]) mesh(g, orb(.028), 0xe1dac0, x, y, .239);
+    mesh(g, softBox(.08, .28, .035), kind === 'guardian' ? 0x9c3f5c : 0x9692a4, 0, .54, .24);
+    mesh(g, softBox(.39, .14, .32), 0x303f46, 0, 1.01, .015);
+    for (const side of [-1, 1]) {
+      const horn = mesh(g, cone(.068, kind === 'guardian' ? .36 : .20, 8), 0xd6c8a8, side * .20, 1.16, .025); horn.rotation.z = -side * .5;
+    }
+  } else {
+    mesh(g, orb(.188), runner ? 0x513d62 : 0x454c4b, 0, 1.00, -.009).scale.y = .47;
+    const strap = mesh(g, softBox(.05, .4, .022), WOOD_LIGHT, -.06, .53, .185); strap.rotation.z = .35;
+    if (runner) { const cape = mesh(g, softBox(.31, .43, .06), 0x513d62, 0, .48, -.22); cape.rotation.x = .3; }
+  }
+  if (kind === 'guardian') mesh(g, octa(.074), 0xa35df1, 0, .57, .28, 0x622fc1);
+  compact(g, ['legL', 'legR', 'armL', 'armR']);
+  for (const name of ['legL', 'legR', 'armL', 'armR']) compact(g.getObjectByName(name) as THREE.Group);
+  g.scale.setScalar(ENEMIES[kind].scale * 1.35); g.userData.healthHeight = kind === 'guardian' ? 1.62 : 1.43;
   return g;
 }
 export function enemyModel(kind: EnemyKind): THREE.Group {
@@ -200,44 +276,6 @@ export function pine(scale = 1): THREE.Group {
     }
   }
   g.scale.setScalar(scale); return g;
-}
-export function castleModel(): THREE.Group {
-  const g = new THREE.Group(); mesh(g, box(3.75, .2, 3.05), 0x858d82, 0, .1, -1);
-  for (const x of [-.97, .97]) { mesh(g, box(.82, 1.8, .68), STONE, x, .97, .04); const p = new THREE.Group(); p.position.x = x; stoneBands(p, .82, .68, .1, 1.8); g.add(p); }
-  mesh(g, box(2.8, .52, .68), EDGE, 0, 2.06, .04);
-  mesh(g, torus(.48, .13, 5, 13, Math.PI), EDGE, 0, 1.45, .45);
-  mesh(g, box(.85, 1.46, .12), WOOD, 0, .76, -.08);
-  for (const x of [-.29, -.145, 0, .145, .29]) mesh(g, box(.027, 1.37, .026), 0x513d2e, x, .73, -.01);
-  for (const y of [.36, 1.0]) mesh(g, box(.79, .06, .03), DARK, 0, y, .006);
-  for (const x of [-1.5, 1.5]) for (const z of [-1.9, .1]) {
-    const p = new THREE.Group(); p.position.set(x, 0, z); g.add(p);
-    mesh(p, box(.83, 2.28, .83), STONE, 0, 1.2, 0); stoneBands(p, .83, .83, .1, 2.2); crenellations(p, .86, 2.55);
-    if (z > 0) { banner(p, 0, 1.5, .43, 1.25); mesh(p, box(.12, .32, .025), DARK, 0, .68, .435); }
-    torch(p, 0, 2.75, 0);
-  }
-  for (const x of [-1.5, 1.5]) mesh(g, box(.41, 1.62, 1.8), STONE, x, .92, -.95);
-  mesh(g, box(2.85, 1.67, .48), STONE, 0, .96, -1.9);
-  mesh(g, box(1.35, 2.60, 1.15), STONE, 0, 1.55, -1.02);
-  const keep = new THREE.Group(); keep.position.set(0, 0, -1.02); stoneBands(keep, 1.35, 1.15, .3, 2.6); g.add(keep);
-  mesh(g, box(1.49, .18, 1.34), EDGE, 0, 2.92, -1.02);
-  const roof = mesh(g, cone(1.06, .92, 4), BLUE, 0, 3.43, -1.02); roof.rotation.y = Math.PI / 4;
-  mesh(g, cylinder(.028, .67), GOLD, 0, 4.17, -1.02);
-  mesh(g, box(.53, .26, .028), BLUE, .24, 4.37, -1.02); mesh(g, box(.035, .20, .028), GOLD, .24, 4.37, -.999);
-  for (const x of [-.33, .33]) { mesh(g, box(.15, .42, .026), DARK, x, 2.3, -.43); mesh(g, torus(.075, .025, 4, 8, Math.PI), EDGE, x, 2.51, -.40); }
-  banner(g, 0, 1.43, -.425, 1.03); return g;
-}
-export function portalModel(): THREE.Group {
-  const g = new THREE.Group();
-  for (const x of [-1.01, 1.01]) {
-    mesh(g, box(.62, 1.87, .75), MORTAR, x, .97, 0);
-    for (let y = .35; y < 1.8; y += .34) mesh(g, box(.66, .025, .78), STONE, x, y, 0);
-    torch(g, x, 2.00, 0);
-  }
-  mesh(g, box(2.58, .43, .77), STONE, 0, 1.97, 0);
-  mesh(g, torus(.67, .20, 5, 12, Math.PI), 0x878982, 0, 1.13, .25);
-  mesh(g, box(1.31, 1.65, .05), 0x202932, 0, .83, -.25);
-  banner(g, -1.03, 1.05, .395, .83); banner(g, 1.03, 1.05, .395, .83);
-  mesh(g, box(.18, .18, .07), 0x784752, 0, 2.03, .44); return g;
 }
 export function cottage(city = false): THREE.Group {
   const g = new THREE.Group();

@@ -43,7 +43,7 @@ export function groundMaterial(color: number, vertexColors = false, surface: Sur
 
 // The playable ground stays perfectly level. Only the surrounding world rises into hills.
 export function valleyHeight(x: number, z: number): number {
-  const outside = Math.max(Math.abs(x) - 16, Math.abs(z) - 14, 0);
+  const outside = Math.max(Math.abs(x) - (WORLD.width / 2 + 1), Math.abs(z) - (WORLD.depth / 2 + 1), 0);
   const blend = THREE.MathUtils.smoothstep(outside, 0, 12);
   const hills = 1.7 + 1.4 * Math.sin(x * .15 + z * .11) + .9 * Math.cos(z * .21 - x * .06);
   return WORLD.elevation + .05 + blend * Math.max(.4, hills);

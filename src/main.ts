@@ -103,10 +103,11 @@ function frame(now: number): void {
       ui.victory(sim, progress, missionIndex, saved);
     } else { overlay = 'gameover'; ui.gameOver(sim); }
   }
-  for (const event of sim.events) { audio.play(event); if (event.type === 'leak') ui.flashCastle(); }
-  view.update(sim, paused || overlay ? 0 : dt * speed, now / 1000); sim.events.length = 0;
+  for (const event of sim.events) { audio.play(event); if (event.type === 'gateHit') ui.flashCastle(); }
   uiAccumulator += dt;
   if (uiAccumulator >= .08) { ui.update(sim, paused, speed, view.placementMessage(sim), progress); uiAccumulator = 0; }
+  // Reflect combat and purchases before a newly introduced model compiles its graphics shaders.
+  view.update(sim, paused || overlay ? 0 : dt * speed, now / 1000); sim.events.length = 0;
 }
 ui.update(sim, paused, speed, view.placementMessage(sim), progress); requestAnimationFrame(frame);
 export { sim as simulation, view as battlefield };

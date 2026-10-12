@@ -20,14 +20,14 @@ export const TOWER_UPGRADES: Record<TowerKind, readonly [TowerUpgrade, TowerUpgr
   mage: [{ cost: 250, damage: 155, range: 5.1, interval: 1.2, splash: 0 }, { cost: 450, damage: 245, range: 5.4, interval: 1.1, splash: 0 }],
   cannon: [{ cost: 350, damage: 180, range: 4.9, interval: 2.25, splash: 2.5 }, { cost: 600, damage: 280, range: 5.2, interval: 2.1, splash: 2.9 }],
 };
-export interface EnemyStats { name: string; hp: number; speed: number; armor: number; magicResist: number; reward: number; score: number; leak: number; scale: number; }
+export interface EnemyStats { name: string; hp: number; speed: number; armor: number; magicResist: number; reward: number; score: number; gateDamage: number; attackInterval: number; scale: number; }
 export const ENEMIES: Record<EnemyKind, EnemyStats> = {
-  minion: { name: 'Esbirro maldito', hp: 52, speed: 1.65, armor: .05, magicResist: 0, reward: 10, score: 120, leak: 30, scale: .7 },
-  runner: { name: 'Corredor sombrío', hp: 38, speed: 2.8, armor: 0, magicResist: .1, reward: 11, score: 140, leak: 25, scale: .55 },
-  beast: { name: 'Bestia acorazada', hp: 220, speed: 1.2, armor: .6, magicResist: .05, reward: 26, score: 300, leak: 75, scale: 1.05 },
-  guardian: { name: 'Guardián maldito', hp: 600, speed: 1.15, armor: .38, magicResist: .35, reward: 60, score: 700, leak: 160, scale: 1.4 },
+  minion: { name: 'Esbirro maldito', hp: 52, speed: 1.65, armor: .05, magicResist: 0, reward: 10, score: 120, gateDamage: 8, attackInterval: 1.2, scale: .7 },
+  runner: { name: 'Corredor sombrío', hp: 38, speed: 2.8, armor: 0, magicResist: .1, reward: 11, score: 140, gateDamage: 6, attackInterval: .85, scale: .55 },
+  beast: { name: 'Bestia acorazada', hp: 220, speed: 1.2, armor: .6, magicResist: .05, reward: 26, score: 300, gateDamage: 30, attackInterval: 1.9, scale: 1.05 },
+  guardian: { name: 'Guardián maldito', hp: 600, speed: 1.15, armor: .38, magicResist: .35, reward: 60, score: 700, gateDamage: 55, attackInterval: 2.2, scale: 1.4 },
 };
-export const WORLD = { width: 30, depth: 26, elevation: 1.65, roadHalfWidth: 1.15, towerRadius: .72, preparation: 20, initialGold: 300, castleHp: 1000 };
+export const WORLD = { width: 34, depth: 26, elevation: 1.65, roadHalfWidth: 1.15, towerRadius: .72, preparation: 20, initialGold: 300, castleHp: 1000 };
 export const BALANCE = { healthGrowth: 1.1, minimumSpawnInterval: .4, waveGoldBase: 25, waveGoldStep: 5 };
 export function waveGold(wave: number): number { return BALANCE.waveGoldBase + wave * BALANCE.waveGoldStep; }
 export function towerStats(kind: TowerKind, level: number): TowerStats {

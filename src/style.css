@@ -479,3 +479,18 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
   .toast { top: 130px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* Combat feedback is projected from actual world positions and never intercepts pointer input. */
+.damage-layer { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:2; }
+.damage-number { position:absolute; left:0; top:0; font-size:24px; font-weight:900; line-height:1; white-space:nowrap; color:#fff5d6; text-shadow:0 2px 0 #233640, 1px 0 2px #182832, -1px 0 2px #182832, 0 3px 8px #12273488; will-change:transform,opacity; }
+.damage-number.magic { color:#95ecff; }
+.damage-number.piercing { color:#ffda7b; }
+.damage-number.gate { color:#ff9985; font-size:29px; }
+.gate-label { position:absolute; left:0; top:0; min-width:104px; padding:6px 9px; border:1px solid #e0c78275; border-radius:9px; background:#102d40df; box-shadow:0 3px 12px #12273435; color:#fff3ce; text-align:center; }
+.gate-label small { display:block; letter-spacing:.09em; font-size:8px; font-weight:800; }
+.gate-label b { display:block; margin-top:3px; font-size:11px; }
+.gate-label i { display:block; height:4px; margin-top:5px; overflow:hidden; border-radius:4px; background:#061b28; }
+.gate-label em { display:block; height:100%; background:linear-gradient(90deg,#cf9a48,#f6dc8a); }
+.gate-label.under-siege { border-color:#ff8a74; }
+.gate-label.under-siege em { background:#ef7861; }
+@media(max-width:600px) { .damage-number { font-size:19px; } .damage-number.gate { font-size:23px; } .gate-label { min-width:89px; padding:5px 7px; } .gate-label small { font-size:7px; } }

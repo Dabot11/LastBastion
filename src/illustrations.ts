@@ -2,7 +2,7 @@ import type { GameMap } from './game/path';
 
 // Illustrations use the actual routes and obstacle positions, so previews describe the mission.
 export function mapIllustration(map: GameMap, id: string): string {
-  const point = (x: number, z: number) => `${(18 + (x + 15) * 6.8).toFixed(1)},${(12 + (z + 13) * 4.5).toFixed(1)}`;
+  const point = (x: number, z: number) => `${(14 + (x + 17) * 5.3).toFixed(1)},${(24 + (z + 13) * 3.5).toFixed(1)}`;
   const route = map.path.map(p => point(p.x, p.z)).join(' ');
   const props = map.obstacles.map((p, i) => {
     const [x, y] = point(p.x, p.z).split(',').map(Number);
@@ -12,7 +12,7 @@ export function mapIllustration(map: GameMap, id: string): string {
   }).join('');
   const [cx, cy] = point(map.path.at(-1)!.x, map.path.at(-1)!.z).split(',').map(Number);
   const [ex, ey] = point(map.path[0].x, map.path[0].z).split(',').map(Number);
-  return `<svg class="mission-map" viewBox="0 0 240 142" fill="none" aria-hidden="true"><defs><linearGradient id="land-${id}" x2="1" y2="1"><stop stop-color="${map.theme === 'forest' ? '#39604b' : map.theme === 'village' ? '#657452' : '#47646a'}"/><stop offset="1" stop-color="#233f40"/></linearGradient><radialGradient id="mist-${id}"><stop stop-color="#bdcf9f" stop-opacity=".2"/><stop offset="1" stop-color="#bdcf9f" stop-opacity="0"/></radialGradient></defs><rect width="240" height="142" rx="12" fill="url(#land-${id})"/><path d="M-10 60Q60-10 150 20T250 0M0 155Q60 80 145 118T250 70" stroke="#92b18b" stroke-opacity=".10" stroke-width="22"/><ellipse cx="115" cy="65" rx="110" ry="72" fill="url(#mist-${id})"/><polyline points="${route}" stroke="#152e30" stroke-width="10" stroke-linejoin="round"/><polyline points="${route}" stroke="#d6b888" stroke-width="6" stroke-linejoin="round"/>${props}<g transform="translate(${cx} ${cy})"><path d="M-8 6V-4H-5V-8H-1V-4H3V-8H7V6Z" fill="#f0dcac"/><path d="M-2 6V1A2 2 0 0 1 2 1V6Z" fill="#354b56"/><path d="M-1-8V-15L6-12-1-10" fill="#e9bd68"/></g><circle cx="${ex}" cy="${ey}" r="5" fill="#293640" stroke="#e58872" stroke-width="2"/></svg>`;
+  return `<svg class="mission-map" viewBox="0 0 240 142" fill="none" aria-hidden="true"><defs><linearGradient id="land-${id}" x2="1" y2="1"><stop stop-color="${map.theme === 'forest' ? '#39604b' : map.theme === 'village' ? '#657452' : '#47646a'}"/><stop offset="1" stop-color="#233f40"/></linearGradient><radialGradient id="mist-${id}"><stop stop-color="#bdcf9f" stop-opacity=".2"/><stop offset="1" stop-color="#bdcf9f" stop-opacity="0"/></radialGradient></defs><rect width="240" height="142" rx="12" fill="url(#land-${id})"/><path d="M-10 60Q60-10 150 20T250 0M0 155Q60 80 145 118T250 70" stroke="#92b18b" stroke-opacity=".10" stroke-width="22"/><ellipse cx="115" cy="65" rx="110" ry="72" fill="url(#mist-${id})"/><polyline points="${route}" stroke="#152e30" stroke-width="10" stroke-linejoin="round"/><polyline points="${route}" stroke="#d6b888" stroke-width="6" stroke-linejoin="round"/>${props}<g transform="translate(${cx} ${cy})"><path d="M-8 6V-4H-5V-8H-1V-4H3V-8H7V6Z" fill="#f0dcac"/><path d="M-2 6V1A2 2 0 0 1 2 1V6Z" fill="#354b56"/><path d="M-1-8V-15L6-12-1-10" fill="#e9bd68"/></g><g transform="translate(${ex} ${ey})"><path d="M-9 5-7-4-2-8 5-6 9 5Z" fill="#7d8f86"/><path d="M-4 5V0a4 4 0 0 1 8 0v5Z" fill="#142931"/><path d="M-5 5V0a5 5 0 0 1 10 0v5" stroke="#b9aa8e" stroke-width="2"/></g></svg>`;
 }
 
 export function castleIllustration(): string {

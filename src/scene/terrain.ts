@@ -2,12 +2,13 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { WORLD } from '../game/config';
-import { DEFAULT_MAP, placementError, samplePath, type GameMap } from '../game/path';
-import { box, cone, orb, castleModel, cottage, mesh, pine, portalModel, torch } from './models';
+import { DEFAULT_MAP, placementError, roadHeight, samplePath, type GameMap } from '../game/path';
+import { box, cone, orb, cottage, mesh, pine, torch } from './models';
+import { fortressModel, caveModel } from './fortress';
 import { landscape } from './landscape';
 import { surroundingWorld } from './scenery';
 import { contactShadowMaterial, groundMaterial } from './surfaces';
-export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): { surfaces: THREE.Object3D[] } {
+export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): { surfaces: THREE.Object3D[]; castle: THREE.Group; door: THREE.Group } {
   const group = new THREE.Group(); scene.add(group);
   const land = landscape(map); scene.add(land.group);
   surroundingWorld(group, map);
@@ -32,24 +33,25 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
     const g = new THREE.Group(); g.position.set(x, WORLD.elevation, z);
     mesh(g, box(.38, .35, .38), 0xb4a388, 0, .17, 0); torch(g, 0, .47, 0); group.add(g);
   }
-  const castle = castleModel(); castle.position.set(map.path.at(-1)!.x, .16, map.path.at(-1)!.z); group.add(castle);
-  const portal = portalModel(); portal.position.set(map.path[0].x, .14, map.path[0].z); portal.rotation.y = -.65; group.add(portal);
+  const castle = fortressModel(); castle.position.set(map.path.at(-1)!.x, WORLD.elevation + .05, map.path.at(-1)!.z); castle.rotation.y = map.gateAngle; group.add(castle);
+  const door = castle.getObjectByName('castle-door') as THREE.Group;
+  const cave = caveModel(); cave.position.set(map.path[0].x, roadHeight(map.path[0], map), map.path[0].z); cave.rotation.y = samplePath(0, map).angle; group.add(cave);
   // Worn cart tracks and tiny stones belong to the same route, without adding collision surfaces.
   for (let progress = 2; progress < map.length - 3; progress += .85) {
     const p = samplePath(progress, map);
     for (const side of [-1, 1]) {
-      const mark = mesh(group, box(.065, .004, .56 + .12 * Math.sin(progress)), 0xc4a16f, p.x + Math.cos(p.angle) * .34 * side, .136, p.z - Math.sin(p.angle) * .34 * side);
-      mark.rotation.y = p.angle; mark.castShadow = false;
+      const mark = mesh(group, box(.045, .004, .56 + .12 * Math.sin(progress)), 0xc4a16f, p.x + Math.cos(p.angle) * .34 * side, roadHeight(p, map) + .018, p.z - Math.sin(p.angle) * .34 * side);
+      mark.rotation.y = p.angle; mark.rotation.x = Math.atan2(roadHeight(samplePath(progress + .2, map), map) - roadHeight(samplePath(progress - .2, map), map), .4); mark.castShadow = false;
     }
     if (Math.sin(progress * 12.3) > .8) {
-      const pebble = mesh(group, orb(.055), 0xdbbe92, p.x + Math.cos(p.angle) * .75, .154, p.z - Math.sin(p.angle) * .75); pebble.scale.y = .32; pebble.castShadow = false;
+      const pebble = mesh(group, orb(.055), 0xdbbe92, p.x + Math.cos(p.angle) * .75, roadHeight(p, map) + .033, p.z - Math.sin(p.angle) * .75); pebble.scale.y = .32; pebble.castShadow = false;
     }
   }
   // Decorative pebbles stay inside the canyon setback and never change construction or enemy movement.
   for (let progress = 1; progress < map.length - 3; progress += 1.7) {
     const p = samplePath(progress, map), side = Math.sin(progress * 17) > 0 ? 1 : -1;
     const x = p.x + Math.cos(p.angle) * 1.3 * side, z = p.z - Math.sin(p.angle) * 1.3 * side;
-    const rock = mesh(group, new THREE.DodecahedronGeometry(.13, 0), 0xa5a48f, x, .2, z); rock.scale.set(1.2, .5, .8);
+    const rock = mesh(group, new THREE.DodecahedronGeometry(.13, 0), 0xa5a48f, x, roadHeight({ x, z }, map) + .07, z); rock.scale.set(1.2, .5, .8);
   }
   const cliffGeometry = new RoundedBoxGeometry(2, 2, 2, 1, .19), vertices = cliffGeometry.getAttribute('position');
   const cliffColors: number[] = [], tint = new THREE.Color();
@@ -63,9 +65,10 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
   const slab = new THREE.Object3D(), slabColor = new THREE.Color(); let slabCount = 0;
   for (let progress = 2; progress < map.length - 3; progress += 1.15) for (const side of [-1, 1]) {
     const p = samplePath(progress, map);
-    slab.position.set(p.x + Math.cos(p.angle) * 1.49 * side, .85, p.z - Math.sin(p.angle) * 1.49 * side);
+    const floor = roadHeight(p, map), cliffHeight = Math.max(.04, WORLD.elevation - floor);
+    slab.position.set(p.x + Math.cos(p.angle) * 1.49 * side, floor + cliffHeight * .48, p.z - Math.sin(p.angle) * 1.49 * side);
     slab.rotation.set(.025, p.angle + .065 * Math.sin(progress), .02 * Math.cos(progress * 2));
-    slab.scale.set(.24 + .025 * Math.sin(progress * 2), .66 + .07 * Math.cos(progress * 1.3), .52); slab.updateMatrix(); canyonRocks.setMatrixAt(slabCount, slab.matrix);
+    slab.scale.set(.24 + .07 * Math.sin(progress * 2), cliffHeight * (.44 + .05 * Math.cos(progress * 1.3)), .45 + .14 * Math.sin(progress * 2.6)); slab.updateMatrix(); canyonRocks.setMatrixAt(slabCount, slab.matrix);
     slabColor.setHex([0x939b96, 0xa5aaa0, 0x858f92, 0xb2b2a5][slabCount % 4]); canyonRocks.setColorAt(slabCount++, slabColor);
     if (Math.sin(progress * 4.3) > -.3) {
       const x = p.x + Math.cos(p.angle) * 1.82 * side, z = p.z - Math.sin(p.angle) * 1.82 * side;
@@ -105,6 +108,8 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
   const baked: THREE.Mesh[] = [];
   group.traverse(object => {
     if (!(object instanceof THREE.Mesh) || object instanceof THREE.InstancedMesh) return;
+    let parent: THREE.Object3D | null = object;
+    while (parent && parent !== group) { if (parent === door) return; parent = parent.parent; }
     const geo = object.geometry.index ? object.geometry.toNonIndexed() : object.geometry.clone(); geo.applyMatrix4(object.matrixWorld);
     const mat = object.material as THREE.Material, key = `${mat.uuid}:${object.castShadow}`;
     const batch = batches.get(key) ?? { mat, geometries: [], shadow: object.castShadow }; batch.geometries.push(geo); batches.set(key, batch); baked.push(object);
@@ -116,5 +121,5 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
   }
   shadeGeometry.dispose();
   // Keep a clear route and a single authoritative construction surface per elevation.
-  return { surfaces: land.surfaces };
+  return { surfaces: land.surfaces, castle, door };
 }

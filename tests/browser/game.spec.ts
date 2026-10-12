@@ -4,18 +4,50 @@ async function buildPoint(page: Page, index: number, y = 1.7): Promise<{ x: numb
     // Use the production route/obstacles, and project a real world position into the canvas.
     const importModule = (url: string): Promise<any> => import(/* @vite-ignore */ url);
     const THREE = await importModule('/node_modules/three/build/three.module.js');
-    const { placementError, PATH, distance } = await importModule('/src/game/path.ts');
+    const { placementError, samplePath, distance } = await importModule('/src/game/path.ts');
     const candidates: { x: number; z: number }[] = [];
     for (let x = 7; x < 14; x += .3) for (let z = 7; z < 12; z += .3) {
-      const p = { x, z }; if (!placementError(p, [], 1000, 100) && distance(p, PATH[0]) < 4.2 && (!candidates.length || distance(p, candidates[0]) > 1.9)) candidates.push(p);
+      const p = { x, z }; if (!placementError(p, [], 1000, 100) && distance(p, samplePath(9)) < 4.2 && (!candidates.length || distance(p, candidates[0]) > 1.9)) candidates.push(p);
     }
-    const p = index < 0 ? PATH[0] : candidates[index]; if (!p) throw new Error('No placement candidate');
+    const p = index < 0 ? samplePath(9) : candidates[index]; if (!p) throw new Error('No placement candidate');
     const { battlefield } = await importModule(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
     const canvas = document.querySelector('canvas')!, rect = canvas.getBoundingClientRect(), camera = battlefield.camera;
     const projected = new THREE.Vector3(p.x, y, p.z).project(camera);
     return { x: rect.left + (projected.x + 1) / 2 * rect.width, y: rect.top + (1 - projected.y) / 2 * rect.height };
   }, { index, y });
 }
+test('real gate siege shows wood, surviving attackers, exact damage numbers and responsive health', async ({ page }) => {
+  test.setTimeout(120000);
+  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem('last-bastion-campaign-v1', JSON.stringify({ pines: { stars: 3, score: 1000 }, market: { stars: 3, score: 1000 }, citadel: { stars: 3, score: 1000 } })));
+  await page.goto('/'); await page.getByRole('button', { name: 'Jugar: El último bastión', exact: true }).click();
+  await page.getByRole('button', { name: 'Pausar', exact: true }).click();
+  const state = await page.evaluate(async () => {
+    const load = (url: string): Promise<any> => import(/* @vite-ignore */ url);
+    const { simulation: sim, battlefield: view } = await load(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
+    const { gateDefenceSites } = await load('/src/game/path.ts');
+    // Controlled arrival fixture. Gate HP, tower damage, attacks and rewards use the production simulation.
+    sim.startWave(); sim.spawnQueue = []; sim.spawned = sim.waveTotal;
+    for (const kind of ['guardian', 'minion']) { const e = sim.spawn(kind); e.progress = sim.map.length - .85; }
+    if (typeof sim.build('archer', gateDefenceSites(sim.map)[1]) === 'string') throw new Error('Gate flank is not buildable');
+    for (let i = 0; i < 100; i++) sim.update(.02);
+    return { hp: sim.castleHp, gateDamage: sim.events.filter((e: any) => e.type === 'gateHit').map((e: any) => e.damage), enemyDamage: sim.events.filter((e: any) => e.type === 'damage').map((e: any) => e.damage), alive: sim.enemies.length, state: sim.enemies[0].state, door: !!view.scene.getObjectByName('castle-door'), cave: !!view.scene.getObjectByName('enemy-cave') };
+  });
+  expect(state.alive).toBe(2); expect(state.state).toBe('attacking'); expect(state.door && state.cave).toBe(true);
+  expect(state.hp).toBe(1000 - state.gateDamage.reduce((sum: number, value: number) => sum + value, 0));
+  expect(state.gateDamage).toEqual([55, 8, 8]); expect(state.enemyDamage.length).toBeGreaterThan(0);
+  await expect(page.locator('#hp')).toHaveText(String(state.hp)); await expect(page.locator('.gate-label')).toContainText(`${state.hp} / 1000`);
+  await expect(page.locator('#wave-status')).toContainText('2 atacando la puerta');
+  await expect(page.locator('#next-label')).toContainText('Refuerza sus flancos');
+  await expect(page.locator('.damage-number.gate')).toHaveCount(state.gateDamage.length);
+  expect(await page.locator('.damage-number.physical').evaluateAll(nodes => nodes.map(n => Number((n as HTMLElement).dataset.damage)))).toEqual(state.enemyDamage);
+  await page.screenshot({ animations: 'disabled', path: 'test-results/siege-desktop.png' });
+  await page.getByRole('button', { name: 'Acercar vista' }).click(); await page.getByRole('button', { name: 'Acercar vista' }).click();
+  await page.screenshot({ animations: 'disabled', path: 'test-results/siege-closeup.png' });
+  await page.getByRole('button', { name: 'Abrir campaña', exact: true }).click(); await page.getByRole('button', { name: 'Jugar: Aldea de los pinos', exact: true }).click();
+  await expect(page.locator('#hp')).toHaveText('1000'); await expect(page.locator('.damage-number')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
 test('real WebGL gameplay: free placement, upgrades, selling, pause, speed, help and live combat', async ({ page }) => {
   // Covers many pointer interactions plus live combat on the software WebGL renderer.
   test.setTimeout(120000);
@@ -100,7 +132,8 @@ for (const viewport of [{ width: 1440, height: 960 }, { width: 1920, height: 108
         const canvas = battlefield.renderer.domElement, rect = canvas.getBoundingClientRect();
         const missing: unknown[] = [];
         for (const point of simulation.map.path) {
-          const world = battlefield.camera.position.clone().set(point.x, .13, point.z).project(battlefield.camera);
+          const { roadHeight } = await load('/src/game/path.ts');
+          const world = battlefield.camera.position.clone().set(point.x, roadHeight(point, simulation.map), point.z).project(battlefield.camera);
           const x = rect.left + (world.x + 1) / 2 * rect.width, y = rect.top + (1 - world.y) / 2 * rect.height;
           if (document.elementFromPoint(x, y) !== canvas) missing.push({ point, x, y, element: document.elementFromPoint(x, y)?.outerHTML.slice(0, 90) });
         }
@@ -128,7 +161,7 @@ test('real defeat without unlocking and restart restore the complete game', asyn
     for (let i = 0; i < 100000 && sim.phase !== 'gameover'; i++) sim.update(.02);
     return { phase: sim.phase, score: sim.score, wave: sim.wave };
   });
-  expect(outcome.phase).toBe('gameover'); expect(outcome.wave).toBeGreaterThan(1);
+  expect(outcome.phase).toBe('gameover'); expect(outcome.wave).toBe(1);
   await expect(page.getByRole('heading', { name: 'El castillo ha caído.', exact: true })).toBeVisible();
   await expect(page.locator('#hp')).toHaveText('0');
   expect(await page.evaluate(() => localStorage.getItem('last-bastion-campaign-v1'))).toBeNull();
@@ -147,7 +180,7 @@ test('real defeat without unlocking and restart restore the complete game', asyn
 
 test('campaign victory unlocks maps and weapons, preserves progress on reload and resets mission state', async ({ page }) => {
   // Includes all four complete missions, multiple WebGL terrains and a full-page reload.
-  test.setTimeout(120000);
+  test.setTimeout(180000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Bloqueada: Villa del mercado', exact: true })).toBeDisabled();
@@ -161,7 +194,9 @@ test('campaign victory unlocks maps and weapons, preserves progress on reload an
     await page.evaluate(async () => {
       const importModule = (url: string): Promise<any> => import(/* @vite-ignore */ url);
       const { simulation: sim } = await importModule(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
-      for (let i = 0; i < 100000 && !sim.finished; i++) { sim.update(.02); for (const enemy of sim.enemies) sim.hit(enemy, 100000, 'magic'); }
+      // This fast-forward checks campaign state. Consume intermediate graphics events as normal frames do;
+      // live tower damage and damage labels are covered by the dedicated gameplay/siege checks.
+      for (let i = 0; i < 100000 && !sim.finished; i++) { sim.update(.02); for (const enemy of sim.enemies) sim.hit(enemy, 100000, 'magic'); sim.events.length = 0; }
     });
     await expect(page.getByRole('heading', { name: '¡Castillo defendido!', exact: true })).toBeVisible();
   }

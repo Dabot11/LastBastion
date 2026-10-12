@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import { WORLD } from '../game/config';
-import { roadDistance, type GameMap, type Point } from '../game/path';
+import { castleSpace, gateLocal, roadDistance, roadHeight, type GameMap, type Point } from '../game/path';
 import { groundMaterial, valleyHeight, type SurfaceKind } from './surfaces';
 interface Sample extends Point { value: number; }
 const TOP = WORLD.elevation + .05;
 function field(p: Point, map: GameMap): number {
-  const gate = map.path.at(-1)!, entry = map.path[0];
-  const courtyard = Math.max(Math.abs(p.x - gate.x) - 2.15, Math.abs(p.z - (gate.z - .95)) - 1.65);
-  const canyon = Math.min(roadDistance(p, map) - 1.45, Math.hypot(p.x - entry.x, p.z - entry.z) - 1.6, courtyard);
-  return canyon;
+  const local = gateLocal(p, map), entry = map.path[0];
+  if (castleSpace(p, map, .25) && local.z < -.05) return 1;
+  const forecourt = Math.max(Math.abs(local.x) - 2.1, Math.abs(local.z - 1.6) - 1.65);
+  return Math.min(roadDistance(p, map) - 1.45, Math.hypot(p.x - entry.x, p.z - entry.z) - 1.8, forecourt);
 }
 function interpolate(a: Sample, b: Sample): Sample {
   const t = a.value / (a.value - b.value);
@@ -37,7 +37,7 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
     for (const p of [a, b, c]) {
       const variation = 1 + .09 * Math.sin(p.x * .62 + p.z * .23) + .07 * Math.cos(p.z * .8 - p.x * .2);
       color.copy(baseGrass).multiplyScalar(variation);
-      append([new THREE.Vector3(p.x, valleyHeight(p.x, p.z), p.z)], topPositions, topColors, color);
+      append([new THREE.Vector3(p.x, castleSpace(p, map, .7) ? TOP : valleyHeight(p.x, p.z), p.z)], topPositions, topColors, color);
     }
   }
   function wall(a: Point, b: Point): void {
@@ -45,9 +45,8 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
     const mid = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
     const nx = -(b.z - a.z) / length, nz = (b.x - a.x) / length;
     const toward = field({ x: mid.x + nx * .06, z: mid.z + nz * .06 }, map) < 0 ? 1 : -1;
-    const floor = .13;
-    const middle = .82;
-    const levels = [floor, middle, TOP - .13, TOP];
+    const floor = Math.min(TOP - .015, roadHeight(mid, map));
+    const levels = [floor, floor + (TOP - floor) * .45, floor + (TOP - floor) * .9, TOP];
     const offsets = [.03, .12, .05, 0];
     const rings = levels.map((y, i) => [a, b].map(p => new THREE.Vector3(p.x + nx * toward * offsets[i], y, p.z + nz * toward * offsets[i])));
     for (let i = 0; i < rings.length - 1; i++) {
@@ -75,7 +74,7 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
     const outer = [inner + 1.2, inner + 3, inner + 5, inner + 8, inner + 12, inner + 18, inner + 26, inner + 36, 75];
     return [...outer.slice().reverse().map(p => -p), ...values, ...outer];
   }
-  const xs = coordinates(16.2), zs = coordinates(14.4), cols = xs.length - 1, rows = zs.length - 1;
+  const xs = coordinates(21.6), zs = coordinates(19.8), cols = xs.length - 1, rows = zs.length - 1;
   const samples: Sample[][] = [];
   for (let z = 0; z <= rows; z++) {
     samples[z] = [];
@@ -89,16 +88,14 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
   const walls = owned(makeGeometry(wallPositions, wallColors), 0xffffff, true, 'stone'); (walls.material as THREE.Material).side = THREE.DoubleSide; walls.castShadow = true;
   group.add(tops, walls);
   // A continuous earthen floor runs below the same route; elevated surfaces occlude it elsewhere.
-  const floorShape = new THREE.Shape();
-  for (let i = 0; i < 4; i++) {
-    const p = [[-15.02, -13.02], [15.02, -13.02], [15.02, 13.02], [-15.02, 13.02]][i];
-    if (!i) floorShape.moveTo(p[0], p[1]); else floorShape.lineTo(p[0], p[1]);
-  }
-  floorShape.closePath();
-  const floorGeometry = new THREE.ShapeGeometry(floorShape); floorGeometry.rotateX(-Math.PI / 2);
+  const floorGeometry = new THREE.PlaneGeometry(46, 42, 103, 94); floorGeometry.rotateX(-Math.PI / 2);
   const positions = floorGeometry.getAttribute('position'), uvs = floorGeometry.getAttribute('uv');
-  for (let i = 0; i < positions.count; i++) uvs.setXY(i, positions.getX(i) * .22, positions.getZ(i) * .22);
-  const floorMesh = owned(floorGeometry, map.theme === 'citadel' ? 0xd5b793 : 0xe1bc83, false, 'road'); floorMesh.position.y = .13;
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i), z = positions.getZ(i);
+    positions.setY(i, roadHeight({ x, z }, map)); uvs.setXY(i, x * .32, z * .32);
+  }
+  floorGeometry.computeVertexNormals();
+  const floorMesh = owned(floorGeometry, map.theme === 'citadel' ? 0xd5b793 : 0xe1bc83, false, 'road');
   group.add(floorMesh);
   return { group, surfaces: [tops, floorMesh] };
 }

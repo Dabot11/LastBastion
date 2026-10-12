@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { WORLD } from '../src/game/config';
 import { MISSIONS } from '../src/game/missions';
-import { placementError, samplePath } from '../src/game/path';
+import { gateLocal, roadHeight, placementError, samplePath } from '../src/game/path';
 import { landscape } from '../src/scene/landscape';
 
 for (const mission of MISSIONS) test(`rendered terrain matches road and complete tower footprints: ${mission.name}`, () => {
@@ -14,8 +14,11 @@ for (const mission of MISSIONS) test(`rendered terrain matches road and complete
     const hit = ray.intersectObjects(land.surfaces, false)[0]; assert.ok(hit, `No surface at ${x}, ${z}`); return hit.point.y;
   }
   for (let progress = 0; progress <= mission.map.length; progress += .8) {
-    const p = samplePath(progress, mission.map); assert.ok(Math.abs(height(p.x, p.z) - .13) < .001, 'The road must remain sunken and clear');
+    const p = samplePath(progress, mission.map); assert.ok(Math.abs(height(p.x, p.z) - roadHeight(p, mission.map)) < .015, `The rendered road must match enemy elevation at ${p.x}, ${p.z}`);
   }
+  const gate = mission.map.path.at(-1)!;
+  assert.ok(Math.abs(height(gate.x, gate.z) - (WORLD.elevation + .05)) < .015, 'The road must meet the elevated wooden threshold');
+  assert.ok(Math.abs(gateLocal(gate, mission.map).z) < .000001);
   let checked = 0;
   for (let x = -13; x <= 13; x += 2) for (let z = -11; z <= 11; z += 2) {
     if (placementError({ x, z }, [], 10000, 100, mission.map)) continue;

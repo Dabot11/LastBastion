@@ -30,10 +30,10 @@ export class Effects {
     const ring = new THREE.Mesh(this.ring, mat); ring.rotation.x = -Math.PI / 2; ring.position.copy(position); this.scene.add(ring);
     this.pulses.push({ object: ring, material: mat, life: duration, duration, size: radius, expansion: 1 });
   }
-  impact(kind: TowerKind | undefined, x: number, z: number, radius = 1.8): void {
-    const position = new THREE.Vector3(x, .5, z);
-    if (kind === 'cannon') { this.flash(position, 0xffad3b, 1.25, .28); this.burst(position, 0xffb953, 20, .08); this.pulse(new THREE.Vector3(x, .16, z), 0xeeb277, radius); }
-    else if (kind === 'mage') { this.flash(position, 0x57d5ff, .78); this.burst(position, 0x8de9fa, 7, .045); this.pulse(new THREE.Vector3(x, .16, z), 0x7acbee, .5, .25); }
+  impact(kind: TowerKind | undefined, x: number, z: number, radius = 1.8, ground = .13): void {
+    const position = new THREE.Vector3(x, ground + .4, z);
+    if (kind === 'cannon') { this.flash(position, 0xffad3b, 1.25, .28); this.burst(position, 0xffb953, 20, .08); this.pulse(new THREE.Vector3(x, ground + .03, z), 0xeeb277, radius); }
+    else if (kind === 'mage') { this.flash(position, 0x57d5ff, .78); this.burst(position, 0x8de9fa, 7, .045); this.pulse(new THREE.Vector3(x, ground + .03, z), 0x7acbee, .5, .25); }
     else this.burst(position, 0xe8c78e, 3, .04);
   }
   update(dt: number): void {

@@ -1,5 +1,5 @@
 import { TOWERS, WORLD, towerStats, upgradeCost, type TowerKind } from '../src/game/config';
-import { placementError, samplePath, type Point, type GameMap } from '../src/game/path';
+import { gatePoint, placementError, samplePath, type Point, type GameMap } from '../src/game/path';
 import { type Mission } from '../src/game/missions';
 import { Simulation } from '../src/game/simulation';
 
@@ -15,7 +15,7 @@ function sites(map: GameMap, offset: number): Site[] {
   if (!known.has(offset)) {
     const route: Point[] = []; for (let d = 0; d < map.length; d += .8) route.push(samplePath(d, map));
     const candidates: Site[] = [];
-    for (let x = -13.5 + offset; x < 14; x += .75) for (let z = -11.5 + offset; z < 12; z += .75) {
+    for (let x = -15.75 + offset; x < 16; x += .75) for (let z = -11.5 + offset; z < 12; z += .75) {
       if (placementError({ x, z }, [], Number.MAX_SAFE_INTEGER, 0, map)) continue;
       candidates.push({ x, z, distances: route.map(p => (p.x - x) ** 2 + (p.z - z) ** 2) });
     }
@@ -32,7 +32,11 @@ function place(sim: Simulation, kind: TowerKind, candidates: Site[], poor: boole
     if (placementError(site, sim.towers, sim.gold, TOWERS[kind].cost, sim.map)) continue;
     const covered = coverage(site, TOWERS[kind].range);
     const nearby = sim.towers.reduce((sum, t) => sum + Math.max(0, 1 - Math.hypot(site.x - t.x, site.z - t.z) / 6), 0);
-    const score = poor ? -covered : covered / (1 + nearby * .45);
+    const attackPositions = [gatePoint(-.8, .85, sim.map), gatePoint(.8, .85, sim.map)];
+    const coversGate = (p: Point, range: number) => attackPositions.every(gate => Math.hypot(p.x - gate.x, p.z - gate.z) < range - .2);
+    const coveredGate = sim.towers.some(t => coversGate(t, towerStats(t.kind, t.level).range));
+    const protectsGate = coversGate(site, TOWERS[kind].range);
+    const score = poor ? -covered : covered / (1 + nearby * .45) + (!coveredGate && protectsGate ? 30 : 0);
     if (score > highest) { highest = score; best = site; }
   }
   if (!best) return false;

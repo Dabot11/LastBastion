@@ -26,7 +26,7 @@ test('route has no crossing or alternative intersection', () => {
     assert.equal(orientation(a.start, a.end, b.start) * orientation(a.start, a.end, b.end) < 0 && orientation(b.start, b.end, a.start) * orientation(b.start, b.end, a.end) < 0, false);
   }
 });
-test('placement rejects route, scenery, overlap, castle, portal, boundaries and insufficient gold', () => {
+test('placement rejects route, scenery, overlap, castle, cave, boundaries and insufficient gold', () => {
   for (const p of PATH) assert.ok(placementError(p, [], 1000, 100));
   assert.ok(placementError({ x: 20, z: 0 }, [], 1000, 100));
   assert.ok(placementError(OBSTACLES[0], [], 1000, 100));
@@ -98,10 +98,10 @@ test('all four towers fire and apply projectile damage', () => {
     let p: Point | null = null;
     for (let x = 7; x < 14 && !p; x += .25) for (let z = 7; z < 12; z += .25) {
       const candidate = { x, z };
-      if (!placementError(candidate, [], 1000, TOWERS[kind].cost, sim.map) && distance(candidate, sim.map.path[0]) < 3.9) { p = candidate; break; }
+      if (!placementError(candidate, [], 1000, TOWERS[kind].cost, sim.map) && distance(candidate, samplePath(9, sim.map)) < 3.9) { p = candidate; break; }
     }
     assert.ok(p); const t = sim.build(kind, p); assert.equal(typeof t, 'object');
-    const target = sim.spawn('guardian'); const hp = target.hp;
+    const target = sim.spawn('guardian'); target.progress = 9; Object.assign(target, samplePath(9, sim.map)); const hp = target.hp;
     advance(sim, 2.5); assert.ok(target.hp < hp, `${kind} did not damage its target`);
   }
 });
@@ -121,9 +121,9 @@ test('movement follows every waypoint and is independent of frame rate', () => {
   const ea = a.spawn('minion'), eb = b.spawn('minion'); advance(a, 20, 1 / 30); advance(b, 20, 1 / 144);
   assert.ok(distance(ea, eb) < .000001); assert.ok(roadDistance(ea) < 1e-8);
 });
-test('leaks damage castle without gold or kills, defeat stops gameplay and new game resets', () => {
+test('repeated gate attacks cause defeat without gold or kills, then a new mission resets', () => {
   const sim = new Simulation(); sim.phase = 'wave'; sim.wave = 5; sim.castleHp = 100;
-  const e = sim.spawn('guardian'); e.progress = PATH_LENGTH - .01; sim.update(.1);
+  const e = sim.spawn('guardian'); e.progress = PATH_LENGTH - .01; advance(sim, 3);
   assert.equal(sim.castleHp, 0); assert.equal(sim.phase, 'gameover'); assert.equal(Number(sim.gold), 300); assert.equal(sim.kills, 0);
   assert.equal(typeof sim.build('archer', validPoint()), 'string'); assert.equal(sim.sell(1), 0);
   const wave = sim.wave; sim.startWave(); sim.update(100); assert.equal(sim.wave, wave);

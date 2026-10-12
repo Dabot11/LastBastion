@@ -24,7 +24,7 @@ function roundedPath(corners: Point[]): Point[] {
 export interface GameMap {
   path: Point[]; segments: { start: Point; end: Point; length: number }[]; length: number;
   obstacles: Obstacle[]; torches: Point[]; fences: Point[];
-  grass: number; sand: number; theme: 'forest' | 'village' | 'citadel';
+  grass: number; sand: number; theme: 'forest' | 'village' | 'citadel'; gateAngle: number;
 }
 export function samplePath(progress: number, map: GameMap = DEFAULT_MAP): Point & { angle: number } {
   let remaining = Math.max(0, progress);
@@ -40,17 +40,40 @@ export function segmentDistance(p: Point, a: Point, b: Point): number {
   return distance(p, { x: a.x + dx * t, z: a.z + dz * t });
 }
 export function roadDistance(p: Point, map: GameMap = DEFAULT_MAP): number { return Math.min(...map.segments.map(s => segmentDistance(p, s.start, s.end))); }
+// The gate is the route endpoint. Local +z faces the arriving army; the entire fortress lies behind it.
+export function gateLocal(p: Point, map: GameMap): Point {
+  const gate = map.path.at(-1)!, dx = p.x - gate.x, dz = p.z - gate.z;
+  return { x: dx * Math.cos(map.gateAngle) - dz * Math.sin(map.gateAngle), z: dx * Math.sin(map.gateAngle) + dz * Math.cos(map.gateAngle) };
+}
+export function gatePoint(x: number, z: number, map: GameMap): Point {
+  const gate = map.path.at(-1)!;
+  return { x: gate.x + x * Math.cos(map.gateAngle) + z * Math.sin(map.gateAngle), z: gate.z - x * Math.sin(map.gateAngle) + z * Math.cos(map.gateAngle) };
+}
+export function castleSpace(p: Point, map: GameMap, margin = 0): boolean {
+  const local = gateLocal(p, map);
+  return Math.abs(local.x) < 5.6 + margin && local.z < .45 + margin && local.z > -10.3 - margin;
+}
+export function gateDefenceSites(map: GameMap): Point[] { return [-3.1, 3.1].map(x => gatePoint(x, 2.15, map)); }
+export function roadHeight(p: Point, map: GameMap): number {
+  const t = Math.max(0, Math.min(1, (6.5 - distance(p, map.path.at(-1)!)) / 6.5));
+  // A gently rising approach meets the wooden threshold at plateau height.
+  return .13 + (WORLD.elevation + .05 - .13) * t * t * (3 - 2 * t);
+}
 export interface Obstacle extends Point { radius: number; type: 'tree' | 'rock' | 'house'; }
 export function createMap(points: Point[], initialSeed: number, theme: GameMap['theme'] = 'forest'): GameMap {
-  const path = roundedPath(points), segments = path.slice(1).map((end, i) => ({ start: path[i], end, length: distance(path[i], end) }));
-  const map: GameMap = { path, segments, length: segments.reduce((s, p) => s + p.length, 0), obstacles: [], torches: [], fences: [], grass: theme === 'village' ? 0xb1b274 : theme === 'citadel' ? 0x86a69a : 0x8fa965, sand: theme === 'citadel' ? 0xc0b39a : 0xcba876, theme };
+  const destination = points.at(-1)!;
+  const gate = { x: destination.x, z: destination.z - 3.2 };
+  const path = roundedPath([{ x: 22, z: 14.8 }, { x: 19.3, z: 15.4 }, ...points.slice(0, -1), { x: gate.x, z: gate.z + 5.5 }, gate]), segments = path.slice(1).map((end, i) => ({ start: path[i], end, length: distance(path[i], end) }));
+  const last = segments.at(-1)!;
+  const gateAngle = Math.atan2(last.start.x - last.end.x, last.start.z - last.end.z);
+  const map: GameMap = { path, segments, length: segments.reduce((s, p) => s + p.length, 0), obstacles: [], torches: [], fences: [], grass: theme === 'village' ? 0xb1b274 : theme === 'citadel' ? 0x86a69a : 0x8fa965, sand: theme === 'citadel' ? 0xc0b39a : 0xcba876, theme, gateAngle };
   let seed = initialSeed;
   const random = (): number => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   for (let i = 0; i < 170; i++) {
     const p = { x: (random() - .5) * 28.2, z: (random() - .5) * 24.2 };
     const roll = random(); const type: Obstacle['type'] = ((theme === 'village' && roll < .14) || (theme === 'citadel' && roll < .18)) ? 'house' : roll < (theme === 'citadel' ? .4 : .82) ? 'tree' : 'rock';
     const radius = type === 'house' ? .95 : .38;
-    if (roadDistance(p, map) > radius + 2.1 && distance(p, path.at(-1)!) > radius + 3.6 && distance(p, path[0]) > radius + 2.7 && !map.obstacles.some(o => distance(p, o) < o.radius + radius + .35)) map.obstacles.push({ ...p, radius, type });
+    if (roadDistance(p, map) > radius + 2.1 && !castleSpace(p, map, radius + 1) && !gateDefenceSites(map).some(site => distance(p, site) < radius + 1.8) && distance(p, path.at(-1)!) > radius + 3.6 && distance(p, path[0]) > radius + 3.8 && !map.obstacles.some(o => distance(p, o) < o.radius + radius + .35)) map.obstacles.push({ ...p, radius, type });
   }
   map.torches = [{ x: -9, z: -3.3 }, { x: 9, z: 5.3 }, { x: -11, z: 8 }, { x: 9, z: -7.4 }].filter(p => roadDistance(p, map) > 2 && distance(p, path.at(-1)!) > 4 && !map.obstacles.some(o => distance(p, o) < o.radius + .4));
   map.fences = [{ x: -3, z: -7.4 }, { x: 1, z: 3.5 }, { x: -3, z: 6.5 }, { x: 4, z: -3.5 }].filter(p => roadDistance(p, map) > 2 && !map.obstacles.some(o => distance(p, o) < o.radius + .9));
@@ -64,8 +87,7 @@ export function placementError(p: Point, towers: Point[], gold: number, cost: nu
   if (Math.abs(p.x) > WORLD.width / 2 - 1 || Math.abs(p.z) > WORLD.depth / 2 - 1) return 'Construye dentro del terreno';
   if (roadDistance(p, map) < WORLD.roadHalfWidth + WORLD.towerRadius + .65) return 'El camino debe quedar libre';
   const castle = map.path.at(-1)!;
-  const overlapsCourtyard = Math.abs(p.x - castle.x) < 2.15 + WORLD.towerRadius + .42 && p.z < castle.z + .7 + WORLD.towerRadius + .42 && p.z > castle.z - 2.6 - WORLD.towerRadius - .42;
-  if (distance(p, castle) < 3.2 || overlapsCourtyard) return 'Esta zona pertenece al castillo';
+  if (distance(p, castle) < 3.2 || castleSpace(p, map, WORLD.towerRadius + .42)) return 'Esta zona pertenece al castillo';
   if (distance(p, map.path[0]) < 2.8) return 'La entrada enemiga debe quedar libre';
   if (map.obstacles.some(o => distance(p, o) < o.radius + WORLD.towerRadius)) return 'Hay un edificio, árbol o roca en esta ubicación';
   if (map.torches.some(o => distance(p, o) < WORLD.towerRadius + .35)) return 'Hay una antorcha en esta ubicación';

@@ -6,7 +6,7 @@ El objetivo es defender el castillo. El mundo pasa de una aldea a una villa, una
 
 Elegir una misión → preparar posiciones → defender sus oleadas → recibir estrellas y puntuación → desbloquear un destino → avanzar o repetir.
 
-El MVP tiene cuatro misiones. Cada una combina un mapa diferente, entre cinco y ocho oleadas y un conjunto de defensas. La ruta sigue siendo única, los enemigos permanecen en ella y las torres se colocan libremente. El castillo tiene 1000 puntos de salud. Su destrucción termina la misión.
+El MVP tiene cuatro misiones. Cada una combina un mapa diferente, entre cinco y ocho oleadas y un conjunto de defensas. La ruta sigue siendo única, los enemigos permanecen en ella y las torres se colocan libremente. La puerta de madera del castillo tiene 1000 puntos de salud. Los enemigos que alcanzan la entrada se detienen y la golpean repetidamente; su destrucción termina la misión. Solo dos atacan simultáneamente, con una fila de espera en la aproximación. Mantener una defensa que cubra los dos flancos permite rematar supervivientes y ganar tiempo para reinvertir durante el combate. El camino sube al umbral de una fortaleza grande asentada sobre terreno elevado.
 
 ## Recompensas que sí están en el MVP
 

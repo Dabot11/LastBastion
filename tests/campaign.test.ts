@@ -47,7 +47,7 @@ test('every mission reaches real victory after its finite waves and terminal sta
     assert.deepEqual({ wave: sim.wave, gold: sim.gold, score: sim.score, hp: sim.castleHp }, before);
   }
 });
-test('victory waits for all spawns, enemies and projectiles; last-wave leakage can cause defeat', () => {
+test('victory waits for all spawns, enemies and projectiles; a surviving gate attacker prevents victory and can cause defeat', () => {
   const sim = new Simulation(); sim.wave = sim.mission.waves.length; sim.phase = 'wave'; sim.spawnQueue = ['minion']; sim.update(.02);
   assert.equal(sim.phase, 'wave'); assert.equal(sim.enemies.length, 1);
   sim.hit(sim.enemies[0], 10000, 'magic');
@@ -55,7 +55,7 @@ test('victory waits for all spawns, enemies and projectiles; last-wave leakage c
   sim.update(.02); assert.equal(sim.phase, 'wave');
   for (let i = 0; i < 100; i++) sim.update(.02); assert.equal(sim.phase, 'victory');
   const loss = new Simulation(); loss.phase = 'wave'; loss.wave = loss.mission.waves.length; loss.castleHp = 1;
-  loss.spawn('minion').progress = loss.map.length - .001; loss.update(.02); assert.equal(loss.phase, 'gameover'); assert.equal(loss.stars, 0);
+  loss.spawn('minion').progress = loss.map.length - .001; loss.update(.02); assert.equal(loss.phase, 'wave'); assert.equal(loss.enemies.length, 1); for (let i = 0; i < 30; i++) loss.update(.02); assert.equal(loss.phase, 'gameover'); assert.equal(loss.stars, 0);
 });
 test('progress unlocks missions in order, persists, keeps best stars and score, and counts wins once', () => {
   const adapter = storage(), progress = new CampaignProgress(adapter);

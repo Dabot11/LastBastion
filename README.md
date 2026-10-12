@@ -97,7 +97,9 @@ src/
     progress.ts     Estrellas, desbloqueos y guardado de campaña
   scene/
     models.ts       Geometría y materiales reutilizables
-    terrain.ts      Cañón, plataformas, vegetación, castillo y portal
+    terrain.ts      Decoración, vegetación, castillo y portal
+    landscape.ts    Plataformas continuas y paredes de cañón por contornos
+    effects.ts      Partículas agrupadas, destellos y anillos de impacto
     view.ts         Renderizado, cámara, raycasting, vista previa y efectos
   audio.ts          Sonidos sintéticos con Web Audio
   ui.ts             HUD, tarjetas, mejoras, guía y pantalla de derrota
@@ -106,10 +108,19 @@ src/
 tests/
   simulation.test.ts
   campaign.test.ts
+  graphics.test.ts
   browser/game.spec.ts
 ```
 
-La simulación no depende de Three.js ni del DOM. Usa pasos de 20 ms y tiempo transcurrido, con límite de recuperación para evitar saltos después de una interrupción prolongada. El renderizado agrupa los elementos estáticos por material, reutiliza geometrías, instancia el terreno y las paredes, limita partículas y hornea las sombras estáticas. Los enemigos usan sombras de contacto móviles.
+La simulación no depende de Three.js ni del DOM. Usa pasos de 20 ms y tiempo transcurrido, con límite de recuperación para evitar saltos después de una interrupción prolongada. El renderizado agrupa escenario y cuerpos por material, reutiliza modelos y geometrías, construye plataformas continuas por contornos e instancia las rocas y hasta 200 partículas. Las sombras del escenario se actualizan al construir, vender o cambiar de mapa. Los enemigos usan sombras de contacto móviles; las antorchas y hechizos usan un único mapa de brillo generado en el navegador. No se descargan texturas ni modelos externos.
+
+## Aspecto visual
+
+El terreno tiene bordes orgánicos, césped con variaciones suaves de color, paredes facetadas y un camino de tierra continuo. Los tres escenarios conservan sus rutas y zonas de construcción originales. Árboles, flores, vallas y edificios refuerzan el carácter de cada región.
+
+El castillo y las torres tienen mampostería, banderas, almenas y armas reconocibles. Las torres reaccionan a los disparos y sus mejoras añaden adornos. Las flechas y virotes tienen puntas y plumas; los magos disparan orbes con estela; los cañones tienen destellos y ondas de explosión correspondientes al radio real de daño. Los enemigos se distinguen por sus cuerpos, armaduras, cuernos y tamaños.
+
+Las pruebas geométricas usan raycasting sobre la superficie renderizada para comprobar que toda la ruta sigue hundida y que la base completa de una torre legal descansa sobre terreno elevado, en cada misión.
 
 ## Validación y alcance
 

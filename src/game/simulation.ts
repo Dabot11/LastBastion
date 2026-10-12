@@ -4,7 +4,7 @@ import { MISSIONS, earnedStars, waveEnemies, type Mission } from './missions';
 export interface Enemy extends Point { id: number; kind: EnemyKind; hp: number; maxHp: number; progress: number; angle: number; }
 export interface Tower extends Point { id: number; kind: TowerKind; level: number; cooldown: number; invested: number; targetAngle: number; }
 export interface Projectile extends Point { id: number; kind: TowerKind; targetId: number; target: Point; damage: number; damageKind: DamageKind; splash: number; speed: number; origin: Point; travelled: number; }
-export type GameEvent = { type: 'shot' | 'impact' | 'kill' | 'build' | 'upgrade' | 'leak' | 'wave' | 'gameover' | 'victory'; x: number; z: number; kind?: TowerKind };
+export type GameEvent = { type: 'shot' | 'impact' | 'kill' | 'build' | 'upgrade' | 'leak' | 'wave' | 'gameover' | 'victory'; x: number; z: number; kind?: TowerKind; radius?: number };
 export class Simulation {
   gold = WORLD.initialGold; castleHp = WORLD.castleHp; wave = 0; kills = 0; score = 0;
   phase: 'preparation' | 'wave' | 'gameover' | 'victory' = 'preparation'; preparation = WORLD.preparation;
@@ -87,7 +87,7 @@ export class Simulation {
       if (d <= step) {
         if (p.splash) { for (const e of this.enemies) if (e.hp > 0 && distance(e, p.target) <= p.splash) this.hit(e, p.damage, p.damageKind); }
         else if (target) this.hit(target, p.damage, p.damageKind);
-        this.events.push({ type: 'impact', ...p.target, kind: p.kind });
+        this.events.push({ type: 'impact', ...p.target, kind: p.kind, radius: p.splash });
       } else { p.x += (p.target.x - p.x) / d * step; p.z += (p.target.z - p.z) / d * step; p.travelled += step; remaining.push(p); }
     }
     this.projectiles = remaining; this.enemies = this.enemies.filter(e => e.hp > 0);

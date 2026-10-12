@@ -1,0 +1,54 @@
+name: Publicar The Last Bastion
+
+# Publication is deliberate: run this from Actions after selecting GitHub Actions in Pages settings.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      pages: read
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+      - name: Probar las reglas del juego
+        run: npm test
+      - name: Compilar el juego
+        run: npm run build
+      - name: Preparar GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Guardar la página compilada
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar el juego
+        id: deployment
+        uses: actions/deploy-pages@v4

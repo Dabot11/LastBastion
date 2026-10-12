@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { ENEMIES, type EnemyKind, type TowerKind } from '../game/config';
+import { ENEMIES, TOWERS, type EnemyKind, type TowerKind } from '../game/config';
 const mats = new Map<string, THREE.MeshStandardMaterial>();
 const geos = new Map<string, THREE.BufferGeometry>();
 const templates = new Map<string, THREE.Group>();
@@ -132,6 +132,22 @@ function makeTower(kind: TowerKind, level: number): THREE.Group {
   }
   const muzzle = new THREE.Object3D(); muzzle.name = 'muzzle'; muzzle.position.set(kind === 'mage' ? .3 : kind === 'archer' ? .27 : 0, kind === 'mage' ? 1.03 : .52, kind === 'mage' ? .13 : .74); turret.add(muzzle);
   for (let i = 1; i < level; i++) { mesh(g, box(1.03, .06, 1.03), GOLD, 0, .48 + i * .36, 0); mesh(g, octa(.055), GOLD, -.14 + i * .14, height + .30, .53); }
+  if (level >= 2) {
+    for (const x of [-.44, .44]) for (const z of [-.44, .44]) {
+      mesh(g, box(.17, .15, .17), GOLD, x, height + .43, z);
+      mesh(g, box(.06, height * .6, .06), EDGE, x, height * .5 + .35, z);
+    }
+    banner(g, -.29, .98, .48, .65);
+    turret.scale.setScalar(level === 3 ? 1.10 : 1.04);
+  }
+  if (level === 3) {
+    for (const x of [-.45, .45]) {
+      mesh(g, cylinder(.065, .40, 6), GOLD, x, height + .81, -.44);
+      mesh(g, octa(.09), TOWERS[kind].color, x, height + 1.06, -.44, kind === 'mage' ? 0x008da7 : 0);
+    }
+    mesh(g, box(.26, .12, .08), GOLD, 0, height + .23, .47);
+    mesh(g, octa(.075), TOWERS[kind].color, 0, height + .24, .54);
+  }
   compact(g, ['turret']); compact(turret, ['barrel']); return g;
 }
 export function towerModel(kind: TowerKind, level = 1): THREE.Group {

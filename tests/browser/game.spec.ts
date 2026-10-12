@@ -129,7 +129,7 @@ test('real defeat without unlocking and restart restore the complete game', asyn
     return { phase: sim.phase, score: sim.score, wave: sim.wave };
   });
   expect(outcome.phase).toBe('gameover'); expect(outcome.wave).toBeGreaterThan(1);
-  await expect(page.getByRole('heading', { name: 'Game Over', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'El castillo ha caído.', exact: true })).toBeVisible();
   await expect(page.locator('#hp')).toHaveText('0');
   expect(await page.evaluate(() => localStorage.getItem('last-bastion-campaign-v1'))).toBeNull();
   await page.screenshot({ animations: 'disabled', path: 'test-results/bastion-gameover.png' });
@@ -188,4 +188,84 @@ test('campaign victory unlocks maps and weapons, preserves progress on reload an
   await page.reload(); await expect(page.locator('.campaign-summary')).toContainText('12 / 12'); await expect(page.getByRole('button', { name: 'Jugar: Ciudadela real', exact: true })).toBeEnabled();
   await expect(page.locator('body')).not.toContainText('CRISTAL'); expect(errors).toEqual([]);
   await page.screenshot({ animations: 'disabled', path: 'test-results/campaign-complete.png' });
+});
+
+test('campaign and help support keyboard navigation without interacting with the battlefield underneath', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Iniciar campaña', exact: true })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.getByRole('button', { name: 'Jugar: Aldea de los pinos', exact: true })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Iniciar campaña', exact: true })).toBeFocused();
+  expect(await page.locator('#board').evaluate(el => (el as HTMLElement).inert)).toBe(true);
+  await page.getByRole('button', { name: 'Cómo jugar', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Cada posición importa.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cerrar ayuda', exact: true })).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(page.getByRole('heading', { name: 'Recupera el reino.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cómo jugar', exact: true }).click(); await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Iniciar campaña', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter'); await expect(page.locator('#overlay')).toBeHidden();
+  expect(await page.locator('#board').evaluate(el => (el as HTMLElement).inert)).toBe(false);
+  await page.keyboard.press('Space'); await expect(page.locator('#pause-tag')).toBeVisible();
+  await page.getByRole('button', { name: 'Iniciar oleada 1', exact: true }).click();
+  await expect(page.locator('#pause-tag')).toBeHidden(); await expect(page.locator('#wave-status')).toContainText('en el valle');
+  expect(await page.evaluate(() => localStorage.getItem('last-bastion-campaign-v1'))).toBeNull();
+});
+
+test('portrait menus, tower actions and battle results fit a phone viewport', async ({ page }) => {
+  test.setTimeout(90000);
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/');
+  async function fits(): Promise<void> {
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const dialog = await page.locator('#dialog').boundingBox();
+    if (await page.locator('#overlay').isVisible()) { expect(dialog!.x).toBeGreaterThanOrEqual(0); expect(dialog!.x + dialog!.width).toBeLessThanOrEqual(390); expect(Math.round(dialog!.height)).toBeLessThanOrEqual(820); }
+  }
+  await fits(); await page.screenshot({ path: 'test-results/ui-campaign-phone.png', animations: 'disabled' });
+  await page.getByRole('button', { name: 'Cómo jugar', exact: true }).click(); await fits();
+  await page.getByRole('button', { name: 'Volver a la campaña', exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'test-results/ui-help-phone.png', animations: 'disabled' });
+  await page.getByRole('button', { name: 'Volver a la campaña', exact: true }).click();
+  await page.getByRole('button', { name: 'Iniciar campaña', exact: true }).click(); await page.keyboard.press('Space');
+  await expect(page.locator('#pause-tag')).toBeVisible(); await fits();
+  await page.getByRole('button', { name: 'Cómo jugar', exact: true }).click();
+  await page.getByRole('button', { name: 'Volver al valle', exact: true }).click();
+  // Exercise visible upgrade actions with real legal purchases; victory/defeat fixtures only advance the results UI.
+  const p = await page.evaluate(async () => {
+    const load = (url: string): Promise<any> => import(/* @vite-ignore */ url);
+    const { simulation: sim, battlefield: view } = await load(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
+    const { placementError } = await load('/src/game/path.ts');
+    for (let x = 7; x < 14; x += .3) for (let z = 7; z < 12; z += .3) if (!placementError({ x, z }, [], sim.gold, 100, sim.map)) {
+      sim.build('archer', { x, z }); const v = view.camera.position.clone().set(x, 2.7, z).project(view.camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight };
+    }
+    throw new Error('No legal build point');
+  });
+  await expect(page.locator('#gold')).toHaveText('200'); await page.mouse.click(p.x, p.y);
+  await expect(page.locator('#tower-panel')).toBeVisible();
+  const upgrade = await page.locator('#upgrade').boundingBox(), dock = await page.locator('.tower-cards').boundingBox();
+  expect(upgrade!.y + upgrade!.height).toBeLessThan(dock!.y);
+  await page.locator('#upgrade').click(); await expect(page.locator('#gold')).toHaveText('120');
+  await page.screenshot({ path: 'test-results/ui-upgrade-phone.png', animations: 'disabled' });
+  await page.evaluate(async () => { const { simulation: sim } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); sim.towers = []; for (let i = 0; i < 100000 && !sim.finished; i++) sim.update(.02); });
+  await expect(page.getByRole('heading', { name: 'El castillo ha caído.', exact: true })).toBeVisible(); await fits();
+  await page.screenshot({ path: 'test-results/ui-defeat-phone.png', animations: 'disabled' });
+  await page.getByRole('button', { name: 'Reintentar misión', exact: true }).click();
+  await page.evaluate(async () => { const { simulation: sim } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); for (let i = 0; i < 100000 && !sim.finished; i++) { sim.update(.02); for (const e of sim.enemies) sim.hit(e, 100000, 'magic'); } });
+  await expect(page.getByRole('heading', { name: '¡Castillo defendido!', exact: true })).toBeVisible(); await fits();
+  await page.getByRole('button', { name: 'Siguiente misión', exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'test-results/ui-victory-phone.png', animations: 'disabled' });
+});
+
+test('a completed campaign recognizes the victory and recommends replaying a mission with fewer stars', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('last-bastion-campaign-v1')) localStorage.setItem('last-bastion-campaign-v1', JSON.stringify({ pines: { stars: 3, score: 1000 }, market: { stars: 1, score: 1000 }, citadel: { stars: 2, score: 1000 }, siege: { stars: 3, score: 1000 } }));
+  });
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Reino recuperado.' })).toBeVisible();
+  await expect(page.locator('.hero-goal')).toContainText('Villa del mercado'); await expect(page.locator('.campaign-summary')).toContainText('9 / 12');
+  await page.getByRole('button', { name: 'Conseguir más estrellas', exact: true }).click();
+  await expect(page.locator('#mission-title')).toHaveText('VILLA DEL MERCADO'); await expect(page.locator('#gold')).toHaveText('300');
+  await page.evaluate(() => localStorage.setItem('last-bastion-campaign-v1', JSON.stringify({ pines: { stars: 3, score: 1000 }, market: { stars: 3, score: 1000 }, citadel: { stars: 3, score: 1000 }, siege: { stars: 3, score: 1000 } })));
+  await page.reload(); await expect(page.locator('.campaign-summary')).toContainText('12 / 12');
+  await expect(page.getByRole('button', { name: 'Repetir campaña', exact: true })).toBeVisible();
+  await page.screenshot({ path: 'test-results/ui-completed-campaign-desktop.png', animations: 'disabled' });
 });

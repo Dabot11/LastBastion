@@ -69,7 +69,7 @@ Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardia
 
 Las defensas tienen prioridades diferentes: arqueros contra la primera línea, ballestas contra amenazas acorazadas, cañones contra grupos y magos contra armadura vulnerable a magia. Combinar posiciones y mejoras conserva más salud que abandonar las torres iniciales. Los ajustes de economía, enemigos y resultados están documentados en [BALANCE.md](BALANCE.md). Para repetir las simulaciones sin abrir WebGL, ejecuta `npm run balance`.
 
-Cuando el castillo pierde toda su salud aparece **Game Over**. Resiste la última oleada y elimina todos los enemigos para ganar: verás estrellas, puntuación y el siguiente destino desbloqueado. Cada misión comienza de nuevo con 300 de oro, 1000 de salud y ninguna torre; el progreso de campaña permanece.
+Cuando el castillo pierde toda su salud aparece **El castillo ha caído**. Resiste la última oleada y elimina todos los enemigos para ganar: verás estrellas, puntuación y el siguiente destino desbloqueado. Cada misión comienza de nuevo con 300 de oro, 1000 de salud y ninguna torre; el progreso de campaña permanece.
 
 ### Campaña y recompensas
 
@@ -94,6 +94,9 @@ El oro solo sirve para construir y mejorar durante cada misión. XP, niveles de 
 - **Espacio:** pausar/reanudar; en pausa puedes construir, mejorar y vender.
 - **1× / 2×:** velocidad de simulación; **M:** activar/silenciar efectos.
 - **?:** guía de juego; **Restablecer vista:** encuadre inicial.
+- **Tab / Mayús + Tab:** recorrer los menús; **Enter / Espacio:** activar el botón enfocado. **Esc** cierra la ayuda o devuelve a la misión actual desde la campaña.
+
+Puedes abrir la guía desde la campaña antes de empezar. Los menús mantienen el foco dentro de sus controles y dejan la batalla inactiva mientras están abiertos. Iniciar una oleada desde la pausa táctica reanuda la defensa.
 
 El juego se pausa al ocultar la pestaña. La guía también detiene la simulación. El sonido comienza silenciado y solo se activa tras una interacción.
 
@@ -116,7 +119,8 @@ src/
     effects.ts      Partículas agrupadas, destellos y anillos de impacto
     view.ts         Renderizado, cámara, raycasting, vista previa y efectos
   audio.ts          Sonidos sintéticos con Web Audio
-  ui.ts             HUD, tarjetas, mejoras, guía y pantalla de derrota
+  illustrations.ts  Vistas de los mapas reales e ilustración del castillo
+  ui.ts             Campaña, HUD, mejoras, ayuda y resultados de batalla
   main.ts           Controles, ciclo de pasos fijos y campaña persistente
   style.css         Interfaz adaptable
 tests/
@@ -132,15 +136,19 @@ scripts/
 
 La simulación no depende de Three.js ni del DOM. Usa pasos de 20 ms y tiempo transcurrido, con límite de recuperación para evitar saltos después de una interrupción prolongada. El renderizado agrupa escenario y cuerpos por material, reutiliza modelos y geometrías, construye el valle por contornos e instancia las rocas y hasta 200 partículas. El muestreo del suelo es más fino junto al camino y más espaciado en el paisaje lejano. Las sombras del escenario se actualizan al construir, vender o cambiar de mapa. El pigmento del terreno, las sombras de contacto y el mapa de brillo de antorchas y hechizos se generan con pequeñas texturas reutilizables. No se descargan texturas ni modelos externos.
 
-## Aspecto visual
+## Interfaz y aspecto visual
+
+Campaña, ayuda, mejoras, victoria y derrota comparten paneles azules, acentos dorados, botones y tipografía. La campaña muestra una vista de cada ruta y sus obstáculos reales, la defensa que incorpora y el estado de desbloqueo. El acceso principal permite empezar o continuar la misión actual. Al completar la campaña reconoce la victoria y propone repetir la misión con menos estrellas; la ayuda presenta cuatro pasos visuales. Las victorias destacan estrellas y nuevas defensas, y las derrotas ofrecen un consejo según las torres construidas.
+
+La información de oro, salud y oleadas tiene mayor contraste. Las defensas bloqueadas muestran un candado y su misión; las disponibles sin oro conservan sus precios e indican cuánto falta. El panel de cada torre compara atributos y mantiene sus acciones de mejorar y vender accesibles al desplazarse por las estadísticas en pantallas pequeñas. Los avisos temporales evitan superponerse a la pausa o los detalles de torre.
 
 El campo de batalla forma parte de un valle que continúa más allá de la zona de construcción. No tiene una base rectangular ni paredes exteriores de tablero: el fondo incluye laderas con bosque, crestas rocosas, atalayas y niebla azul que suaviza la distancia. El suelo del área jugable sigue siendo llano y conserva las rutas y reglas de construcción de cada misión. Los pinos tienen ramas y copas irregulares; arbustos, flores, vallas y edificios añaden detalle a cada región.
 
-El escenario ocupa toda la pantalla. Los recursos, controles y tarjetas de defensas aparecen en paneles flotantes. La cámara muestra más cerca el castillo y la entrada enemiga, con un ángulo que deja el recorrido fuera de las tarjetas en desktop. Se puede acercar o alejar con los botones **+ / −** o la rueda, arrastrar para explorar y **Restablecer vista** para recuperar el encuadre inicial.
+El escenario ocupa toda la pantalla. Los recursos, controles y tarjetas de defensas aparecen en paneles flotantes. La cámara calcula el espacio libre entre el HUD y las tarjetas, incluyendo la altura del castillo, para conservar visible el recorrido en distintos tamaños de pantalla. Se puede acercar o alejar con los botones **+ / −** o la rueda, arrastrar para explorar y **Restablecer vista** para recuperar el encuadre inicial.
 
-El castillo y las torres tienen mampostería, banderas, almenas y armas reconocibles. Las torres reaccionan a los disparos y sus mejoras añaden adornos. Las flechas y virotes tienen puntas y plumas; los magos disparan orbes con estela; los cañones tienen destellos y ondas de explosión correspondientes al radio real de daño. Los enemigos se distinguen por sus cuerpos, armaduras, cuernos y tamaños.
+El castillo y las torres tienen mampostería, banderas, almenas y armas reconocibles. Las torres reaccionan a los disparos y sus mejoras añaden bandas, estandartes, remates y armas más grandes. Los iconos de construcción se renderizan a mayor resolución. El suelo, camino y piedra usan texturas procedurales distintas con relieve de material; huellas de carros, pequeñas piedras y helechos añaden detalle sin cambiar colisiones ni posiciones legales. Las flechas y virotes tienen puntas y plumas; los magos disparan orbes con estela; los cañones tienen destellos y ondas de explosión correspondientes al radio real de daño. Los enemigos se distinguen por sus cuerpos, armaduras, cuernos y tamaños.
 
-Las pruebas geométricas usan raycasting sobre la superficie renderizada para comprobar que toda la ruta sigue hundida, que la base completa de una torre legal descansa sobre terreno elevado y que el valle continúa por los cuatro lados sin ampliar el área de construcción. Las pruebas de navegador comprueban además que ningún punto de las cuatro rutas quede detrás de un control en resoluciones de 900×700, 1280×720, 1440×960 y 1920×1080, y que el zoom y el restablecimiento funcionen.
+Las pruebas geométricas usan raycasting sobre la superficie renderizada para comprobar que toda la ruta sigue hundida, que la base completa de una torre legal descansa sobre terreno elevado y que el valle continúa por los cuatro lados sin ampliar el área de construcción. Las pruebas de navegador comprueban además que ningún punto de las cuatro rutas quede detrás de un control en resoluciones de 900×700, 1280×720, 1440×960 y 1920×1080, y que el zoom y el restablecimiento funcionen. También se revisan los menús, resultados y acciones de torre a 390×844, la navegación con teclado, el retorno desde la ayuda y el inicio desde la pausa.
 
 ## Validación y alcance
 

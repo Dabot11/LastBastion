@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { WORLD } from '../game/config';
 
-let grain: THREE.DataTexture | undefined;
+export type SurfaceKind = 'grass' | 'road' | 'stone';
+const grains = new Map<SurfaceKind, THREE.DataTexture>();
 let shadow: THREE.MeshBasicMaterial | undefined;
 export function contactShadowMaterial(): THREE.MeshBasicMaterial {
   if (!shadow) {
@@ -16,19 +17,27 @@ export function contactShadowMaterial(): THREE.MeshBasicMaterial {
   return shadow;
 }
 // A small, seamless pigment texture adds detail without downloading artwork.
-export function groundMaterial(color: number, vertexColors = false): THREE.MeshStandardMaterial {
-  if (!grain) {
-    const pixels = new Uint8Array(128 * 128 * 4); let seed = 711;
-    for (let i = 0; i < pixels.length; i += 4) {
+export function groundMaterial(color: number, vertexColors = false, surface: SurfaceKind = 'grass'): THREE.MeshStandardMaterial {
+  if (!grains.has(surface)) {
+    const size = 256, pixels = new Uint8Array(size * size * 4); let seed = 711;
+    for (let z = 0; z < size; z++) for (let x = 0; x < size; x++) {
+      const i = (z * size + x) * 4;
       seed = (seed * 1664525 + 1013904223) >>> 0;
-      const shade = 233 + (seed >>> 24) % 23;
-      pixels[i] = pixels[i + 1] = pixels[i + 2] = shade; pixels[i + 3] = 255;
+      const grain = (seed >>> 24) / 255;
+      // Periodic waves make the larger pigment patches seamless, with fine grit over them.
+      const patch = Math.sin(x * Math.PI * 4 / size + Math.sin(z * Math.PI * 6 / size)) * Math.cos(z * Math.PI * 4 / size);
+      const veins = Math.pow(Math.abs(Math.sin(z * Math.PI * 12 / size + Math.sin(x * Math.PI * 4 / size) * .8)), 16);
+      const shade = surface === 'stone' ? 225 + patch * 11 + grain * 17 - veins * 24 : surface === 'road' ? 229 + patch * 10 + grain * 13 : 221 + patch * 18 + grain * 15;
+      pixels[i] = Math.min(255, shade - (surface === 'grass' ? 5 : 0));
+      pixels[i + 1] = Math.min(255, shade);
+      pixels[i + 2] = Math.min(255, shade - (surface === 'grass' ? 9 : 0)); pixels[i + 3] = 255;
     }
-    grain = new THREE.DataTexture(pixels, 128, 128); grain.wrapS = grain.wrapT = THREE.RepeatWrapping;
+    const grain = new THREE.DataTexture(pixels, size, size); grain.wrapS = grain.wrapT = THREE.RepeatWrapping;
     grain.magFilter = THREE.LinearFilter; grain.minFilter = THREE.LinearMipmapLinearFilter;
-    grain.generateMipmaps = true; grain.needsUpdate = true;
+    grain.generateMipmaps = true; grain.needsUpdate = true; grains.set(surface, grain);
   }
-  const material = new THREE.MeshStandardMaterial({ color, map: grain, vertexColors, roughness: 1 });
+  const grain = grains.get(surface)!;
+  const material = new THREE.MeshStandardMaterial({ color, map: grain, bumpMap: grain, bumpScale: surface === 'stone' ? .06 : .025, vertexColors, roughness: 1 });
   material.userData.owned = true; return material;
 }
 

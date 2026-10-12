@@ -34,6 +34,17 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
   }
   const castle = castleModel(); castle.position.set(map.path.at(-1)!.x, .16, map.path.at(-1)!.z); group.add(castle);
   const portal = portalModel(); portal.position.set(map.path[0].x, .14, map.path[0].z); portal.rotation.y = -.65; group.add(portal);
+  // Worn cart tracks and tiny stones belong to the same route, without adding collision surfaces.
+  for (let progress = 2; progress < map.length - 3; progress += .85) {
+    const p = samplePath(progress, map);
+    for (const side of [-1, 1]) {
+      const mark = mesh(group, box(.065, .004, .56 + .12 * Math.sin(progress)), 0xc4a16f, p.x + Math.cos(p.angle) * .34 * side, .136, p.z - Math.sin(p.angle) * .34 * side);
+      mark.rotation.y = p.angle; mark.castShadow = false;
+    }
+    if (Math.sin(progress * 12.3) > .8) {
+      const pebble = mesh(group, orb(.055), 0xdbbe92, p.x + Math.cos(p.angle) * .75, .154, p.z - Math.sin(p.angle) * .75); pebble.scale.y = .32; pebble.castShadow = false;
+    }
+  }
   // Decorative pebbles stay inside the canyon setback and never change construction or enemy movement.
   for (let progress = 1; progress < map.length - 3; progress += 1.7) {
     const p = samplePath(progress, map), side = Math.sin(progress * 17) > 0 ? 1 : -1;
@@ -45,10 +56,10 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
   for (let i = 0; i < vertices.count; i++) {
     const x = vertices.getX(i), y = vertices.getY(i), z = vertices.getZ(i);
     vertices.setXYZ(i, x * (1 + .09 * Math.sin(y * 4 + z * 3)), y + .055 * Math.sin(x * 5 + z * 2), z * (1 + .06 * Math.cos(y * 4 - x * 3)));
-    tint.setHex(y > .75 ? 0xc2cca9 : 0xffffff).multiplyScalar(.88 + .12 * Math.sin(x * 5 + y * 4 + z * 3)); cliffColors.push(tint.r, tint.g, tint.b);
+    tint.setHex(y > .75 ? 0xa6bd84 : 0xffffff).multiplyScalar(.88 + .12 * Math.sin(x * 5 + y * 4 + z * 3)); cliffColors.push(tint.r, tint.g, tint.b);
   }
   cliffGeometry.setAttribute('color', new THREE.Float32BufferAttribute(cliffColors, 3)); cliffGeometry.computeVertexNormals();
-  const canyonRocks = new THREE.InstancedMesh(cliffGeometry, groundMaterial(0xffffff, true), Math.ceil(map.length / 1.15) * 2);
+  const canyonRocks = new THREE.InstancedMesh(cliffGeometry, groundMaterial(0xffffff, true, 'stone'), Math.ceil(map.length / 1.15) * 2);
   const slab = new THREE.Object3D(), slabColor = new THREE.Color(); let slabCount = 0;
   for (let progress = 2; progress < map.length - 3; progress += 1.15) for (const side of [-1, 1]) {
     const p = samplePath(progress, map);
@@ -76,6 +87,16 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
       for (let j = 0; j < 3; j++) { const flower = mesh(group, orb(.045), j % 2 ? 0xf6d689 : 0xe2c5d0, p.x + (j - 1) * .09, y + .045, p.z + Math.sin(j) * .08); flower.castShadow = false; }
     } else {
       for (let j = 0; j < 3; j++) { const blade = mesh(group, cone(.035, .17 + j * .025, 3), i % 3 ? 0x4e7e39 : 0x739447, p.x + (j - 1) * .04, y + .09, p.z); blade.rotation.z = (j - 1) * .35; blade.castShadow = false; }
+    }
+  }
+  // Ferns and clover add silhouette detail around existing scenery; the build rules stay authoritative.
+  for (const [i, o] of map.obstacles.entries()) if (o.type !== 'house') {
+    const p = { x: o.x + .6 * Math.sin(i * 3), z: o.z + .6 * Math.cos(i * 3) };
+    if (placementError(p, [], 10000, 0, map)) continue;
+    for (let j = 0; j < 5; j++) {
+      const angle = j * Math.PI * .4;
+      const leaf = mesh(group, cone(.08, .38, 4), j % 2 ? 0x467b42 : 0x78a255, p.x + Math.sin(angle) * .12, WORLD.elevation + .2, p.z + Math.cos(angle) * .12);
+      leaf.rotation.set(Math.cos(angle) * .55, angle, Math.sin(angle) * .55); leaf.castShadow = false;
     }
   }
   // Merge static props into one draw call per material. Tiny flora does not cast shadows.

@@ -10,6 +10,7 @@ import { AudioEffects } from './audio';
 const root = document.getElementById('app')!;
 let missionIndex = 0, sim = new Simulation(), paused = false, speed = 1;
 let overlay: 'campaign' | 'help' | 'gameover' | 'victory' | null = 'campaign', finishedRecorded = false, missionActive = false;
+let helpReturn: 'campaign' | null = null;
 let progress: CampaignProgress;
 try { progress = new CampaignProgress(localStorage); } catch { progress = new CampaignProgress(); }
 const audio = new AudioEffects();
@@ -28,15 +29,16 @@ function startMission(index: number): void {
   view.loadMap(sim.map); ui.hideOverlay(); ui.briefing(sim); ui.update(sim, paused, speed, null, progress);
 }
 function showCampaign(): void { cancel(); overlay = 'campaign'; ui.campaign(progress, missionActive ? sim : undefined); }
+function showHelp(): void { if (overlay === 'victory' || overlay === 'gameover') return; helpReturn = overlay === 'campaign' ? 'campaign' : null; overlay = 'help'; ui.help(helpReturn === 'campaign'); }
+function closeHelp(): void { if (helpReturn === 'campaign') showCampaign(); else { overlay = null; ui.hideOverlay(); } helpReturn = null; }
 const ui = new UI(root, {
   select, cancel, mission: startMission, campaign: showCampaign, resume: () => { overlay = null; ui.hideOverlay(); }, nextMission: () => startMission(missionIndex + 1),
   pause: () => { if (!overlay && !sim.finished) paused = !paused; },
   speed: () => { speed = speed === 1 ? 2 : 1; }, sound: () => audio.toggle(),
-  nextWave: () => { if (!overlay && !paused) sim.startWave(); else if (paused) ui.toast('Reanuda la partida para iniciar la oleada'); },
+  nextWave: () => { if (!overlay && sim.phase === 'preparation') { paused = false; sim.startWave(); } },
   upgrade: () => { if (ui.selectedId !== null) { const error = sim.upgrade(ui.selectedId); if (error) ui.toast(error); else ui.toast('Torre mejorada: más daño, alcance y velocidad'); } },
   sell: () => { if (ui.selectedId !== null) { const refund = sim.sell(ui.selectedId); ui.toast(`Torre vendida · +${refund} oro`); cancel(); } },
-  help: () => { if (sim.finished || overlay === 'campaign') return; overlay = 'help'; ui.help(); },
-  closeHelp: () => { overlay = null; ui.hideOverlay(); },
+  help: showHelp, closeHelp,
   restart: () => startMission(missionIndex), resetCamera: () => view.resetCamera(), zoom: delta => view.zoom(delta),
 }, progress);
 try { view = new GameView(ui.board, sim.map); ui.setIcons(view.towerIcons()); }
@@ -74,8 +76,13 @@ canvas.addEventListener('contextmenu', event => { event.preventDefault(); cancel
 canvas.addEventListener('wheel', event => { event.preventDefault(); if (!overlay) view.zoom(event.deltaY); }, { passive: false });
 window.addEventListener('keydown', event => {
   if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (overlay) {
+    if (event.key === 'Escape') { if (overlay === 'help') closeHelp(); else if (overlay === 'campaign' && missionActive && !sim.finished) { overlay = null; ui.hideOverlay(); } }
+    return;
+  }
+  if (event.target instanceof Element && event.target.closest('button,a') && (event.code === 'Space' || event.key === 'Enter')) return;
   const kinds: TowerKind[] = ['archer', 'crossbow', 'mage', 'cannon'];
-  if (event.key === 'Escape') { if (overlay === 'help') { overlay = null; ui.hideOverlay(); } else cancel(); }
+  if (event.key === 'Escape') cancel();
   if (event.key >= '1' && event.key <= '4') select(kinds[Number(event.key) - 1]);
   if (event.code === 'Space') { event.preventDefault(); if (!overlay && !sim.finished) paused = !paused; }
   if (event.key.toLowerCase() === 'm') ui.el('sound').click();

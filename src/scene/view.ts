@@ -3,7 +3,7 @@ import { TOWERS, WORLD, towerStats, type TowerKind } from '../game/config';
 import { placementError, type GameMap, type Point } from '../game/path';
 import { type Simulation, type Tower } from '../game/simulation';
 import { createTerrain } from './terrain';
-import { box, circle, enemyModel, material, projectileModel, towerModel } from './models';
+import { box, circle, enemyModel, projectileModel, towerModel } from './models';
 interface EnemyVisual { group: THREE.Group; health: THREE.Mesh; }
 import { Effects } from './effects';
 export class GameView {
@@ -24,18 +24,22 @@ export class GameView {
   ghost: THREE.Group | null = null; ghostKind: TowerKind | null = null; hover: Point | null = null;
   selectedId: number | null = null; private ghostValid: boolean | null = null;
   private pan = new THREE.Vector3(); private observer: ResizeObserver; private framingY = 0;
+  private readonly healthMaterial = new THREE.MeshBasicMaterial({ color: 0xf17770, toneMapped: false });
+  private readonly healthBackground = new THREE.MeshBasicMaterial({ color: 0x142c3b, toneMapped: false });
+  private readonly enemyShade = new THREE.MeshBasicMaterial({ color: 0x20352c, transparent: true, opacity: .22, depthWrite: false });
   constructor(readonly container: HTMLElement, map: GameMap) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setClearColor(0xb8d0db); this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1;
     this.renderer.domElement.setAttribute('aria-label', 'Campo de batalla 3D: construye defensas en las plataformas verdes');
+    this.renderer.domElement.tabIndex = 0;
     container.append(this.renderer.domElement);
-    this.scene.fog = new THREE.Fog(0xb8d0db, 43, 94);
-    this.scene.add(new THREE.HemisphereLight(0xc8eaff, 0x5e7435, 1.6));
-    const rim = new THREE.DirectionalLight(0xbadcf9, .7); rim.position.set(20, 15, -24); this.scene.add(rim);
-    const sun = new THREE.DirectionalLight(0xffe1a3, 3.1); sun.position.set(-18, 32, 14); sun.castShadow = true;
+    this.scene.fog = new THREE.Fog(0xb7cfcc, 40, 92);
+    this.scene.add(new THREE.HemisphereLight(0xc4e3ef, 0x385e39, 1.25));
+    const rim = new THREE.DirectionalLight(0xb5dbe9, .8); rim.position.set(20, 15, -24); this.scene.add(rim);
+    const sun = new THREE.DirectionalLight(0xffe8c0, 3.3); sun.position.set(-18, 32, 14); sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = -25; sun.shadow.camera.right = 25;
     sun.shadow.camera.top = 25; sun.shadow.camera.bottom = -25; sun.shadow.camera.far = 80; sun.shadow.normalBias = .06; sun.shadow.bias = .00025; this.scene.add(sun); this.renderer.shadowMap.autoUpdate = false; this.renderer.shadowMap.needsUpdate = true;
     this.effects = new Effects(this.scene);
@@ -50,18 +54,25 @@ export class GameView {
   resize(): void {
     const w = this.container.clientWidth, h = this.container.clientHeight; if (!w || !h) return;
     this.renderer.setSize(w, h); const aspect = w / h;
-    const height = Math.max(w < 700 ? 32 : 28, 40 / aspect); this.camera.left = -height * aspect / 2; this.camera.right = height * aspect / 2;
-    this.camera.top = height / 2; this.camera.bottom = -height / 2;
-    // Fit the default route above the actual floating dock, without zooming the whole world out.
-    // A separate camera makes this independent of the player's current pan and zoom.
-    const base = this.camera.clone(); base.zoom = 1; base.position.set(-9, 29.7, 24); base.lookAt(0, 0, 0); base.updateProjectionMatrix(); base.updateMatrixWorld();
-    const dock = this.container.parentElement?.querySelector('.tower-cards')?.getBoundingClientRect(), board = this.container.getBoundingClientRect();
-    let shift = 0;
-    if (dock) for (const p of this.map.path) {
-      const projected = new THREE.Vector3(p.x, .13, p.z).project(base);
-      const x = board.left + (projected.x + 1) / 2 * w, y = board.top + (1 - projected.y) / 2 * h;
-      if (x > dock.left - 16 && x < dock.right + 16) shift = Math.max(shift, y - dock.top + 24);
-    }
+    let height = Math.max(w < 700 ? 32 : 28, 40 / aspect);
+    const board = this.container.getBoundingClientRect();
+    const hud = this.container.parentElement?.querySelector('.topbar')?.getBoundingClientRect();
+    const dock = this.container.parentElement?.querySelector('.tower-cards')?.getBoundingClientRect();
+    const safeTop = (hud?.bottom ?? board.top + 110) - board.top + 16;
+    const safeBottom = (dock?.top ?? board.bottom - 140) - board.top - 24;
+    const safeHeight = Math.max(100, safeBottom - safeTop);
+    const base = this.camera.clone(); base.zoom = 1; base.position.set(-9, 29.7, 24); base.lookAt(0, 0, 0); base.updateMatrixWorld();
+    const frame = () => {
+      base.left = -height * aspect / 2; base.right = height * aspect / 2; base.top = height / 2; base.bottom = -height / 2; base.updateProjectionMatrix();
+      const castle = this.map.path.at(-1)!;
+      const points = [...this.map.path.map(p => new THREE.Vector3(p.x, .13, p.z)), new THREE.Vector3(castle.x, 4.9, castle.z - 1), new THREE.Vector3(this.map.path[0].x, 2.5, this.map.path[0].z)];
+      const ys = points.map(p => (1 - p.project(base).y) / 2 * h);
+      return { min: Math.min(...ys), max: Math.max(...ys) };
+    };
+    let bounds = frame();
+    if (bounds.max - bounds.min > safeHeight) { height *= (bounds.max - bounds.min) / safeHeight; bounds = frame(); }
+    this.camera.left = base.left; this.camera.right = base.right; this.camera.top = base.top; this.camera.bottom = base.bottom;
+    const shift = (bounds.min + bounds.max - safeTop - safeBottom) / 2;
     const up = new THREE.Vector3().setFromMatrixColumn(base.matrixWorld, 1);
     this.framingY = -shift * height / (h * up.y); this.updateCamera();
   }
@@ -102,10 +113,10 @@ export class GameView {
   private createEnemy(id: number, kind: Parameters<typeof enemyModel>[0]): EnemyVisual {
     const group = enemyModel(kind);
     group.traverse(o => { if (o instanceof THREE.Mesh) o.castShadow = false; });
-    const shadow = new THREE.Mesh(circle(.42, 12), new THREE.MeshBasicMaterial({ color: 0x3c332f, transparent: true, opacity: .18, depthWrite: false }));
+    const shadow = new THREE.Mesh(circle(.42, 12), this.enemyShade);
     shadow.rotation.x = -Math.PI / 2; shadow.position.y = .012; group.add(shadow);
-    const bg = new THREE.Mesh(box(.84, .075, .035), material(0x2c2230)); bg.position.set(0, Number(group.userData.healthHeight ?? 1.35), 0); bg.quaternion.copy(this.camera.quaternion);
-    const health = new THREE.Mesh(box(.76, .045, .04), material(0xe45b67)); health.position.z = .015; bg.add(health); group.add(bg);
+    const bg = new THREE.Mesh(box(.84, .075, .035), this.healthBackground); bg.position.set(0, Number(group.userData.healthHeight ?? 1.35), 0); bg.quaternion.copy(this.camera.quaternion);
+    const health = new THREE.Mesh(box(.76, .045, .04), this.healthMaterial); health.position.z = .015; bg.add(health); group.add(bg);
     this.scene.add(group); const visual = { group, health }; this.enemies.set(id, visual); return visual;
   }
   private syncTower(t: Tower): THREE.Group {
@@ -185,7 +196,7 @@ export class GameView {
     this.renderer.render(this.scene, this.camera);
   }
   towerIcons(): Record<TowerKind, string> {
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); renderer.setSize(200, 180); renderer.setPixelRatio(1);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); renderer.setSize(320, 288); renderer.setPixelRatio(1);
     renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
     const scene = new THREE.Scene(); scene.add(new THREE.HemisphereLight(0xffffff, 0x657b88, 3)); const light = new THREE.DirectionalLight(0xffeac5, 4); light.position.set(-3, 5, 4); scene.add(light);
     const camera = new THREE.OrthographicCamera(-1.8, 1.8, 1.7, -1.55, .1, 30); camera.position.set(3, 3.7, 5); camera.lookAt(0, 1.45, 0);
@@ -207,5 +218,5 @@ export class GameView {
     this.map = map; this.surfaces = createTerrain(this.terrainRoot, map).surfaces; this.collectFlames();
     this.range.visible = false; this.renderer.shadowMap.needsUpdate = true; this.resetCamera();
   }
-  dispose(): void { this.observer.disconnect(); this.effects.dispose(); this.renderer.dispose(); }
+  dispose(): void { this.observer.disconnect(); this.effects.dispose(); this.healthMaterial.dispose(); this.healthBackground.dispose(); this.enemyShade.dispose(); this.renderer.dispose(); }
 }

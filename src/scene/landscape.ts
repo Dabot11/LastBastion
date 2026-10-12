@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { WORLD } from '../game/config';
 import { roadDistance, type GameMap, type Point } from '../game/path';
-import { groundMaterial, valleyHeight } from './surfaces';
+import { groundMaterial, valleyHeight, type SurfaceKind } from './surfaces';
 interface Sample extends Point { value: number; }
 const TOP = WORLD.elevation + .05;
 function field(p: Point, map: GameMap): number {
@@ -14,8 +14,8 @@ function interpolate(a: Sample, b: Sample): Sample {
   const t = a.value / (a.value - b.value);
   return { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t, value: 0 };
 }
-function owned(geometry: THREE.BufferGeometry, color: number, vertexColors = false): THREE.Mesh {
-  const mat = groundMaterial(color, vertexColors);
+function owned(geometry: THREE.BufferGeometry, color: number, vertexColors = false, surface: SurfaceKind = 'grass'): THREE.Mesh {
+  const mat = groundMaterial(color, vertexColors, surface);
   const mesh = new THREE.Mesh(geometry, mat); mesh.receiveShadow = true; return mesh;
 }
 function makeGeometry(positions: number[], colors: number[]): THREE.BufferGeometry {
@@ -27,7 +27,7 @@ function makeGeometry(positions: number[], colors: number[]): THREE.BufferGeomet
 export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.Object3D[] } {
   const group = new THREE.Group();
   const topPositions: number[] = [], topColors: number[] = [], wallPositions: number[] = [], wallColors: number[] = [];
-  const baseGrass = new THREE.Color(map.theme === 'forest' ? 0x70a53d : map.theme === 'village' ? 0x92ad48 : 0x68a05c);
+  const baseGrass = new THREE.Color(map.theme === 'forest' ? 0x62954c : map.theme === 'village' ? 0x8d9d50 : 0x58966a);
   const rockColor = new THREE.Color(map.theme === 'citadel' ? 0x8a99a3 : 0x9c9c8e);
   const color = new THREE.Color();
   const append = (points: THREE.Vector3[], positions: number[], colors: number[], tint: THREE.Color): void => {
@@ -35,7 +35,7 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
   };
   function topTriangle(a: Point, b: Point, c: Point): void {
     for (const p of [a, b, c]) {
-      const variation = 1 + .12 * Math.sin(p.x * .62 + p.z * .23) + .08 * Math.cos(p.z * .8 - p.x * .2);
+      const variation = 1 + .09 * Math.sin(p.x * .62 + p.z * .23) + .07 * Math.cos(p.z * .8 - p.x * .2);
       color.copy(baseGrass).multiplyScalar(variation);
       append([new THREE.Vector3(p.x, valleyHeight(p.x, p.z), p.z)], topPositions, topColors, color);
     }
@@ -86,7 +86,7 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
     clip([a, d, c]); clip([a, c, b]);
   }
   const tops = owned(makeGeometry(topPositions, topColors), 0xffffff, true); tops.castShadow = true;
-  const walls = owned(makeGeometry(wallPositions, wallColors), 0xffffff, true); (walls.material as THREE.Material).side = THREE.DoubleSide; walls.castShadow = true;
+  const walls = owned(makeGeometry(wallPositions, wallColors), 0xffffff, true, 'stone'); (walls.material as THREE.Material).side = THREE.DoubleSide; walls.castShadow = true;
   group.add(tops, walls);
   // A continuous earthen floor runs below the same route; elevated surfaces occlude it elsewhere.
   const floorShape = new THREE.Shape();
@@ -98,7 +98,7 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
   const floorGeometry = new THREE.ShapeGeometry(floorShape); floorGeometry.rotateX(-Math.PI / 2);
   const positions = floorGeometry.getAttribute('position'), uvs = floorGeometry.getAttribute('uv');
   for (let i = 0; i < positions.count; i++) uvs.setXY(i, positions.getX(i) * .22, positions.getZ(i) * .22);
-  const floorMesh = owned(floorGeometry, map.theme === 'citadel' ? 0xe7bd8a : 0xf0c385); floorMesh.position.y = .13;
+  const floorMesh = owned(floorGeometry, map.theme === 'citadel' ? 0xd5b793 : 0xe1bc83, false, 'road'); floorMesh.position.y = .13;
   group.add(floorMesh);
   return { group, surfaces: [tops, floorMesh] };
 }

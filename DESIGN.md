@@ -23,7 +23,7 @@ El MVP sirve para comprobar si el jugador entiende cómo construir, llega a una 
 
 Registrar durante pruebas de juego, sin recopilar datos personales: misión elegida, tiempo aproximado, resultado, salud restante, torres usadas y una nota sobre el momento divertido o frustrante. Objetivo inicial orientativo: misiones de 3–6 minutos de juego activo, con pausa opcional para planificar. Los tiempos y la dificultad se ajustarán después de partidas reales.
 
-Revisar primero que una estrategia razonable permita ganar la aldea, que varias combinaciones puedan ganar cada misión y que alcanzar tres estrellas requiera mejores posiciones, sin depender de una única combinación obligatoria.
+Revisar primero que una estrategia razonable permita ganar la aldea, que varias combinaciones puedan ganar cada misión y que alcanzar tres estrellas requiera mejores posiciones, sin depender de una única combinación obligatoria. La primera revisión de números, criterios y resultados reproducibles está en [BALANCE.md](BALANCE.md); `npm run balance` permite repetirla. Las simulaciones se completan con pruebas de juego antes de seguir aumentando la dificultad.
 
 ## Iteraciones siguientes
 

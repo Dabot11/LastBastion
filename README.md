@@ -56,7 +56,9 @@ Selecciona una torre y mueve el cursor sobre el césped. La vista previa verde p
 
 Haz clic en una torre construida para ver sus estadísticas, mejorarla hasta **nivel 3** o venderla por **el 70%** de lo invertido. Las mejoras aumentan daño, alcance y frecuencia; las del cañón también aumentan su radio de explosión.
 
-Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardianes con resistencia física y mágica. Cada misión tiene una composición propia y un final definido. Tienes 20 segundos de preparación entre oleadas y puedes iniciar la siguiente antes de tiempo. Al completar una oleada recibes una bonificación de oro.
+Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardianes con resistencia física y mágica. Cada misión tiene una composición propia y un final definido. Durante la preparación ves los enemigos de la próxima oleada y una sugerencia de defensa; los guardianes se anuncian antes de empezar y llegan con escoltas. Tienes 20 segundos de preparación entre oleadas y puedes iniciar la siguiente antes de tiempo. Al completar una oleada recibes una bonificación de oro.
+
+Las defensas tienen prioridades diferentes: arqueros contra la primera línea, ballestas contra amenazas acorazadas, cañones contra grupos y magos contra armadura vulnerable a magia. Combinar posiciones y mejoras conserva más salud que abandonar las torres iniciales. Los ajustes de economía, enemigos y resultados están documentados en [BALANCE.md](BALANCE.md). Para repetir las simulaciones sin abrir WebGL, ejecuta `npm run balance`.
 
 Cuando el castillo pierde toda su salud aparece **Game Over**. Resiste la última oleada y elimina todos los enemigos para ganar: verás estrellas, puntuación y el siguiente destino desbloqueado. Cada misión comienza de nuevo con 300 de oro, 1000 de salud y ninguna torre; el progreso de campaña permanece.
 
@@ -109,9 +111,13 @@ src/
   style.css         Interfaz adaptable
 tests/
   simulation.test.ts
+  balance.test.ts
   campaign.test.ts
   graphics.test.ts
   browser/game.spec.ts
+scripts/
+  balance-scenarios.ts  Estrategias legales y combate real reproducible
+  balance-report.ts     Comparación de dificultad, economía y duración
 ```
 
 La simulación no depende de Three.js ni del DOM. Usa pasos de 20 ms y tiempo transcurrido, con límite de recuperación para evitar saltos después de una interrupción prolongada. El renderizado agrupa escenario y cuerpos por material, reutiliza modelos y geometrías, construye el valle por contornos e instancia las rocas y hasta 200 partículas. El muestreo del suelo es más fino junto al camino y más espaciado en el paisaje lejano. Las sombras del escenario se actualizan al construir, vender o cambiar de mapa. El pigmento del terreno, las sombras de contacto y el mapa de brillo de antorchas y hechizos se generan con pequeñas texturas reutilizables. No se descargan texturas ni modelos externos.

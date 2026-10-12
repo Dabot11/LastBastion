@@ -1,5 +1,5 @@
 import { TOWERS, towerStats, upgradeCost, type TowerKind } from './game/config';
-import { MISSIONS, towerUnlockMission } from './game/missions';
+import { MISSIONS, towerUnlockMission, waveAdvice, waveSummary } from './game/missions';
 import type { CampaignProgress } from './game/progress';
 import type { Simulation } from './game/simulation';
 export const ICONS = {
@@ -97,17 +97,19 @@ export class UI {
   }
   toast(text: string): void { window.clearTimeout(this.toastTimer); this.el('toast').textContent = text; this.el('toast').hidden = false; this.toastTimer = window.setTimeout(() => { this.el('toast').hidden = true; }, 2600); }
   update(sim: Simulation, paused: boolean, speed: number, placement: string | null, progress: CampaignProgress): void {
+    const prep = sim.phase === 'preparation', next = sim.mission.waves[sim.wave];
     this.el('gold').textContent = String(sim.gold); this.el('hp').textContent = String(sim.castleHp); this.el('hp-progress').style.width = `${sim.castleHp / 10}%`;
-    this.el('wave').textContent = `Oleada ${Math.max(1, sim.wave)} / ${sim.mission.waves.length}`;
-    this.el('wave-status').textContent = sim.phase === 'wave' ? `${sim.enemies.length} en el valle · ${sim.spawnQueue.length} por llegar` : sim.phase === 'gameover' ? 'El castillo ha caído' : sim.phase === 'victory' ? '¡Misión completada!' : sim.wave ? 'Oleada superada' : 'Preparando defensas';
+    this.el('wave').textContent = `Oleada ${Math.max(1, sim.wave + (prep ? 1 : 0))} / ${sim.mission.waves.length}`;
+    this.el('wave-status').textContent = sim.phase === 'wave' ? `${sim.enemies.length} en el valle · ${sim.spawnQueue.length} por llegar` : sim.phase === 'gameover' ? 'El castillo ha caído' : sim.phase === 'victory' ? '¡Misión completada!' : waveSummary(next);
     this.el('wave-progress').style.width = `${(sim.phase === 'preparation' || sim.finished ? sim.wave : sim.wave - 1 + (sim.spawned - sim.enemies.length) / Math.max(1, sim.waveTotal)) / sim.mission.waves.length * 100}%`;
-    this.el('challenge').hidden = !sim.mission.waves[sim.wave - 1]?.guardian;
+    this.el('challenge').hidden = !(prep ? next : sim.mission.waves[sim.wave - 1])?.guardian;
+    this.el('challenge').textContent = prep ? 'GUARDIÁN' : 'HORDA DE ÉLITE';
     if (this.lastWave !== sim.wave) { this.lastWave = sim.wave; if (sim.mission.waves[sim.wave - 1]?.guardian) this.toast('¡Horda de élite! Un guardián se aproxima.'); }
     this.el('pause-tag').hidden = !paused; this.el('pause').innerHTML = icon(paused ? 'play' : 'pause'); this.el('pause').setAttribute('aria-label', paused ? 'Reanudar' : 'Pausar');
     this.el('speed').textContent = `${speed}×`; this.el('speed').setAttribute('aria-label', `Cambiar velocidad a ${speed === 1 ? 2 : 1}x`);
-    const prep = sim.phase === 'preparation'; const waveButton = this.el('next-wave') as HTMLButtonElement; waveButton.disabled = !prep;
+    const waveButton = this.el('next-wave') as HTMLButtonElement; waveButton.disabled = !prep;
     waveButton.innerHTML = prep ? `Iniciar oleada ${sim.wave + 1} ${icon('arrow')}` : `${icon('shield')} ${sim.finished ? sim.phase === 'victory' ? 'Misión superada' : 'Bastión caído' : 'Defiende el castillo'}`;
-    this.el('next-label').textContent = prep ? sim.wave ? 'Un respiro antes de la batalla' : 'La horda se aproxima' : 'Mantén tus defensas';
+    this.el('next-label').textContent = prep ? waveAdvice(next, sim.mission.towers) : 'Mantén tus defensas';
     this.el('next-countdown').textContent = prep ? `Preparación: ${Math.ceil(sim.preparation)} s` : `Oleada ${sim.wave} · ${sim.kills} enemigos derrotados`;
     this.el('record').textContent = `${progress.totalStars} / ${MISSIONS.length * 3} ★`;
     document.querySelectorAll<HTMLButtonElement>('[data-tower]').forEach(b => { const kind = b.dataset.tower as TowerKind; const locked = !sim.mission.towers.includes(kind); b.disabled = locked || sim.gold < TOWERS[kind].cost || sim.finished; b.classList.toggle('locked', locked); b.title = locked ? `Se desbloquea en la misión ${towerUnlockMission(kind)}` : TOWERS[kind].description; const subtitle = b.querySelector('.card-copy > span'); if (subtitle) subtitle.textContent = locked ? `Misión ${towerUnlockMission(kind)} · Bloqueada` : TOWERS[kind].description.split(' · ')[0]; b.classList.toggle('selected', kind === this.selectedKind); });

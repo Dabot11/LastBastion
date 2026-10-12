@@ -17,6 +17,8 @@ async function buildPoint(page: Page, index: number, y = 1.7): Promise<{ x: numb
   }, { index, y });
 }
 test('real WebGL gameplay: free placement, upgrades, selling, pause, speed, help and live combat', async ({ page }) => {
+  // Covers many pointer interactions plus live combat on the software WebGL renderer.
+  test.setTimeout(120000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/'); await expect(page.getByRole('heading', { name: 'Recupera el reino.' })).toBeVisible();
   await page.getByRole('button', { name: 'Jugar: Aldea de los pinos', exact: true }).click();
@@ -54,11 +56,36 @@ test('responsive interface fits small desktop and keeps controls usable', async 
   await page.screenshot({ animations: 'disabled', path: 'test-results/bastion-small.png' });
 });
 
-test('full-screen valley keeps every route visible on desktop and camera controls restore the view', async ({ page }) => {
-  test.setTimeout(120000);
+test('preparation forecasts the actual enemies and warns about an escorted guardian before starting', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('last-bastion-campaign-v1', JSON.stringify({ pines: { stars: 3, score: 1000 }, market: { stars: 3, score: 1000 } })));
+  await page.goto('/'); await page.getByRole('button', { name: 'Jugar: Ciudadela real', exact: true }).click();
+  await page.getByRole('button', { name: 'Pausar', exact: true }).click();
+  await expect(page.locator('#wave-status')).toContainText('9 esbirros · 3 rápidos');
+  const state = await page.evaluate(async () => {
+    const load = (url: string): Promise<any> => import(/* @vite-ignore */ url);
+    const { simulation: sim } = await load(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
+    const { scenarioPlanner } = await load('/scripts/balance-scenarios.ts'); const plan = scenarioPlanner(sim.mission, 'mixed');
+    // Play four entire waves with legally purchased towers and actual projectiles, then inspect preparation.
+    for (let ticks = 0; ticks < 40000 && !sim.finished && !(sim.wave === 4 && sim.phase === 'preparation'); ticks++) {
+      if (sim.phase === 'preparation') { plan(sim); sim.startWave(); }
+      sim.update(.02); sim.events.length = 0;
+    }
+    return { wave: sim.wave, phase: sim.phase, hp: sim.castleHp };
+  });
+  expect(state).toEqual({ wave: 4, phase: 'preparation', hp: 1000 });
+  await expect(page.locator('#wave')).toHaveText('Oleada 5 / 7');
+  await expect(page.locator('#wave-status')).toContainText('1 guardián');
+  await expect(page.locator('#challenge')).toBeVisible(); await expect(page.locator('#challenge')).toHaveText('GUARDIÁN');
+  await expect(page.locator('#next-label')).toContainText('Guardián con escolta');
+  await page.screenshot({ animations: 'disabled', path: 'test-results/balance-preview.png' });
+  await page.getByRole('button', { name: 'Reanudar', exact: true }).click(); await page.getByRole('button', { name: 'Iniciar oleada 5', exact: true }).click();
+  await expect(page.locator('#wave-status')).toContainText('en el valle'); await expect(page.locator('#challenge')).toHaveText('HORDA DE ÉLITE');
+});
+
+for (const viewport of [{ width: 1440, height: 960 }, { width: 1920, height: 1080 }, { width: 900, height: 700 }, { width: 1280, height: 720 }]) test(`full-screen valley keeps every route visible at ${viewport.width}×${viewport.height}`, async ({ page }) => {
+  // Each resolution has its own bounded test; three terrain rebuilds fit software WebGL.
   await page.addInitScript(() => localStorage.setItem('last-bastion-campaign-v1', JSON.stringify({ pines: { stars: 3, score: 1000 }, market: { stars: 3, score: 1000 } })));
   await page.goto('/');
-  for (const viewport of [{ width: 1440, height: 960 }, { width: 1920, height: 1080 }, { width: 900, height: 700 }, { width: 1280, height: 720 }]) {
     await page.setViewportSize(viewport);
     for (const name of ['Aldea de los pinos', 'Villa del mercado', 'Ciudadela real']) {
       await page.getByRole('button', { name: `Jugar: ${name}`, exact: true }).click();
@@ -79,7 +106,7 @@ test('full-screen valley keeps every route visible on desktop and camera control
       if (name === 'Ciudadela real') await page.screenshot({ animations: 'disabled', path: `test-results/valley-${viewport.width}.png` });
       await page.getByRole('button', { name: 'Abrir campaña', exact: true }).click();
     }
-  }
+  if (viewport.width !== 900) return;
   await page.getByRole('button', { name: 'Jugar: Aldea de los pinos', exact: true }).click();
   async function zoom(): Promise<number> { return page.evaluate(async () => { const load = (url: string): Promise<any> => import(/* @vite-ignore */ url); return (await load(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src)).battlefield.camera.zoom; }); }
   await page.getByRole('button', { name: 'Acercar vista', exact: true }).click(); expect(await zoom()).toBeGreaterThan(1);
@@ -115,6 +142,8 @@ test('real defeat without unlocking and restart restore the complete game', asyn
 
 
 test('campaign victory unlocks maps and weapons, preserves progress on reload and resets mission state', async ({ page }) => {
+  // Includes all three complete missions, multiple WebGL terrains and a full-page reload.
+  test.setTimeout(120000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Bloqueada: Villa del mercado', exact: true })).toBeDisabled();

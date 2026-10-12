@@ -1,6 +1,6 @@
-import { ENEMIES, TOWERS, WORLD, damageAfterResistance, towerStats, upgradeCost, type EnemyKind, type TowerKind, type DamageKind } from './config';
+import { BALANCE, ENEMIES, TOWERS, WORLD, damageAfterResistance, towerStats, upgradeCost, waveGold, type EnemyKind, type TowerKind, type DamageKind } from './config';
 import { distance, placementError, samplePath, type Point } from './path';
-import { MISSIONS, earnedStars, waveEnemies, type Mission } from './missions';
+import { MISSIONS, earnedStars, spawnInterval, waveEnemies, type Mission } from './missions';
 export interface Enemy extends Point { id: number; kind: EnemyKind; hp: number; maxHp: number; progress: number; angle: number; }
 export interface Tower extends Point { id: number; kind: TowerKind; level: number; cooldown: number; invested: number; targetAngle: number; }
 export interface Projectile extends Point { id: number; kind: TowerKind; targetId: number; target: Point; damage: number; damageKind: DamageKind; splash: number; speed: number; origin: Point; travelled: number; }
@@ -42,21 +42,21 @@ export class Simulation {
     this.waveTotal = count; this.events.push({ type: 'wave', x: 0, z: 0 });
   }
   spawn(kind: EnemyKind): Enemy {
-    const hp = ENEMIES[kind].hp * this.mission.healthMultiplier * Math.pow(1.115, Math.max(0, this.wave - 1));
+    const hp = ENEMIES[kind].hp * this.mission.healthMultiplier * Math.pow(BALANCE.healthGrowth, Math.max(0, this.wave - 1));
     const e: Enemy = { id: this.nextId++, kind, hp, maxHp: hp, progress: 0, ...samplePath(0, this.map) };
     this.enemies.push(e); return e;
   }
   hit(e: Enemy, damage: number, kind: DamageKind): void {
     if (e.hp <= 0) return;
     e.hp -= damageAfterResistance(damage, kind, ENEMIES[e.kind]);
-    if (e.hp <= 0) { this.kills++; this.gold += ENEMIES[e.kind].reward; this.score += ENEMIES[e.kind].reward * 10 + this.wave * 5; this.events.push({ type: 'kill', x: e.x, z: e.z }); }
+    if (e.hp <= 0) { this.kills++; this.gold += ENEMIES[e.kind].reward; this.score += ENEMIES[e.kind].score + this.wave * 5; this.events.push({ type: 'kill', x: e.x, z: e.z }); }
   }
   update(dt: number): void {
     if (this.finished || dt <= 0) return;
     if (this.phase === 'preparation') { this.preparation = Math.max(0, this.preparation - dt); if (!this.preparation) this.startWave(); }
     if (this.phase === 'wave') {
       this.spawnTimer -= dt;
-      while (this.spawnTimer <= 0 && this.spawnQueue.length) { this.spawn(this.spawnQueue.shift()!); this.spawned++; this.spawnTimer += Math.max(.4, 1.1 - this.wave * .018); }
+      while (this.spawnTimer <= 0 && this.spawnQueue.length) { this.spawn(this.spawnQueue.shift()!); this.spawned++; this.spawnTimer += spawnInterval(this.mission, this.wave); }
     }
     for (const e of this.enemies) {
       if (e.hp <= 0) continue;
@@ -70,7 +70,17 @@ export class Simulation {
     }
     for (const t of this.towers) {
       const stats = towerStats(t.kind, t.level); t.cooldown -= dt;
-      const target = this.enemies.filter(e => e.hp > 0 && distance(e, t) <= stats.range).sort((a, b) => b.progress - a.progress)[0];
+      let target: Enemy | undefined, priority = -Infinity;
+      for (const e of this.enemies) {
+        if (e.hp <= 0 || distance(e, t) > stats.range) continue;
+        let value = 0;
+        if (t.kind === 'crossbow') value = ENEMIES[e.kind].armor * e.maxHp;
+        if (t.kind === 'mage') value = Math.max(0, ENEMIES[e.kind].armor - ENEMIES[e.kind].magicResist) * e.maxHp;
+        if (t.kind === 'cannon') for (const nearby of this.enemies) {
+          if (nearby.hp > 0 && distance(e, nearby) <= stats.splash) value += damageAfterResistance(1, stats.damageKind, ENEMIES[nearby.kind]);
+        }
+        if (value > priority || (value === priority && (!target || e.progress > target.progress))) { target = e; priority = value; }
+      }
       if (!target) { t.cooldown = Math.max(0, t.cooldown); continue; }
       t.targetAngle = Math.atan2(target.x - t.x, target.z - t.z);
       if (t.cooldown <= 0) {
@@ -94,7 +104,7 @@ export class Simulation {
     if (this.phase === 'wave' && !this.spawnQueue.length && !this.enemies.length && !this.projectiles.length) {
       this.phase = this.wave >= this.mission.waves.length ? 'victory' : 'preparation'; this.preparation = WORLD.preparation;
       if (this.phase === 'victory') this.events.push({ type: 'victory', x: 0, z: 0 });
-      const reward = 35 + this.wave * 5; this.gold += reward; this.score += this.wave * 100;
+      this.gold += waveGold(this.wave); this.score += this.wave * 100;
     }
   }
 }

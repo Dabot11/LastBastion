@@ -61,7 +61,7 @@ test('armor, piercing and magic have distinct damage behavior', () => {
 });
 test('enemy rewards are awarded exactly once', () => {
   const sim = new Simulation(); sim.wave = 1; const e = sim.spawn('minion'); sim.hit(e, 10000, 'magic'); sim.hit(e, 10000, 'magic');
-  assert.equal(sim.kills, 1); assert.equal(Number(sim.gold), 300 + ENEMIES.minion.reward);
+  assert.equal(sim.kills, 1); assert.equal(Number(sim.gold), 300 + ENEMIES.minion.reward); assert.equal(sim.score, 125);
 });
 test('all four towers fire and apply projectile damage', () => {
   for (const kind of Object.keys(TOWERS) as (keyof typeof TOWERS)[]) {
@@ -108,5 +108,5 @@ test('missions have finite waves, introduce challenges and stop at their final w
 });
 test('wave completion grants preparation, bonus gold and early start works', () => {
   const sim = new Simulation(); sim.startWave(); sim.spawnQueue = []; sim.update(.01);
-  assert.equal(sim.phase, 'preparation'); assert.equal(sim.preparation, WORLD.preparation); assert.equal(Number(sim.gold), 340); sim.startWave(); assert.equal(sim.wave, 2);
+  assert.equal(sim.phase, 'preparation'); assert.equal(sim.preparation, WORLD.preparation); assert.equal(Number(sim.gold), 330); sim.startWave(); assert.equal(sim.wave, 2);
 });

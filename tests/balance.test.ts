@@ -4,10 +4,10 @@ import { TOWERS, type EnemyKind, type TowerKind } from '../src/game/config';
 import { MISSIONS, spawnInterval, waveAdvice, waveEnemies, waveSummary } from '../src/game/missions';
 import { distance, placementError, samplePath, type Point } from '../src/game/path';
 import { Simulation } from '../src/game/simulation';
-import { runScenario, type Strategy } from '../scripts/balance-scenarios';
+import { runScenario, strategiesForMission, type Strategy } from '../scripts/balance-scenarios';
 
 for (const [index, mission] of MISSIONS.entries()) test(`legal strategies can win without pixel-perfect placement: ${mission.name}`, () => {
-  const strategies: Strategy[] = index === 0 ? ['mixed', 'mixed-expand'] : index === 1 ? ['mixed', 'artillery'] : ['mixed', 'arcane'];
+  const strategies: Strategy[] = index === 0 ? ['mixed', 'mixed-expand'] : index === 1 || index === 3 ? ['mixed', 'mixed-expand'] : ['mixed', 'arcane'];
   let perfect = false;
   for (const strategy of strategies) for (const offset of [0, .25, .5]) {
     const result = runScenario(mission, strategy, offset);
@@ -23,9 +23,11 @@ for (const [index, mission] of MISSIONS.entries()) test(`legal strategies can wi
 
 test('idle openings lose stars in the introduction and cannot coast through later missions', () => {
   for (const strategy of ['opening-archers', 'opening-crossbows', 'opening-mixed'] as const) {
-    const first = runScenario(MISSIONS[0], strategy);
-    assert.equal(first.phase, 'victory', 'A competent opening should still let a new player advance');
-    assert.ok(first.stars < 3, 'Perfect health must require reinvesting');
+    if (strategiesForMission(MISSIONS[0]).includes(strategy)) {
+      const first = runScenario(MISSIONS[0], strategy);
+      assert.equal(first.phase, 'victory', 'A competent opening should still let a new player advance');
+      assert.ok(first.stars < 3, 'Perfect health must require reinvesting');
+    }
     for (const mission of MISSIONS.slice(1)) assert.equal(runScenario(mission, strategy).phase, 'gameover', `${mission.name}: ${strategy}`);
   }
 });
@@ -47,7 +49,7 @@ test('wave forecasts match real queues, and guardians have escorts after them', 
 });
 
 function targetFixture(kind: TowerKind, units: { kind: EnemyKind; progress: number }[]): { sim: Simulation; ids: number[] } {
-  const sim = new Simulation(MISSIONS[2]); sim.wave = 1; sim.phase = 'wave';
+  const sim = new Simulation(MISSIONS[3]); sim.gold = 1000; sim.wave = 1; sim.phase = 'wave';
   const positions = units.map(e => samplePath(e.progress, sim.map)); let point: Point | undefined;
   for (let x = 7; x < 14 && !point; x += .25) for (let z = 6; z < 12; z += .25) {
     const p = { x, z };

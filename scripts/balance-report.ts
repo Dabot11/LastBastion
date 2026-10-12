@@ -1,7 +1,7 @@
 import { MISSIONS } from '../src/game/missions';
-import { runScenario, STRATEGIES } from './balance-scenarios';
+import { runScenario, strategiesForMission } from './balance-scenarios';
 
-const results = MISSIONS.flatMap(mission => STRATEGIES.filter(strategy => (strategy !== 'arcane' || mission.towers.includes('mage')) && (strategy !== 'artillery' || mission.towers.includes('cannon'))).map(strategy => runScenario(mission, strategy)));
+const results = MISSIONS.flatMap(mission => strategiesForMission(mission).map(strategy => runScenario(mission, strategy)));
 if (results.some(r => r.phase !== 'victory' && r.phase !== 'gameover')) process.exitCode = 1;
 if (process.argv.includes('--json')) console.log(JSON.stringify(results, null, 2));
 else {

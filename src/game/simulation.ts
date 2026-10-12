@@ -1,4 +1,4 @@
-import { BALANCE, ENEMIES, TOWERS, WORLD, damageAfterResistance, towerStats, upgradeCost, waveGold, type EnemyKind, type TowerKind, type DamageKind } from './config';
+import { BALANCE, ENEMIES, MAX_TOWER_LEVEL, TOWERS, WORLD, damageAfterResistance, refundGold, towerStats, upgradeCost, waveGold, type EnemyKind, type TowerKind, type DamageKind } from './config';
 import { distance, placementError, samplePath, type Point } from './path';
 import { MISSIONS, earnedStars, spawnInterval, waveEnemies, type Mission } from './missions';
 export interface Enemy extends Point { id: number; kind: EnemyKind; hp: number; maxHp: number; progress: number; angle: number; }
@@ -25,14 +25,14 @@ export class Simulation {
   }
   upgrade(id: number): string | null {
     const t = this.towers.find(t => t.id === id); if (!t || this.finished) return 'Torre no disponible';
-    if (t.level >= 3) return 'Nivel máximo alcanzado';
+    if (t.level >= MAX_TOWER_LEVEL) return 'Nivel máximo alcanzado';
     const cost = upgradeCost(t.kind, t.level); if (this.gold < cost) return 'No tienes suficiente oro';
     this.gold -= cost; t.invested += cost; t.level++; this.events.push({ type: 'upgrade', x: t.x, z: t.z }); return null;
   }
   sell(id: number): number {
     if (this.finished) return 0;
     const t = this.towers.find(t => t.id === id); if (!t) return 0;
-    const refund = Math.floor(t.invested * .7); this.gold += refund; this.towers = this.towers.filter(t => t.id !== id); return refund;
+    const refund = refundGold(t.invested); this.gold += refund; this.towers = this.towers.filter(t => t.id !== id); return refund;
   }
   startWave(): void {
     if (this.phase !== 'preparation' || this.wave >= this.mission.waves.length) return;

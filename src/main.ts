@@ -74,7 +74,7 @@ canvas.addEventListener('contextmenu', event => { event.preventDefault(); cancel
 canvas.addEventListener('wheel', event => { event.preventDefault(); if (!overlay) view.zoom(event.deltaY); }, { passive: false });
 window.addEventListener('keydown', event => {
   if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
-  const kinds: TowerKind[] = ['archer', 'crossbow', 'cannon', 'mage'];
+  const kinds: TowerKind[] = ['archer', 'crossbow', 'mage', 'cannon'];
   if (event.key === 'Escape') { if (overlay === 'help') { overlay = null; ui.hideOverlay(); } else cancel(); }
   if (event.key >= '1' && event.key <= '4') select(kinds[Number(event.key) - 1]);
   if (event.code === 'Space') { event.preventDefault(); if (!overlay && !sim.finished) paused = !paused; }

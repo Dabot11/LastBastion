@@ -1,6 +1,6 @@
 # The Last Bastion
 
-Juego Tower Defense 3D de fantasía medieval, con construcción libre y una campaña de tres misiones. Three.js genera todo el escenario y los personajes mediante geometría low-poly. No requiere recursos externos, cuentas ni claves API.
+Juego Tower Defense 3D de fantasía medieval, con construcción libre y una campaña de cuatro misiones. Three.js genera todo el escenario y los personajes mediante geometría low-poly. No requiere recursos externos, cuentas ni claves API.
 
 ## Ejecutar
 
@@ -50,11 +50,20 @@ Selecciona una torre y mueve el cursor sobre el césped. La vista previa verde p
 | Defensa | Oro | Ventaja |
 | --- | ---: | --- |
 | Arqueros | 100 | Ataques rápidos contra enemigos pequeños |
-| Ballesta | 150 | Gran alcance; ignora el 80% de la armadura física |
-| Cañón | 200 | Explosiones que dañan a todos los enemigos de su radio |
-| Mago | 150 | Magia que evita la resistencia física |
+| Ballesta | 200 | Gran alcance; ignora el 80% de la armadura física |
+| Mago | 350 | Magia que evita la resistencia física |
+| Cañón | 500 | Explosiones que dañan a todos los enemigos de su radio |
 
-Haz clic en una torre construida para ver sus estadísticas, mejorarla hasta **nivel 3** o venderla por **el 70%** de lo invertido. Las mejoras aumentan daño, alcance y frecuencia; las del cañón también aumentan su radio de explosión.
+Cada torre construida tiene su propio nivel, de **1 a 3**. Haz clic en ella para comparar los atributos actuales con los de la próxima mejora y ver su coste antes de comprar. Las mejoras aumentan daño, alcance y frecuencia; las del cañón también aumentan su radio de explosión. Puedes vender por **el 70%** de todo lo invertido en esa torre.
+
+| Defensa | Construcción | Nivel 1 → 2 | Nivel 2 → 3 | Total hasta nivel 3 |
+| --- | ---: | ---: | ---: | ---: |
+| Arqueros | 100 | 80 | 140 | 320 |
+| Ballesta | 200 | 160 | 280 | 640 |
+| Mago | 350 | 250 | 450 | 1050 |
+| Cañón | 500 | 350 | 600 | 1450 |
+
+Los precios de mejora son incrementales. Otra torre cubre una posición nueva; mejorar concentra potencia en una posición que ya funciona. Magos y cañones cuestan más que el oro inicial: establece cobertura barata y ahorra recompensas para incorporarlos. Las defensas bloqueadas indican su misión; las disponibles sin suficiente oro indican cuánto falta.
 
 Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardianes con resistencia física y mágica. Cada misión tiene una composición propia y un final definido. Durante la preparación ves los enemigos de la próxima oleada y una sugerencia de defensa; los guardianes se anuncian antes de empezar y llegan con escoltas. Tienes 20 segundos de preparación entre oleadas y puedes iniciar la siguiente antes de tiempo. Al completar una oleada recibes una bonificación de oro.
 
@@ -66,19 +75,20 @@ Cuando el castillo pierde toda su salud aparece **Game Over**. Resiste la últim
 
 | Misión | Oleadas | Escenario y defensas |
 | --- | ---: | --- |
-| Aldea de los pinos | 5 | Bosque; arqueros y ballestas |
-| Villa del mercado | 6 | Camino vertical entre viviendas; añade cañones; un guardián final |
-| Ciudadela real | 7 | Edificios de piedra, pinos y otra ruta; añade magos y varios guardianes |
+| Aldea de los pinos | 5 | Bosque; solo arqueros, contra esbirros y corredores |
+| Villa del mercado | 6 | Camino entre viviendas; añade ballestas contra las primeras armaduras |
+| Ciudadela real | 7 | Edificios de piedra y otra ruta; añade magos y varios guardianes |
+| El último bastión | 8 | Una cuarta ruta fortificada; añade cañones contra grandes grupos |
 
 Ganar una misión desbloquea la siguiente. Las estrellas premian el estado del castillo: **una** por ganar, **dos** conservando al menos 60% de salud y **tres** conservando al menos 90%. Puedes repetir cualquier misión desbloqueada para mejorar el resultado. El menú de campaña conserva la mejor puntuación y cantidad de estrellas de cada misión; una repetición peor no reduce tus marcas ni suma estrellas duplicadas.
 
-El progreso se guarda en `localStorage` bajo `last-bastion-campaign-v1`. Sin almacenamiento disponible se conserva en memoria durante la sesión. No se sincroniza entre dispositivos. El antiguo récord de supervivencia, si existía, queda intacto en su clave anterior; las estrellas de campaña empiezan desde cero.
+El progreso se guarda en `localStorage` bajo `last-bastion-campaign-v1`. Sin almacenamiento disponible se conserva en memoria durante la sesión. No se sincroniza entre dispositivos. Los guardados de las tres misiones anteriores conservan sus estrellas y puntuaciones; si completaste la ciudadela, la cuarta misión ya está desbloqueada.
 
 El oro solo sirve para construir y mejorar durante cada misión. XP, niveles de comandante y monedas persistentes se reservan para futuras iteraciones. El alcance y criterio de esas iteraciones están en [DESIGN.md](DESIGN.md).
 
 ### Controles
 
-- **1–4:** seleccionar defensa; **clic izquierdo:** construir o seleccionar torre.
+- **1–4:** arqueros, ballesta, mago, cañón; **clic izquierdo:** construir o seleccionar torre.
 - **Escape / clic derecho:** cancelar la construcción o cerrar la selección.
 - **Rueda:** zoom; **arrastrar:** desplazar la cámara cuando no estás construyendo.
 - **Espacio:** pausar/reanudar; en pausa puedes construir, mejorar y vender.
@@ -95,7 +105,7 @@ src/
     config.ts       Balance centralizado: costos, enemigos, daño y niveles
     path.ts         Ruta ordenada, distancias, obstáculos y construcción
     simulation.ts   Enemigos, oleadas, torres, proyectiles, victoria y economía
-    missions.ts     Las tres misiones, mapas, armas y composición de oleadas
+    missions.ts     Las cuatro misiones, mapas, armas y composición de oleadas
     progress.ts     Estrellas, desbloqueos y guardado de campaña
   scene/
     models.ts       Geometría y materiales reutilizables
@@ -130,7 +140,7 @@ El escenario ocupa toda la pantalla. Los recursos, controles y tarjetas de defen
 
 El castillo y las torres tienen mampostería, banderas, almenas y armas reconocibles. Las torres reaccionan a los disparos y sus mejoras añaden adornos. Las flechas y virotes tienen puntas y plumas; los magos disparan orbes con estela; los cañones tienen destellos y ondas de explosión correspondientes al radio real de daño. Los enemigos se distinguen por sus cuerpos, armaduras, cuernos y tamaños.
 
-Las pruebas geométricas usan raycasting sobre la superficie renderizada para comprobar que toda la ruta sigue hundida, que la base completa de una torre legal descansa sobre terreno elevado y que el valle continúa por los cuatro lados sin ampliar el área de construcción. Las pruebas de navegador comprueban además que ningún punto de las tres rutas quede detrás de un control en resoluciones de 900×700, 1280×720, 1440×960 y 1920×1080, y que el zoom y el restablecimiento funcionen.
+Las pruebas geométricas usan raycasting sobre la superficie renderizada para comprobar que toda la ruta sigue hundida, que la base completa de una torre legal descansa sobre terreno elevado y que el valle continúa por los cuatro lados sin ampliar el área de construcción. Las pruebas de navegador comprueban además que ningún punto de las cuatro rutas quede detrás de un control en resoluciones de 900×700, 1280×720, 1440×960 y 1920×1080, y que el zoom y el restablecimiento funcionen.
 
 ## Validación y alcance
 
@@ -138,6 +148,6 @@ Las pruebas comprueban continuidad y ausencia de cruces de la ruta, movimiento a
 
 Las pruebas de navegador comprueban WebGL real, colocación con cursor, selección, mejoras, venta, falta de oro, pausa, velocidad, guía, combate con recompensa, adaptación a una ventana de escritorio pequeña, derrota real, victoria, guardado de las estrellas, desbloqueo de todas las misiones y defensas, cambio de mapa y reinicio completo.
 
-Los gráficos son una interpretación procedural de la referencia; los personajes y animaciones son deliberadamente sencillos. El equilibrio de las tres misiones necesita sesiones reales de juego. No hay multijugador ni sincronización de progreso entre dispositivos. La experiencia está diseñada para escritorio, aunque la interfaz se adapta a ventanas pequeñas. El rendimiento depende de la GPU y WebGL disponibles.
+Los gráficos son una interpretación procedural de la referencia; los personajes y animaciones son deliberadamente sencillos. El equilibrio de las cuatro misiones necesita sesiones reales de juego. No hay multijugador ni sincronización de progreso entre dispositivos. La experiencia está diseñada para escritorio, aunque la interfaz se adapta a ventanas pequeñas. El rendimiento depende de la GPU y WebGL disponibles.
 
 Posibles mejoras: nuevos mapas con un único camino, efectos de estados, variedad de guardianes, opciones de calidad gráfica, accesibilidad adicional y un balance afinado con partidas reales.

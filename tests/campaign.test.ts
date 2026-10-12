@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MISSIONS, earnedStars, waveEnemies } from '../src/game/missions';
+import { MISSIONS, earnedStars, towerUnlockMission, waveEnemies } from '../src/game/missions';
 import { CampaignProgress, PROGRESS_KEY, type StorageAdapter } from '../src/game/progress';
 import { placementError, roadDistance, samplePath, type Point } from '../src/game/path';
 import { Simulation } from '../src/game/simulation';
@@ -67,6 +67,8 @@ test('progress unlocks missions in order, persists, keeps best stars and score, 
   progress.complete(1, 1, 200); assert.ok(progress.isUnlocked(2));
   progress.complete(2, 3, 1000); assert.equal(progress.totalStars, 7); assert.equal(progress.completed, 3);
   const restored = new CampaignProgress(adapter); assert.equal(restored.totalStars, 7); assert.ok(restored.isUnlocked(2));
+  assert.ok(restored.isUnlocked(3), 'Old three-mission saves must immediately unlock the fourth map');
+  assert.ok(restored.complete(3, 3, 1500)); assert.equal(restored.totalStars, 10); assert.equal(restored.completed, 4);
 });
 test('invalid and unavailable storage cannot corrupt progress or stop playing', () => {
   assert.equal(new CampaignProgress(storage('broken json')).totalStars, 0);
@@ -77,7 +79,9 @@ test('invalid and unavailable storage cannot corrupt progress or stop playing', 
 });
 test('weapon availability belongs to the mission and retries reset gold, castle and upgrades', () => {
   const first = new Simulation(); assert.equal(typeof first.build('cannon', { x: 0, z: 0 }), 'string'); assert.equal(typeof first.build('mage', { x: 0, z: 0 }), 'string'); assert.equal(first.gold, 300);
-  assert.ok(MISSIONS[1].towers.includes('cannon')); assert.equal(MISSIONS[1].towers.includes('mage'), false); assert.ok(MISSIONS[2].towers.includes('mage'));
+  assert.deepEqual(MISSIONS.map(m => m.towers), [['archer'], ['archer', 'crossbow'], ['archer', 'crossbow', 'mage'], ['archer', 'crossbow', 'mage', 'cannon']]);
+  assert.deepEqual(['archer', 'crossbow', 'mage', 'cannon'].map(kind => towerUnlockMission(kind as 'archer' | 'crossbow' | 'mage' | 'cannon')), [1, 2, 3, 4]);
+  assert.equal(typeof first.build('crossbow', { x: 0, z: 0 }), 'string');
   first.castleHp = 200; first.gold = 2; const retry = new Simulation(first.mission);
   assert.equal(retry.castleHp, 1000); assert.equal(retry.gold, 300); assert.equal(retry.wave, 0); assert.equal(retry.towers.length, 0);
 });

@@ -5,6 +5,9 @@ import { Simulation } from '../src/game/simulation';
 
 export type Strategy = 'none' | 'opening-archers' | 'opening-crossbows' | 'opening-mixed' | 'archers' | 'crossbows' | 'mixed' | 'mixed-expand' | 'mixed-upgrades' | 'artillery' | 'arcane' | 'poor-positions';
 export const STRATEGIES: Strategy[] = ['none', 'opening-archers', 'opening-crossbows', 'opening-mixed', 'archers', 'crossbows', 'mixed', 'mixed-expand', 'mixed-upgrades', 'artillery', 'arcane', 'poor-positions'];
+export function strategiesForMission(mission: Mission): Strategy[] {
+  return STRATEGIES.filter(s => (!s.includes('crossbows') || mission.towers.includes('crossbow')) && (s !== 'arcane' || mission.towers.includes('mage')) && (s !== 'artillery' || mission.towers.includes('cannon')));
+}
 interface Site extends Point { distances: number[]; }
 const layouts = new WeakMap<GameMap, Map<number, Site[]>>();
 function sites(map: GameMap, offset: number): Site[] {
@@ -58,10 +61,12 @@ export interface BalanceResult {
 // Combat uses the same fixed 20 ms steps, projectiles, resistances and movement as the browser.
 // No enemy HP, castle health, gold, queue or damage is manufactured by this runner.
 export function scenarioPlanner(mission: Mission, strategy: Strategy, offset = 0): (sim: Simulation) => void {
+  if (!strategiesForMission(mission).includes(strategy)) throw new Error(`${strategy} needs a defense locked in ${mission.id}`);
   const candidates = sites(mission.map, offset);
   const single: TowerKind = strategy.includes('crossbows') ? 'crossbow' : 'archer';
   const mixed = strategy.includes('mixed') || strategy === 'artillery' || strategy === 'arcane';
-  const preference: TowerKind[] = strategy === 'arcane' ? ['archer', 'mage', 'crossbow', 'cannon'] : strategy === 'artillery' ? ['archer', 'cannon', 'crossbow', 'mage'] : mission.towers;
+  // Establish cheap coverage before saving for a specialist; do not wait for a 500-gold cannon behind one archer.
+  const preference: TowerKind[] = strategy === 'arcane' ? ['archer', 'archer', 'crossbow', 'mage', 'cannon'] : strategy === 'artillery' ? ['archer', 'archer', 'crossbow', 'cannon', 'mage'] : mission.towers;
   const order = mixed ? preference.filter(kind => mission.towers.includes(kind)) : [single];
   const frozen = strategy.startsWith('opening-'), poor = strategy === 'poor-positions';
   let purchases = 0;

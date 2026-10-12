@@ -33,3 +33,4 @@
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 .castle .muted{color:#b7ced7}.castle>svg{color:#8accdf;fill:#b8d1cf33}
+.tower-panel{max-height:calc(100dvh - 360px);overflow:auto}.level-pips{float:right;letter-spacing:3px}.upgrade-caption{font-size:8px;letter-spacing:1px;color:#abc4d3;margin-top:16px}.tower-stats{display:grid;grid-template-columns:1fr 1fr;gap:14px 10px;margin:12px 0 18px}.tower-stats b{font-size:15px;white-space:nowrap}.tower-stats em{font-style:normal;color:#9fecce}.stat-arrow{display:inline!important;font-size:11px!important;margin:0 5px;color:#aac1d1!important}.investment,.upgrade-shortfall{display:block;text-align:center;font-size:9px;color:#aac1d1;line-height:1.5}.upgrade-shortfall{margin-top:8px;color:#efd19c}.investment{margin-top:3px}

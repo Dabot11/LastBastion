@@ -4,6 +4,7 @@ import { MISSIONS, earnedStars, towerUnlockMission, waveEnemies } from '../src/g
 import { CampaignProgress, PROGRESS_KEY, type StorageAdapter } from '../src/game/progress';
 import { placementError, roadDistance, samplePath, type Point } from '../src/game/path';
 import { Simulation } from '../src/game/simulation';
+import { WORLD } from '../src/game/config';
 function storage(initial = '{}'): StorageAdapter {
   const values = new Map<string, string>([[PROGRESS_KEY, initial]]);
   return { getItem: key => values.get(key) ?? null, setItem: (key, value) => { values.set(key, value); } };
@@ -27,9 +28,11 @@ test('all mission maps are distinct, continuous and have no crossing, with free 
       const a = map.segments[i], b = map.segments[j];
       assert.equal(orient(a.start, a.end, b.start) * orient(a.start, a.end, b.end) < 0 && orient(b.start, b.end, a.start) * orient(b.start, b.end, a.end) < 0, false, mission.name);
     }
-    let free = 0;
-    for (let x = -13; x < 14; x++) for (let z = -11; z < 12; z++) if (!placementError({ x, z }, [], 1000, 100, map)) free++;
-    assert.ok(free > 80, `${mission.name} has too little buildable land`);
+    // Measure continuous land across the playable bounds, rather than treating
+    // integer coordinates as fixed construction slots. Each sample covers .25 m².
+    let freeArea = 0;
+    for (let x = -WORLD.width / 2 + 1.25; x < WORLD.width / 2 - 1; x += .5) for (let z = -WORLD.depth / 2 + 1.25; z < WORLD.depth / 2 - 1; z += .5) if (!placementError({ x, z }, [], 1000, 100, map)) freeArea += .25;
+    assert.ok(freeArea > 80, `${mission.name} has too little buildable land`);
     for (const obstacle of map.obstacles) assert.ok(placementError(obstacle, [], 1000, 100, map));
   }
 });

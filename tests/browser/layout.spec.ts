@@ -62,7 +62,7 @@ for (const viewport of [{ width: 1536, height: 844 }, { width: 1920, height: 108
   for (let i = 1; i < rectangles.length; i++) expect(rectangles[i].left).toBeGreaterThanOrEqual(rectangles[i - 1].right);
 
   await page.keyboard.press('1'); const blocked = await point(page, true); await page.mouse.move(blocked.px, blocked.py);
-  await expect(page.locator('#placement-hint')).toBeVisible(); await expect(page.locator('#placement-hint')).toContainText('El camino debe quedar libre');
+  await expect(page.locator('#placement-hint')).toBeVisible(); await expect(page.locator('#placement-hint')).toContainText('Sobre el camino');
   const warning = await page.locator('#placement-hint').boundingBox(); expect(warning!.y).toBeGreaterThan(hud!.y + hud!.height); expect(warning!.y + warning!.height).toBeLessThan(hud!.y + hud!.height + 60);
   expect(await page.locator('.notification-lane').evaluate(node => getComputedStyle(node).pointerEvents)).toBe('none');
   expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.tagName, { x: warning!.x + warning!.width / 2, y: warning!.y + warning!.height / 2 })).toBe('CANVAS');

@@ -117,8 +117,8 @@ export class UI {
   flashCastle(): void { this.el('castle-resource').classList.remove('damaged'); void this.el('castle-resource').offsetWidth; this.el('castle-resource').classList.add('damaged'); }
   help(fromCampaign = false): void {
     const steps = [
-      ['castle', 'Elige y construye', 'Abre Construir defensas y elige un arma. El menú se oculta para dejarte espacio. Colócala en el césped, junto al camino. Verde: puedes construir. Rojo: ubicación bloqueada.'],
-      ['target', 'Aprovecha las curvas', 'El círculo muestra el alcance real. Cubre tramos largos y reserva defensas para la puerta: los enemigos que llegan seguirán atacándola.'],
+      ['castle', 'Elige y construye', 'Abre Construir defensas y elige un arma. Las zonas verdes muestran dónde cabe. Coloca libremente: la base con ✓ confirma; la X indica un bloqueo y su motivo aparece arriba.'],
+      ['target', 'Aprovecha las curvas', 'El círculo azul discontinuo muestra el alcance real, distinto de la base de colocación. Cubre tramos largos y reserva defensas para la puerta: los enemigos que llegan seguirán atacándola.'],
       ['plus', 'Invierte con estrategia', 'Cada torre sube del nivel 1 al 3. Compara su próxima mejora o compra cobertura nueva. Vender devuelve el 70%.'],
       ['shield', 'Defiende y avanza', 'Lee la próxima oleada y prepara tus defensas. Gana para abrir otra misión; conserva la salud para ganar más estrellas.'],
     ] as const;
@@ -174,11 +174,13 @@ export class UI {
     });
     this.el('cancel').hidden = !this.selectedKind && this.selectedId === null;
     this.el('build-status').hidden = !this.selectedKind && this.selectedId === null;
-    this.el('placement-hint').hidden = !this.selectedKind; this.el('placement-hint').textContent = placement ?? 'Ubicación válida · Clic para construir'; this.el('placement-hint').classList.toggle('invalid', !!placement);
+    const guidance = placement === 'Zonas verdes: aquí cabe tu defensa';
+    const hint = this.el('placement-hint'), hintText = guidance ? placement : placement ? `✕ ${placement}` : '✓ Ubicación válida · Clic para construir';
+    hint.hidden = !this.selectedKind; if (hint.textContent !== hintText) hint.textContent = hintText; hint.classList.toggle('invalid', !!placement && !guidance);
     this.el('build-tip').hidden = !this.selectedKind;
     this.el('build-tip').textContent = this.selectedKind ? `${TOWERS[this.selectedKind].name} · ${TOWERS[this.selectedKind].cost} oro` : '';
     this.board.parentElement!.classList.toggle('is-placing', !!this.selectedKind);
-    this.board.parentElement!.classList.toggle('placing-invalid', !!this.selectedKind && !!placement);
+    this.board.parentElement!.classList.toggle('placing-invalid', !!this.selectedKind && !!placement && !guidance);
     const t = sim.towers.find(t => t.id === this.selectedId), panel = this.el('tower-panel'); panel.hidden = !t; this.board.parentElement!.classList.toggle('inspecting', !!t);
     if (t) {
       const stats = towerStats(t.kind, t.level), cost = upgradeCost(t.kind, t.level), maxed = t.level >= MAX_TOWER_LEVEL;

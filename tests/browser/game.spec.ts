@@ -65,7 +65,7 @@ test('real WebGL gameplay: free placement, upgrades, selling, pause, speed, help
   await expect(page.locator('canvas')).toHaveCount(1);
   await chooseArcher(page);
   const blocked = await buildPoint(page, -1, .15); await page.mouse.move(blocked.x, blocked.y);
-  await expect(page.locator('#placement-hint')).toContainText('El camino debe quedar libre');
+  await expect(page.locator('#placement-hint')).toContainText('Sobre el camino');
   await page.mouse.click(blocked.x, blocked.y); await expect(page.locator('#gold')).toHaveText('300');
   const p = await buildPoint(page, 0); await page.mouse.move(p.x, p.y); await expect(page.locator('#placement-hint')).toContainText('Ubicación válida');
   await page.mouse.click(p.x, p.y); await expect(page.locator('#gold')).toHaveText('200');

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ENEMIES, TOWERS, WORLD, towerStats, type TowerKind } from '../game/config';
-import { gatePoint, placementError, roadHeight, type GameMap, type Point } from '../game/path';
+import { gatePoint, placementIssue, roadHeight, type GameMap, type Point } from '../game/path';
 import { type Simulation, type Tower } from '../game/simulation';
 import { createTerrain } from './terrain';
 import { box, circle, enemyModel, orb, projectileModel, towerModel } from './models';
@@ -8,12 +8,14 @@ import { DamageLabels } from './damage-labels';
 interface EnemyVisual { group: THREE.Group; health: THREE.Mesh; hit: THREE.Mesh; }
 import { Effects } from './effects';
 import { battlefieldFraming, CAMERA_OFFSET } from './framing';
+import { ConstructionAreas, PlacementFootprint } from './construction';
 export class GameView {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.OrthographicCamera(-20, 20, 16, -16, .1, 260);
   readonly raycaster = new THREE.Raycaster();
   readonly pointer = new THREE.Vector2();
+  private pointerClient: { x: number; y: number } | null = null;
   readonly enemies = new Map<number, EnemyVisual>();
   readonly towers = new Map<number, THREE.Group>();
   readonly projectiles = new Map<number, THREE.Group>();
@@ -26,7 +28,10 @@ export class GameView {
   private readonly terrainRoot = new THREE.Group();
   private map: GameMap;
   readonly range: THREE.Mesh;
+  readonly constructionAreas = new ConstructionAreas();
+  readonly footprint = new PlacementFootprint();
   ghost: THREE.Group | null = null; ghostKind: TowerKind | null = null; hover: Point | null = null;
+  private hoverHeight = WORLD.elevation + .05;
   selectedId: number | null = null; private ghostValid: boolean | null = null;
   private pan = new THREE.Vector3(); private observer: ResizeObserver; private framing = new THREE.Vector3();
   private readonly healthMaterial = new THREE.MeshBasicMaterial({ color: 0xf17770, toneMapped: false });
@@ -39,7 +44,7 @@ export class GameView {
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setClearColor(0xb8d0db); this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1;
-    this.renderer.domElement.setAttribute('aria-label', 'Campo de batalla 3D: construye defensas en las plataformas verdes');
+    this.renderer.domElement.setAttribute('aria-label', 'Campo de batalla 3D: selecciona una defensa para ver las zonas disponibles y construir libremente');
     this.renderer.domElement.tabIndex = 0;
     container.append(this.renderer.domElement);
     this.scene.fog = new THREE.Fog(0xb7cfcc, 40, 92);
@@ -52,10 +57,12 @@ export class GameView {
     this.map = map; this.scene.add(this.terrainRoot);
     const terrain = createTerrain(this.terrainRoot, map); this.surfaces = terrain.surfaces; this.door = terrain.door; this.castleFraming = terrain.castleFraming; this.collectFlames();
     this.damageLabels = new DamageLabels(container);
-    const rangeMat = new THREE.MeshBasicMaterial({ color: 0xbdeaaa, transparent: true, opacity: .13, depthWrite: false, side: THREE.DoubleSide });
+    const rangeMat = new THREE.MeshBasicMaterial({ color: 0x9edcf3, transparent: true, opacity: .045, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
     this.range = new THREE.Mesh(new THREE.CircleGeometry(1, 80), rangeMat); this.range.rotation.x = -Math.PI / 2; this.range.visible = false;
-    const ring = new THREE.Mesh(new THREE.RingGeometry(.982, 1, 80), new THREE.MeshBasicMaterial({ color: 0xe1fbd3, transparent: true, opacity: .85, side: THREE.DoubleSide, depthWrite: false }));
-    this.range.add(ring); this.scene.add(this.range);
+    this.range.name = 'attack-range';
+    const ringPoints = Array.from({ length: 97 }, (_, i) => new THREE.Vector3(Math.cos(i / 96 * Math.PI * 2), Math.sin(i / 96 * Math.PI * 2), 0));
+    const ring = new THREE.Line(new THREE.BufferGeometry().setFromPoints(ringPoints), new THREE.LineDashedMaterial({ color: 0xc4e6f6, transparent: true, opacity: .55, dashSize: .045, gapSize: .028, depthWrite: false, toneMapped: false }));
+    ring.computeLineDistances(); this.range.add(ring); this.scene.add(this.range, this.constructionAreas.group, this.footprint.group);
     this.observer = new ResizeObserver(() => this.resize()); this.observer.observe(container);
     for (const selector of ['.topbar', '.command-strip']) { const element = container.parentElement?.querySelector(selector); if (element) this.observer.observe(element); }
     this.resize();
@@ -77,8 +84,9 @@ export class GameView {
 
   private updateCamera(): void {
     this.camera.position.set(...CAMERA_OFFSET).add(this.pan).add(this.framing); this.camera.lookAt(this.pan.clone().add(this.framing)); this.camera.updateProjectionMatrix(); this.camera.updateMatrixWorld();
+    if (this.hover) this.refreshPointer();
   }
-  zoom(delta: number): void { this.camera.zoom = THREE.MathUtils.clamp(this.camera.zoom * Math.exp(-delta * .001), .8, 1.8); this.camera.updateProjectionMatrix(); }
+  zoom(delta: number): void { this.camera.zoom = THREE.MathUtils.clamp(this.camera.zoom * Math.exp(-delta * .001), .8, 1.8); this.camera.updateProjectionMatrix(); if (this.hover) this.refreshPointer(); }
   panBy(dx: number, dy: number): void {
     const worldPerPixel = (this.camera.top - this.camera.bottom) / (this.container.clientHeight * this.camera.zoom);
     const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 1);
@@ -87,10 +95,17 @@ export class GameView {
   }
   resetCamera(): void { this.pan.set(0, 0, 0); this.camera.zoom = 1; this.resize(); }
   setPointer(event: PointerEvent): void {
-    const rect = this.renderer.domElement.getBoundingClientRect(); this.pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
+    this.pointerClient = { x: event.clientX, y: event.clientY }; this.refreshPointer();
+  }
+  private refreshPointer(): void {
+    if (!this.pointerClient) return;
+    const rect = this.renderer.domElement.getBoundingClientRect(), { x, y } = this.pointerClient;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) { this.hover = null; return; }
+    this.pointer.set((x - rect.left) / rect.width * 2 - 1, -(y - rect.top) / rect.height * 2 + 1);
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const intersection = this.raycaster.intersectObjects(this.surfaces, false)[0];
     this.hover = intersection ? { x: intersection.point.x, z: intersection.point.z } : null;
+    if (intersection) this.hoverHeight = intersection.point.y;
   }
   pickTower(event: PointerEvent): number | null {
     this.setPointer(event); const hit = this.raycaster.intersectObjects([...this.towers.values()], true)[0];
@@ -98,16 +113,20 @@ export class GameView {
     while (object) { if (typeof object.userData.towerId === 'number') return object.userData.towerId as number; object = object.parent; } return null;
   }
   setGhost(kind: TowerKind | null): void {
-    if (this.ghost) { this.scene.remove(this.ghost); this.ghost.traverse(o => { if (o instanceof THREE.Mesh) (o.material as THREE.Material).dispose(); }); }
+    if (this.ghost) { this.scene.remove(this.ghost); this.ghost.traverse(o => { if (o instanceof THREE.Mesh || o instanceof THREE.Sprite) (o.material as THREE.Material).dispose(); }); }
     this.ghost = null; this.ghostKind = kind; this.ghostValid = null;
+    this.constructionAreas.hide(); this.footprint.group.visible = false; this.range.visible = false;
     if (kind) {
-      this.ghost = towerModel(kind); this.ghost.traverse(o => { if (o instanceof THREE.Mesh) { o.material = (o.material as THREE.Material).clone(); const m = o.material as THREE.MeshStandardMaterial; m.transparent = true; m.opacity = .58; m.depthWrite = false; o.castShadow = false; } });
+      this.ghost = towerModel(kind); this.ghost.traverse(o => { if (o instanceof THREE.Mesh || o instanceof THREE.Sprite) { o.material = (o.material as THREE.Material).clone(); const m = o.material; m.transparent = true; m.opacity = .60; m.depthWrite = false; o.castShadow = false; } });
       this.scene.add(this.ghost); this.ghost.visible = false;
     }
   }
   placementMessage(sim: Simulation): string | null {
-    if (!this.ghostKind) return null; if (!this.hover) return 'Apunta a una plataforma de césped';
-    return placementError(this.hover, sim.towers, sim.gold, TOWERS[this.ghostKind].cost, sim.map);
+    if (!this.ghostKind) return null;
+    if (sim.finished) return 'La partida ha terminado';
+    if (!sim.mission.towers.includes(this.ghostKind)) return 'Defensa bloqueada en esta misión';
+    if (!this.hover) return sim.gold < TOWERS[this.ghostKind].cost ? 'No tienes suficiente oro' : 'Zonas verdes: aquí cabe tu defensa';
+    return placementIssue(this.hover, sim.towers, sim.gold, TOWERS[this.ghostKind].cost, sim.map)?.brief ?? null;
   }
   private createEnemy(id: number, kind: Parameters<typeof enemyModel>[0]): EnemyVisual {
     const group = enemyModel(kind);
@@ -204,13 +223,15 @@ export class GameView {
     this.effects.update(visualDt);
     this.flames.forEach((flame, i) => flame.scale.setScalar(Number(flame.userData.baseSize) * (1 + .09 * Math.sin(time * 5 + i * 2.3))));
     let rangeCenter: Point | null = null, radius = 0;
+    this.constructionAreas.update(sim, this.ghostKind);
     if (this.ghost && this.ghostKind) {
       this.ghost.visible = !!this.hover;
+      this.footprint.update(this.hover, this.hoverHeight, !this.placementMessage(sim));
       if (this.hover) {
         const valid = !this.placementMessage(sim);
-        if (valid !== this.ghostValid) { this.ghost.traverse(o => { if (o instanceof THREE.Mesh) { const m = o.material as THREE.MeshStandardMaterial; m.color.setHex(valid ? 0x83eaaa : 0xf27474); m.emissive.setHex(valid ? 0x225d3a : 0x612929); } }); this.ghostValid = valid; }
-        this.ghost.position.set(this.hover.x, WORLD.elevation + .07, this.hover.z); rangeCenter = this.hover; radius = TOWERS[this.ghostKind].range;
-        (this.range.material as THREE.MeshBasicMaterial).color.setHex(valid ? 0x83eaaa : 0xf27474);
+        if (valid !== this.ghostValid) { this.ghost.traverse(o => { if (o instanceof THREE.Mesh) { const m = o.material as THREE.MeshStandardMaterial; m.opacity = valid ? .60 : .40; m.emissive.setHex(valid ? 0x141e28 : 0x572525); } }); this.ghostValid = valid; }
+        this.ghost.position.set(this.hover.x, this.hoverHeight + .02, this.hover.z); rangeCenter = this.hover; radius = TOWERS[this.ghostKind].range;
+        (this.range.material as THREE.MeshBasicMaterial).color.setHex(0x9edcf3);
       }
     } else if (this.selectedId !== null) {
       const t = sim.towers.find(t => t.id === this.selectedId); if (t) { rangeCenter = t; radius = towerStats(t.kind, t.level).range; (this.range.material as THREE.MeshBasicMaterial).color.setHex(0xa6d9f0); }
@@ -247,5 +268,5 @@ export class GameView {
     this.map = map; const terrain = createTerrain(this.terrainRoot, map); this.surfaces = terrain.surfaces; this.door = terrain.door; this.castleFraming = terrain.castleFraming; this.collectFlames();
     this.range.visible = false; this.renderer.shadowMap.needsUpdate = true; this.resetCamera();
   }
-  dispose(): void { this.observer.disconnect(); this.effects.dispose(); this.damageLabels.dispose(); this.hitMaterial.dispose(); this.healthMaterial.dispose(); this.healthBackground.dispose(); this.enemyShade.dispose(); this.renderer.dispose(); }
+  dispose(): void { this.observer.disconnect(); this.setGhost(null); this.constructionAreas.dispose(); this.footprint.dispose(); this.range.geometry.dispose(); (this.range.material as THREE.Material).dispose(); this.range.children.forEach(o => { if (o instanceof THREE.Line) { o.geometry.dispose(); (o.material as THREE.Material).dispose(); } }); this.effects.dispose(); this.damageLabels.dispose(); this.hitMaterial.dispose(); this.healthMaterial.dispose(); this.healthBackground.dispose(); this.enemyShade.dispose(); this.renderer.dispose(); }
 }

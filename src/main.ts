@@ -66,7 +66,7 @@ canvas.addEventListener('pointerup', event => {
   if (!click || overlay || sim.finished) return;
   view.setPointer(event);
   if (ui.selectedKind) {
-    const error = view.placementMessage(sim); if (error || !view.hover) { ui.toast(error ?? 'Elige una plataforma'); return; }
+    const error = view.placementMessage(sim); if (error || !view.hover) { ui.toast(error ?? 'Elige una zona verde'); return; }
     const tower = sim.build(ui.selectedKind, view.hover); if (typeof tower === 'string') ui.toast(tower); else ui.toast('Defensa construida');
   } else { const id = view.pickTower(event); ui.selectedId = id; view.selectedId = id; if (id !== null) ui.setDefensesOpen(false); }
 });

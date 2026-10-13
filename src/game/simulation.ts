@@ -1,9 +1,9 @@
-import { BALANCE, ENEMIES, MAX_TOWER_LEVEL, TOWERS, WORLD, damageAfterResistance, refundGold, towerStats, upgradeCost, waveGold, type EnemyKind, type TowerKind, type DamageKind } from './config';
+import { BALANCE, ENEMIES, MAX_TOWER_LEVEL, TARGET_PRIORITIES, TOWERS, WORLD, damageAfterResistance, refundGold, towerStats, upgradeCost, waveGold, type EnemyKind, type TowerKind, type DamageKind, type TargetPriority } from './config';
 import { distance, gatePoint, padAt, placementError, samplePath, type Point } from './path';
 import { MISSIONS, earnedStars, spawnInterval, waveEnemies, type Mission } from './missions';
-export interface Enemy extends Point { id: number; kind: EnemyKind; hp: number; maxHp: number; progress: number; angle: number; siegeSlot: number | null; attackCooldown: number; hitFlash: number; attackPulse: number; state: 'marching' | 'waiting' | 'attacking'; }
-export interface Tower extends Point { id: number; padId: string; kind: TowerKind; level: number; cooldown: number; invested: number; targetAngle: number; }
-export interface Projectile extends Point { id: number; kind: TowerKind; targetId: number; target: Point; damage: number; damageKind: DamageKind; splash: number; speed: number; origin: Point; travelled: number; }
+export interface Enemy extends Point { id: number; kind: EnemyKind; hp: number; maxHp: number; progress: number; angle: number; siegeSlot: number | null; attackCooldown: number; hitFlash: number; attackPulse: number; poisonRemaining: number; poisonDps: number; poisonClock: number; poisonPending: number; state: 'marching' | 'waiting' | 'attacking'; }
+export interface Tower extends Point { id: number; padId: string; kind: TowerKind; level: number; cooldown: number; invested: number; targetAngle: number; priority: TargetPriority; }
+export interface Projectile extends Point { id: number; kind: TowerKind; targetId: number; target: Point; damage: number; damageKind: DamageKind; poisonDps: number; poisonDuration: number; lane: number; speed: number; origin: Point; travelled: number; }
 export type GameEvent = { type: 'shot' | 'impact' | 'damage' | 'gateHit' | 'kill' | 'build' | 'upgrade' | 'wave' | 'gameover' | 'victory' | 'spawn'; x: number; z: number; kind?: TowerKind; enemyKind?: EnemyKind; level?: number; radius?: number; damage?: number; enemyId?: number; damageKind?: DamageKind };
 export class Simulation {
   gold = WORLD.initialGold; castleHp: number; wave = 0; kills = 0; score = 0;
@@ -22,7 +22,7 @@ export class Simulation {
     const error = placementError(p, this.towers, this.gold, TOWERS[kind].cost, this.map); if (error) return error;
     const pad = padAt(p, this.map)!;
     this.gold -= TOWERS[kind].cost;
-    const tower: Tower = { x: pad.x, z: pad.z, padId: pad.id, id: this.nextId++, kind, level: 1, cooldown: 0, invested: TOWERS[kind].cost, targetAngle: 0 };
+    const tower: Tower = { x: pad.x, z: pad.z, padId: pad.id, id: this.nextId++, kind, level: 1, cooldown: 0, invested: TOWERS[kind].cost, targetAngle: 0, priority: kind === 'poison' ? 'strongest' : 'first' };
     this.towers.push(tower); this.events.push({ type: 'build', x: pad.x, z: pad.z, kind }); return tower;
   }
   upgrade(id: number): string | null {
@@ -36,6 +36,17 @@ export class Simulation {
     const t = this.towers.find(t => t.id === id); if (!t) return 0;
     const refund = refundGold(t.invested); this.gold += refund; this.towers = this.towers.filter(t => t.id !== id); return refund;
   }
+  setPriority(id: number, priority: TargetPriority): boolean {
+    const tower = this.towers.find(t => t.id === id);
+    if (!tower || this.finished || !Object.hasOwn(TARGET_PRIORITIES, priority)) return false;
+    tower.priority = priority; return true;
+  }
+  applyPoison(enemy: Enemy, dps: number, duration: number): void {
+    if (enemy.hp <= 0 || dps <= 0 || duration <= 0) return;
+    // One status per enemy: refresh its duration and retain the strongest active dose.
+    enemy.poisonDps = Math.max(enemy.poisonDps, dps);
+    enemy.poisonRemaining = Math.max(enemy.poisonRemaining, duration);
+  }
   startWave(): void {
     if (this.phase !== 'preparation' || this.wave >= this.mission.waves.length) return;
     this.wave++; this.phase = 'wave'; this.spawnTimer = 0; this.spawned = 0;
@@ -45,7 +56,7 @@ export class Simulation {
   }
   spawn(kind: EnemyKind): Enemy {
     const hp = ENEMIES[kind].hp * this.mission.healthMultiplier * Math.pow(BALANCE.healthGrowth, Math.max(0, this.wave - 1));
-    const e: Enemy = { id: this.nextId++, kind, hp, maxHp: hp, progress: 0, siegeSlot: null, attackCooldown: .45, hitFlash: 0, attackPulse: 0, state: 'marching', ...samplePath(0, this.map) };
+    const e: Enemy = { id: this.nextId++, kind, hp, maxHp: hp, progress: 0, siegeSlot: null, attackCooldown: .45, hitFlash: 0, attackPulse: 0, poisonRemaining: 0, poisonDps: 0, poisonClock: 0, poisonPending: 0, state: 'marching', ...samplePath(0, this.map) };
     this.enemies.push(e); this.events.push({ type: 'spawn', x: e.x, z: e.z, enemyKind: kind, enemyId: e.id }); return e;
   }
   hit(e: Enemy, damage: number, kind: DamageKind): void {
@@ -62,6 +73,16 @@ export class Simulation {
     if (this.phase === 'wave') {
       this.spawnTimer -= dt;
       while (this.spawnTimer <= 0 && this.spawnQueue.length) { this.spawn(this.spawnQueue.shift()!); this.spawned++; this.spawnTimer += spawnInterval(this.mission, this.wave); }
+    }
+    // Integrate poison independently of frame rate, but group visible damage into half-second ticks.
+    for (const enemy of this.enemies) if (enemy.hp > 0 && enemy.poisonRemaining > 0) {
+      const elapsed = Math.min(dt, enemy.poisonRemaining);
+      enemy.poisonPending += enemy.poisonDps * elapsed; enemy.poisonClock += elapsed;
+      enemy.poisonRemaining = Math.max(0, enemy.poisonRemaining - elapsed);
+      if (enemy.poisonClock >= .5 - 1e-9 || enemy.poisonRemaining < 1e-9) {
+        this.hit(enemy, enemy.poisonPending, 'poison'); enemy.poisonPending = 0; enemy.poisonClock = 0;
+      }
+      if (enemy.poisonRemaining < 1e-9) { enemy.poisonRemaining = 0; enemy.poisonDps = 0; }
     }
     const occupied = new Set(this.enemies.filter(e => e.hp > 0 && e.siegeSlot !== null).map(e => e.siegeSlot));
     let waiting = 0, queueLimit = this.map.length - .85;
@@ -98,22 +119,21 @@ export class Simulation {
     }
     for (const t of this.towers) {
       const stats = towerStats(t.kind, t.level); t.cooldown -= dt;
-      let target: Enemy | undefined, priority = -Infinity;
-      for (const e of this.enemies) {
-        if (e.hp <= 0 || distance(e, t) > stats.range) continue;
-        let value = 0;
-        if (t.kind === 'crossbow') value = ENEMIES[e.kind].armor * e.maxHp;
-        if (t.kind === 'mage') value = Math.max(0, ENEMIES[e.kind].armor - ENEMIES[e.kind].magicResist) * e.maxHp;
-        if (t.kind === 'cannon') for (const nearby of this.enemies) {
-          if (nearby.hp > 0 && distance(e, nearby) <= stats.splash) value += damageAfterResistance(1, stats.damageKind, ENEMIES[nearby.kind]);
-        }
-        if (value > priority || (value === priority && (!target || e.progress > target.progress))) { target = e; priority = value; }
-      }
+      const candidates = this.enemies.filter(e => e.hp > 0 && distance(e, t) <= stats.range);
+      const rank = (e: Enemy) => {
+        const coveredDose = t.kind === 'poison' && e.poisonRemaining > .8 && e.poisonDps >= stats.poisonDps;
+        const toughness = e.hp / (1 - ENEMIES[e.kind].armor) * (coveredDose ? .25 : 1);
+        if (t.priority === 'strongest') return toughness;
+        if (t.priority === 'gate' && e.state === 'attacking') return 1_000_000 + (t.kind === 'poison' ? toughness : e.progress);
+        return e.progress;
+      };
+      candidates.sort((a, b) => rank(b) - rank(a) || b.progress - a.progress || a.id - b.id);
+      const target = candidates[0];
       if (!target) { t.cooldown = Math.max(0, t.cooldown); continue; }
       t.targetAngle = Math.atan2(target.x - t.x, target.z - t.z);
       if (t.cooldown <= 0) {
         t.cooldown = stats.interval;
-        this.projectiles.push({ id: this.nextId++, x: t.x, z: t.z, origin: { x: t.x, z: t.z }, targetId: target.id, target: { x: target.x, z: target.z }, damage: stats.damage, damageKind: stats.damageKind, splash: stats.splash, speed: stats.projectileSpeed, kind: t.kind, travelled: 0 });
+        for (const [index, enemy] of candidates.slice(0, stats.bolts).entries()) this.projectiles.push({ id: this.nextId++, x: t.x, z: t.z, origin: { x: t.x, z: t.z }, targetId: enemy.id, target: { x: enemy.x, z: enemy.z }, damage: stats.damage, damageKind: stats.damageKind, poisonDps: stats.poisonDps, poisonDuration: stats.poisonDuration, lane: stats.bolts > 1 ? (index - (stats.bolts - 1) / 2) * .22 : 0, speed: stats.projectileSpeed, kind: t.kind, travelled: 0 });
         this.events.push({ type: 'shot', x: t.x, z: t.z, kind: t.kind });
       }
     }
@@ -123,9 +143,8 @@ export class Simulation {
       if (target) p.target = { x: target.x, z: target.z };
       const d = distance(p, p.target), step = p.speed * dt;
       if (d <= step) {
-        if (p.splash) { for (const e of this.enemies) if (e.hp > 0 && distance(e, p.target) <= p.splash) this.hit(e, p.damage, p.damageKind); }
-        else if (target) this.hit(target, p.damage, p.damageKind);
-        this.events.push({ type: 'impact', ...p.target, kind: p.kind, radius: p.splash });
+        if (target) { this.hit(target, p.damage, p.damageKind); this.applyPoison(target, p.poisonDps, p.poisonDuration); }
+        this.events.push({ type: 'impact', ...p.target, kind: p.kind });
       } else { p.x += (p.target.x - p.x) / d * step; p.z += (p.target.z - p.z) / d * step; p.travelled += step; remaining.push(p); }
     }
     this.projectiles = remaining; this.enemies = this.enemies.filter(e => e.hp > 0);

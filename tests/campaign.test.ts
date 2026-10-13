@@ -12,7 +12,7 @@ function finishMission(sim: Simulation): void {
   for (let wave = 0; wave < sim.mission.waves.length; wave++) {
     sim.startWave(); let ticks = 0;
     while (sim.phase === 'wave' && ticks++ < 10000) {
-      sim.update(.02); for (const enemy of sim.enemies) sim.hit(enemy, 100000, 'magic');
+      sim.update(.02); for (const enemy of sim.enemies) sim.hit(enemy, 100000, 'physical');
     }
     assert.ok(ticks < 10000, 'Wave did not finish');
   }
@@ -42,15 +42,15 @@ test('every mission reaches real victory after its finite waves and terminal sta
     assert.equal(sim.phase, 'victory'); assert.equal(sim.wave, mission.waves.length); assert.equal(sim.stars, 3);
     assert.equal(sim.kills, mission.waves.reduce((count, wave) => count + waveEnemies(wave).length, 0));
     const before = { wave: sim.wave, gold: sim.gold, score: sim.score, hp: sim.castleHp };
-    sim.update(100); sim.startWave(); assert.equal(typeof sim.build('archer', { x: 0, z: 0 }), 'string'); assert.equal(sim.sell(1), 0);
+    sim.update(100); sim.startWave(); assert.equal(typeof sim.build('precision', { x: 0, z: 0 }), 'string'); assert.equal(sim.sell(1), 0);
     assert.deepEqual({ wave: sim.wave, gold: sim.gold, score: sim.score, hp: sim.castleHp }, before);
   }
 });
 test('victory waits for all spawns, enemies and projectiles; a surviving gate attacker prevents victory and can cause defeat', () => {
   const sim = new Simulation(); sim.wave = sim.mission.waves.length; sim.phase = 'wave'; sim.spawnQueue = ['minion']; sim.update(.02);
   assert.equal(sim.phase, 'wave'); assert.equal(sim.enemies.length, 1);
-  sim.hit(sim.enemies[0], 10000, 'magic');
-  sim.projectiles.push({ id: 99, kind: 'mage', targetId: -1, target: { x: 0, z: 0 }, origin: { x: 8, z: 8 }, x: 8, z: 8, damage: 10, damageKind: 'magic', speed: 10, splash: 0, travelled: 0 });
+  sim.hit(sim.enemies[0], 10000, 'physical');
+  sim.projectiles.push({ id: 99, kind: 'poison', targetId: -1, target: { x: 0, z: 0 }, origin: { x: 8, z: 8 }, x: 8, z: 8, damage: 10, damageKind: 'physical', speed: 10, poisonDps: 0, poisonDuration: 0, lane: 0, travelled: 0 });
   sim.update(.02); assert.equal(sim.phase, 'wave');
   for (let i = 0; i < 100; i++) sim.update(.02); assert.equal(sim.phase, 'victory');
   const loss = new Simulation(); loss.phase = 'wave'; loss.wave = loss.mission.waves.length; loss.castleHp = 1;
@@ -77,10 +77,10 @@ test('invalid and unavailable storage cannot corrupt progress or stop playing', 
   assert.equal(blocked.complete(0, 2, 500), false); assert.ok(blocked.isUnlocked(1)); assert.equal(blocked.totalStars, 2);
 });
 test('weapon availability belongs to the mission and retries reset gold, castle and upgrades', () => {
-  const first = new Simulation(); assert.equal(typeof first.build('cannon', { x: 0, z: 0 }), 'string'); assert.equal(typeof first.build('mage', { x: 0, z: 0 }), 'string'); assert.equal(first.gold, 300);
-  assert.deepEqual(MISSIONS.slice(0, 4).map(m => m.towers), [['archer'], ['archer', 'crossbow'], ['archer', 'crossbow', 'mage'], ['archer', 'crossbow', 'mage', 'cannon']]);
-  assert.deepEqual(['archer', 'crossbow', 'mage', 'cannon'].map(kind => towerUnlockMission(kind as 'archer' | 'crossbow' | 'mage' | 'cannon')), [1, 2, 3, 4]);
-  assert.equal(typeof first.build('crossbow', { x: 0, z: 0 }), 'string');
+  const first = new Simulation(); assert.equal(typeof first.build('triple', { x: 0, z: 0 }), 'string'); assert.equal(typeof first.build('poison', { x: 0, z: 0 }), 'string'); assert.equal(first.gold, 300);
+  assert.deepEqual(MISSIONS.slice(0, 3).map(m => m.towers), [['precision'], ['precision', 'triple'], ['precision', 'triple', 'poison']]);
+  assert.deepEqual(['precision', 'triple', 'poison'].map(kind => towerUnlockMission(kind as 'precision' | 'triple' | 'poison')), [1, 2, 3]);
+  assert.equal(typeof first.build('triple', { x: 0, z: 0 }), 'string');
   first.castleHp = 200; first.gold = 2; const retry = new Simulation(first.mission);
   assert.equal(retry.castleHp, 1000); assert.equal(retry.gold, 300); assert.equal(retry.wave, 0); assert.equal(retry.towers.length, 0);
 });
@@ -96,7 +96,7 @@ test('ten missions keep the original saves and unlock the new campaign sequentia
     if (i < 9) assert.ok(new CampaignProgress(adapter).isUnlocked(i + 1));
   }
   assert.equal(new CampaignProgress(adapter).completed, 10);
-  for (const mission of MISSIONS.slice(4)) assert.deepEqual(mission.towers, ['archer', 'crossbow', 'mage', 'cannon']);
+  for (const mission of MISSIONS.slice(4)) assert.deepEqual(mission.towers, ['precision', 'triple', 'poison']);
 });
 test('gate health scales per mission; stars use its percentage and retries restore its maximum', () => {
   let previous = 0;

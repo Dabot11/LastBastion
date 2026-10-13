@@ -14,7 +14,7 @@ export class DamageLabels {
     this.layer.className = 'damage-layer'; this.layer.setAttribute('aria-hidden', 'true');
     this.gate.className = 'gate-label'; this.layer.append(this.gate); container.append(this.layer);
   }
-  add(position: THREE.Vector3, damage: number, kind: 'physical' | 'piercing' | 'magic' | 'gate'): void {
+  add(position: THREE.Vector3, damage: number, kind: 'physical' | 'poison' | 'gate'): void {
     if (this.labels.length >= 64) this.release(this.labels.shift()!);
     const element = this.spare.pop() ?? document.createElement('span'); element.className = `damage-number ${kind}`;
     element.textContent = `−${Math.round(damage) || '<1'}`; element.dataset.damage = String(damage);

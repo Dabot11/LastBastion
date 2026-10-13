@@ -10,14 +10,12 @@ test('every weapon, impact, creature and reward has a non-silent finite waveform
     assert.equal(sound[0], 0); assert.ok(Math.abs(sound.at(-1)!) < .002);
   }
 });
-test('bow, crossbow, cannon and magic have distinct textures, envelopes and durations', () => {
-  const sounds = ['arrow', 'crossbow', 'cannon', 'magic'].map(name => renderSound(name as 'arrow'));
-  for (let i = 0; i < sounds.length; i++) for (const other of sounds.slice(i + 1)) {
-    const a = sounds[i]; let dot = 0, left = 0, right = 0;
-    for (let n = 0; n < Math.min(a.length, other.length); n++) { dot += a[n] * other[n]; left += a[n] ** 2; right += other[n] ** 2; }
-    assert.ok(Math.abs(dot / Math.sqrt(left * right)) < .95, 'Do not reuse the same beep across weapons');
-  }
-  assert.ok(sounds[2].length > sounds[0].length * 3, 'A cannon blast needs a rumbling tail');
+test('a crossbow release and its impact are brief and have distinct waveforms', () => {
+  const shot = renderSound('crossbow'), impact = renderSound('impact-crossbow');
+  assert.ok(shot.length / AUDIO_SAMPLE_RATE < .2 && impact.length / AUDIO_SAMPLE_RATE < .15);
+  let dot = 0, left = 0, right = 0;
+  for (let i = 0; i < impact.length; i++) { dot += shot[i] * impact[i]; left += shot[i] ** 2; right += impact[i] ** 2; }
+  assert.ok(Math.abs(dot / Math.sqrt(left * right)) < .95);
 });
 test('original stereo music loops without silence, clipped peaks or a discontinuity at the seam', () => {
   const [left, right] = renderMusic(); assert.equal(left.length, MUSIC_SECONDS * AUDIO_SAMPLE_RATE); assert.equal(right.length, left.length);

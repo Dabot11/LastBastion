@@ -525,3 +525,11 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
   .pause-tag small { display: none; }
   .tower-panel { top: calc(var(--hud-bottom) + 54px); right: 9px; width: 236px; max-height: calc(100dvh - var(--hud-bottom) - 178px); }
 }
+
+/* Three crossbow specializations and their per-defense targeting control. */
+.tower-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.target-priority { display: flex; align-items: center; gap: 10px; font-size: 11px; margin: 9px 0 4px; }
+.target-priority select { min-width: 0; flex: 1; border: 1px solid #8ca6ad70; border-radius: 6px; padding: 7px; background: #163449; color: #fff1d0; font: inherit; }
+.priority-description { display: block; color: #bfd0d3; font-size: 10px; line-height: 1.4; }
+.damage-number.poison { color: #baf082; text-shadow: 0 2px 3px #1b331d, 0 0 4px #183522; }
+@media (max-width: 600px) { .defenses-menu .tower-card img { width: 78px; } .defenses-menu .card-copy > span { font-size: 8px; } }

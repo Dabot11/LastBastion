@@ -37,7 +37,8 @@ const ui = new UI(root, {
   pause: () => { if (!overlay && !sim.finished) paused = !paused; },
   speed: () => { speed = speed === 1 ? 2 : 1; }, sound: () => audio.toggle(), music: enabled => audio.setMusic(enabled), volume: value => audio.setVolume(value), audioSettings: () => ({ muted: audio.muted, music: audio.musicEnabled, volume: audio.volume }),
   nextWave: () => { if (!overlay && sim.phase === 'preparation') { paused = false; sim.startWave(); } },
-  upgrade: () => { if (ui.selectedId !== null) { const error = sim.upgrade(ui.selectedId); if (error) ui.toast(error); else ui.toast('Torre mejorada: más daño, alcance y velocidad'); } },
+  upgrade: () => { if (ui.selectedId !== null) { const error = sim.upgrade(ui.selectedId); if (error) ui.toast(error); else ui.toast('Ballesta mejorada: más potencia y alcance'); } },
+  priority: priority => { if (ui.selectedId !== null) sim.setPriority(ui.selectedId, priority); },
   sell: () => { if (ui.selectedId !== null) { const refund = sim.sell(ui.selectedId); ui.toast(`Torre vendida · +${refund} oro`); cancel(); } },
   help: showHelp, closeHelp,
   restart: () => startMission(missionIndex), resetCamera: () => view.resetCamera(), zoom: delta => view.zoom(delta),
@@ -81,10 +82,11 @@ window.addEventListener('keydown', event => {
     if (event.key === 'Escape') { if (overlay === 'help') closeHelp(); else if (overlay === 'campaign' && missionActive && !sim.finished) { overlay = null; ui.hideOverlay(); } }
     return;
   }
+  if (event.target instanceof Element && event.target.closest('input,select,textarea')) return;
   if (event.target instanceof Element && event.target.closest('button,a') && (event.code === 'Space' || event.key === 'Enter')) return;
-  const kinds: TowerKind[] = ['archer', 'crossbow', 'mage', 'cannon'];
+  const kinds = Object.keys(TOWERS) as TowerKind[];
   if (event.key === 'Escape') { cancel(); ui.setDefensesOpen(false); }
-  if (event.key >= '1' && event.key <= '4') select(kinds[Number(event.key) - 1]);
+  if (event.key >= '1' && event.key <= '3') select(kinds[Number(event.key) - 1]);
   if (event.code === 'Space') { event.preventDefault(); if (!overlay && !sim.finished) paused = !paused; }
   if (event.key.toLowerCase() === 'b') ui.el('defenses-toggle').click();
   if (event.key.toLowerCase() === 'm') ui.el('sound').click();

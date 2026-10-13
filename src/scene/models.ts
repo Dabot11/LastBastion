@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { ENEMIES, TOWERS, type EnemyKind, type TowerKind } from '../game/config';
+import { ENEMIES, TOWERS, towerStats, type EnemyKind, type TowerKind } from '../game/config';
 const mats = new Map<string, THREE.MeshStandardMaterial>();
 const geos = new Map<string, THREE.BufferGeometry>();
 const templates = new Map<string, THREE.Group>();
@@ -112,16 +112,6 @@ function crenellations(g: THREE.Group, width: number, y: number): void {
   for (const x of [-width / 2, 0, width / 2]) for (const z of [-width / 2, width / 2]) mesh(g, box(.22, .29, .22), EDGE, x, y, z);
   for (const x of [-width / 2, width / 2]) mesh(g, box(.22, .29, .22), EDGE, x, y, 0);
 }
-function person(g: THREE.Group, mage: boolean): void {
-  mesh(g, cone(.19, .43, 7), mage ? 0x2e4c95 : BLUE, 0, .30, 0);
-  mesh(g, cylinder(.17, .08, 6), mage ? GOLD : WOOD, 0, .18, 0);
-  mesh(g, orb(.125), 0xe2b181, 0, .59, .035);
-  for (const x of [-.043, .043]) mesh(g, box(.018, .025, .018), DARK, x, .61, .14);
-  if (mage) { mesh(g, cone(.18, .32, 6), BLUE, 0, .80, -.025); mesh(g, box(.25, .16, .09), BLUE, 0, .6, -.07); }
-  else { mesh(g, cylinder(.15, .09, 6), DARK, 0, .72, 0); mesh(g, cone(.16, .16, 6), BLUE, 0, .8, 0); }
-  for (const x of [-.09, .09]) mesh(g, box(.10, .13, .15), DARK, x, .065, .025);
-  for (const x of [-.20, .20]) { const arm = mesh(g, box(.10, .26, .10), BLUE, x, .41, .08); arm.rotation.z = -x * 1.6; mesh(g, orb(.052), 0xe2b181, x * .9, .36, .17); }
-}
 const levelShields = new Map<number, THREE.SpriteMaterial>();
 function levelShield(level: number): THREE.Sprite {
   if (!levelShields.has(level)) {
@@ -143,7 +133,7 @@ function makeTower(kind: TowerKind, level: number): THREE.Group {
   const base = mesh(g, cylinder(.70 + (level - 1) * .07, .14 + (level - 1) * .04, 6), level === 3 ? GOLD : level === 2 ? DARK : 0x858c80, 0, .07 + (level - 1) * .02, 0); base.rotation.y = Math.PI / 2;
   if (level >= 2) mesh(g, cylinder(.68, .08, 6), level === 3 ? EDGE : 0x9692a4, 0, .20, 0).rotation.y = Math.PI / 2;
   mesh(g, softBox(.99, .17, .99), EDGE, 0, .22, 0);
-  const height = kind === 'cannon' ? .9 : 1.5;
+  const height = 1.5;
   mesh(g, softBox(.86, height, .86), stone, 0, .31 + height / 2, 0); stoneBands(g, .86, .86, .31, height);
   for (const x of [-.44, .44]) for (const z of [-.44, .44]) mesh(g, softBox(.14, height, .14), EDGE, x, .31 + height / 2, z);
   for (const x of [-.29, .29]) mesh(g, softBox(.17, .045, .017), 0x678562, x, .37, .447);
@@ -152,43 +142,36 @@ function makeTower(kind: TowerKind, level: number): THREE.Group {
   mesh(g, torus(.085, .025, 4, 8, Math.PI), EDGE, 0, 1.13, .45);
   banner(g, .29, .99, .475, .78);
   const turret = new THREE.Group(); turret.name = 'turret'; turret.position.y = height + .43; turret.userData.restY = turret.position.y; g.add(turret);
-  if (kind === 'archer' || kind === 'mage') {
-    person(turret, kind === 'mage');
-    if (kind === 'mage') {
-      mesh(turret, cylinder(.03, .95), WOOD_LIGHT, .30, .48, .13);
-      const orbHolder = mesh(turret, torus(.14, .024, 4, 10), GOLD, .30, .99, .13); orbHolder.rotation.x = Math.PI / 2;
-      mesh(turret, octa(.115), 0x59d8ff, .30, 1.02, .13, 0x009ed1);
-      const light = glow(0x44ccff, .54); light.position.set(.30, 1.03, .13); turret.add(light);
-      for (const x of [-.32, .32]) mesh(g, box(.055, .34, .026), 0x83c9de, x, 1.44, .48, 0x004b72);
-    } else {
-      const bow = mesh(turret, torus(.27, .025, 4, 13, Math.PI), WOOD_LIGHT, .27, .48, .31); bow.rotation.y = Math.PI / 2; bow.rotation.z = Math.PI / 2;
-      mesh(turret, box(.016, .49, .015), 0xe7dab7, .27, .48, .31);
-      mesh(turret, box(.026, .026, .47), WOOD, .27, .48, .35);
-    }
-  } else if (kind === 'crossbow') {
-    mesh(turret, cylinder(.11, .39), WOOD, 0, .19, 0);
-    mesh(turret, box(.19, .13, 1.02), WOOD, 0, .43, .10);
-    for (const x of [-.34, .34]) { const brace = mesh(turret, box(.10, .10, .6), WOOD_LIGHT, x, .47, .32); brace.rotation.y = -x * 1.2; }
-    const arms = mesh(turret, torus(.47, .04, 5, 13, Math.PI), WOOD_LIGHT, 0, .47, .34); arms.rotation.x = Math.PI / 2; arms.rotation.z = Math.PI;
-    mesh(turret, box(.89, .017, .017), 0xf1dab1, 0, .47, .34);
-    mesh(turret, box(.038, .038, .98), 0xa7aa9c, 0, .52, .16);
-    mesh(turret, cone(.065, .15, 4), DARK, 0, .53, .72).rotation.x = Math.PI / 2;
-  } else {
-    for (const x of [-.33, .33]) {
-      const wheel = mesh(turret, cylinder(.27, .10, 20), WOOD, x, .27, -.10); wheel.rotation.z = Math.PI / 2;
-      mesh(turret, torus(.255, .023, 6, 24), DARK, x * 1.15, .27, -.1).rotation.y = Math.PI / 2;
-      for (let i = 0; i < 4; i++) { const spoke = mesh(turret, softBox(.018, .45, .026), WOOD_LIGHT, x * 1.17, .27, -.1); spoke.rotation.x = i * Math.PI / 4; }
-      const axle = mesh(turret, cylinder(.067, .115, 12), GOLD, x * 1.18, .27, -.10); axle.rotation.z = Math.PI / 2;
-    }
-    mesh(turret, softBox(.56, .18, .83), WOOD, 0, .26, -.03);
-    for (const x of [-.23, .23]) { const brace = mesh(turret, softBox(.11, .34, .5), WOOD_LIGHT, x, .4, .015); brace.rotation.x = -.15; }
-    const barrel = mesh(turret, cylinder(.255, .90, 24), 0x303f46, 0, .52, .24); barrel.rotation.x = Math.PI / 2 - .12; barrel.name = 'barrel';
-    for (const z of [-.13, .12, .55, .69]) { const band = mesh(turret, torus(.258, .025, 6, 24), GOLD, 0, .52 + z * .1, z); band.rotation.x = -.12; }
-    mesh(turret, circle(.205, 24), 0x15232b, 0, .603, .697).rotation.x = -.12;
-    mesh(turret, torus(.19, .013, 6, 24), 0x626174, 0, .603, .710).rotation.x = -.12;
-    torch(g, -.43, 1.04, -.4);
+  const accent = TOWERS[kind].color;
+  mesh(g, box(.46, .16, .055), accent, 0, 1.35, .48);
+  mesh(turret, cylinder(.11, .39), WOOD, 0, .19, 0);
+  mesh(turret, softBox(.26, .14, 1.10), kind === 'precision' ? DARK : WOOD, 0, .43, .10);
+  for (const x of [-.36, .36]) { const brace = mesh(turret, box(.10, .10, .65), WOOD_LIGHT, x, .47, .32); brace.rotation.y = -x * 1.2; }
+  const arms = mesh(turret, torus(.49, .045, 5, 16, Math.PI), kind === 'precision' ? 0x9692a4 : WOOD_LIGHT, 0, .47, .34); arms.rotation.x = Math.PI / 2; arms.rotation.z = Math.PI;
+  const string = mesh(turret, box(.93, .017, .017), 0xf1dab1, 0, .47, .34); string.name = 'bow-string';
+  const stats = towerStats(kind, level), loaded = new THREE.Group(); loaded.name = 'loaded-bolts'; turret.add(loaded);
+  for (let i = 0; i < stats.bolts; i++) {
+    const x = (i - (stats.bolts - 1) / 2) * .22;
+    mesh(turret, softBox(.07, .05, 1), DARK, x, .50, .14);
+    mesh(loaded, box(.035, .035, .92), WOOD_LIGHT, x, .55, .16);
+    mesh(loaded, cone(.06, .15, 4), kind === 'poison' ? accent : 0xc0c9be, x, .55, .72).rotation.x = Math.PI / 2;
+    mesh(loaded, box(.08, .025, .13), accent, x, .55, -.21);
   }
-  const muzzle = new THREE.Object3D(); muzzle.name = 'muzzle'; muzzle.position.set(kind === 'mage' ? .3 : kind === 'archer' ? .27 : 0, kind === 'mage' ? 1.03 : .52, kind === 'mage' ? .13 : .74); turret.add(muzzle);
+  if (kind === 'precision') {
+    mesh(turret, softBox(.07, .16, .07), 0x9692a4, 0, .63, -.3);
+    mesh(turret, torus(.10, .018, 5, 14), accent, 0, .73, -.3);
+  }
+  if (kind === 'triple') {
+    for (const x of [-.30, .30]) mesh(turret, softBox(.12, .18, .65), accent, x, .38, -.09);
+  }
+  if (kind === 'poison') {
+    for (const x of [-.29, .29]) {
+      mesh(turret, cylinder(.08, .23, 10), 0x447b46, x, .34, -.22);
+      mesh(turret, cylinder(.065, .13, 10), accent, x, .39, -.22, 0x17380b);
+      mesh(turret, cylinder(.048, .07, 8), WOOD, x, .50, -.22);
+    }
+  }
+  const muzzle = new THREE.Object3D(); muzzle.name = 'muzzle'; muzzle.position.set(0, .55, .74); turret.add(muzzle);
   for (let i = 1; i < level; i++) { mesh(g, box(1.03, .06, 1.03), GOLD, 0, .48 + i * .36, 0); mesh(g, octa(.055), GOLD, -.14 + i * .14, height + .30, .53); }
   if (level >= 2) {
     for (const x of [-.44, .44]) for (const z of [-.44, .44]) {
@@ -203,14 +186,14 @@ function makeTower(kind: TowerKind, level: number): THREE.Group {
     for (const x of [-.4, .4]) for (const z of [-.4, .4]) mesh(g, cylinder(.12, .22, 6), GOLD, x, height + .68, z);
     for (const x of [-.45, .45]) {
       mesh(g, cylinder(.065, .40, 6), GOLD, x, height + .81, -.44);
-      mesh(g, octa(.09), TOWERS[kind].color, x, height + 1.06, -.44, kind === 'mage' ? 0x008da7 : 0);
+      mesh(g, octa(.09), TOWERS[kind].color, x, height + 1.06, -.44, kind === 'poison' ? 0x17380b : 0);
     }
     mesh(g, box(.26, .12, .08), GOLD, 0, height + .23, .47);
     mesh(g, octa(.075), TOWERS[kind].color, 0, height + .24, .54);
   }
   const shield = levelShield(level); shield.position.set(-.51, height + .15, .60); g.add(shield);
   g.userData.level = level;
-  compact(g, ['turret']); compact(turret, ['barrel']); return g;
+  g.userData.variant = kind; g.userData.bolts = stats.bolts; compact(g, ['turret']); compact(turret, ['bow-string', 'loaded-bolts']); return g;
 }
 export function towerModel(kind: TowerKind, level = 1): THREE.Group {
   const key = `tower-${kind}-${level}`; if (!templates.has(key)) templates.set(key, makeTower(kind, level)); return templates.get(key)!.clone(true);
@@ -310,12 +293,9 @@ export function cottage(city = false): THREE.Group {
 }
 export function projectileModel(kind: TowerKind): THREE.Group {
   const g = new THREE.Group();
-  if (kind === 'mage') { mesh(g, orb(.11), 0x72ddff, 0, 0, 0, 0x12b4e2); const light = glow(0x50ceff, .58); g.add(light); for (const [z, size] of [[-.18, .37], [-.32, .22]]) { const trail = glow(0x4bb4f5, size); trail.position.z = z; g.add(trail); } }
-  else if (kind === 'cannon') { mesh(g, orb(.13), 0x27363d, 0, 0, 0); mesh(g, orb(.055), 0xffc765, 0, 0, -.13, 0xff8b1c); }
-  else {
-    const shaft = mesh(g, cylinder(kind === 'crossbow' ? .025 : .016, kind === 'crossbow' ? .58 : .4, 5), WOOD_LIGHT, 0, 0, 0); shaft.rotation.x = Math.PI / 2;
-    const tip = mesh(g, cone(kind === 'crossbow' ? .07 : .045, .15, 4), 0xc0c9be, 0, 0, kind === 'crossbow' ? .36 : .27); tip.rotation.x = Math.PI / 2;
-    for (const x of [-.05, .05]) { const feather = mesh(g, box(.014, .08, .09), 0xe6e1c2, x, 0, -.18); feather.rotation.z = -x * 5; }
-  }
+  const shaft = mesh(g, cylinder(.024, .58, 5), WOOD_LIGHT, 0, 0, 0); shaft.rotation.x = Math.PI / 2;
+  const tip = mesh(g, cone(.065, .15, 4), kind === 'poison' ? 0x99d76b : 0xc0c9be, 0, 0, .36, kind === 'poison' ? 0x17380b : 0); tip.rotation.x = Math.PI / 2;
+  for (const x of [-.05, .05]) { const feather = mesh(g, box(.014, .08, .11), TOWERS[kind].color, x, 0, -.18); feather.rotation.z = -x * 5; }
+  if (kind === 'poison') { const trail = glow(0x91c758, .22); trail.position.z = -.27; g.add(trail); }
   g.traverse(o => { if (o instanceof THREE.Mesh) { o.castShadow = false; o.receiveShadow = false; } }); return g;
 }

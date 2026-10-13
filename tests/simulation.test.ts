@@ -38,23 +38,21 @@ test('stone foundations span the entry, middle and castle approaches', () => {
   for (const fraction of [.12, .45, .85]) assert.ok(DEFAULT_MAP.pads.some(p => Math.abs(p.progress / DEFAULT_MAP.length - fraction) < .18));
 });
 test('economy, three levels, actual stat changes, sale and rejection are transactional', () => {
-  const sim = new Simulation(), p = validPoint(); const t = sim.build('archer', p); assert.equal(typeof t, 'object'); if (typeof t === 'string') return;
-  assert.equal(Number(sim.gold), 200); assert.equal(typeof sim.build('archer', p), 'string'); assert.equal(Number(sim.gold), 200);
-  assert.equal(sim.upgrade(t.id), null); assert.equal(Number(sim.gold), 120); assert.equal(Number(t.level), 2);
-  assert.ok(towerStats('archer', 2).damage > TOWERS.archer.damage); assert.ok(towerStats('archer', 2).range > TOWERS.archer.range); assert.ok(towerStats('archer', 2).interval < TOWERS.archer.interval);
-  assert.ok(sim.upgrade(t.id)); assert.equal(Number(t.level), 2); sim.gold += 100; assert.equal(sim.upgrade(t.id), null); assert.equal(Number(t.level), 3);
+  const sim = new Simulation(), p = validPoint(); const t = sim.build('precision', p); assert.equal(typeof t, 'object'); if (typeof t === 'string') return;
+  assert.equal(Number(sim.gold), 150); assert.equal(typeof sim.build('precision', p), 'string'); assert.equal(Number(sim.gold), 150);
+  assert.equal(sim.upgrade(t.id), null); assert.equal(Number(sim.gold), 40); assert.equal(Number(t.level), 2);
+  assert.ok(towerStats('precision', 2).damage > TOWERS.precision.damage); assert.ok(towerStats('precision', 2).range > TOWERS.precision.range); assert.ok(towerStats('precision', 2).interval === TOWERS.precision.interval);
+  assert.ok(sim.upgrade(t.id)); assert.equal(Number(t.level), 2); sim.gold += 200; assert.equal(sim.upgrade(t.id), null); assert.equal(Number(t.level), 3);
   const before = sim.gold; assert.ok(sim.upgrade(t.id)); assert.equal(Number(sim.gold), before);
   const expected = Math.floor(t.invested * 7 / 10); assert.equal(sim.sell(t.id), expected); assert.equal(sim.towers.length, 0); assert.equal(Number(sim.gold), before + expected); assert.equal(sim.sell(t.id), 0);
 });
-test('armor, piercing and magic have distinct damage behavior', () => {
-  const beast = ENEMIES.beast;
-  assert.equal(damageAfterResistance(100, 'physical', beast), 40);
-  assert.equal(damageAfterResistance(100, 'piercing', beast), 88);
-  assert.equal(damageAfterResistance(100, 'magic', beast), 95);
-  assert.ok(damageAfterResistance(100, 'magic', ENEMIES.guardian) < 100);
+test('poison partially bypasses armor while physical bolts remain weak against it', () => {
+  assert.ok(Math.abs(damageAfterResistance(100, 'physical', ENEMIES.beast) - 30) < 1e-8);
+  assert.equal(damageAfterResistance(100, 'poison', ENEMIES.beast), 82.5);
+  assert.equal(damageAfterResistance(100, 'poison', ENEMIES.runner), 100);
 });
 test('each placed tower pays its own prices and upgrades without changing its neighbors', () => {
-  const prices = { archer: [100, 80, 140], crossbow: [200, 160, 280], mage: [350, 250, 450], cannon: [500, 350, 600] };
+  const prices = { precision: [150, 110, 200], triple: [200, 150, 250], poison: [250, 170, 280] };
   for (const kind of Object.keys(TOWERS) as (keyof typeof TOWERS)[]) {
     const sim = new Simulation(MISSIONS[3]); sim.gold = 5000;
     const first = sim.build(kind, validPoint([], sim.map)); assert.notEqual(typeof first, 'string'); if (typeof first === 'string') continue;
@@ -64,8 +62,7 @@ test('each placed tower pays its own prices and upgrades without changing its ne
       const before = sim.gold, previous = towerStats(kind, level);
       assert.equal(upgradeCost(kind, level), prices[kind][level]); assert.equal(sim.upgrade(first.id), null);
       assert.equal(sim.gold, before - prices[kind][level]); assert.equal(first.level, level + 1);
-      const stats = towerStats(kind, first.level); assert.ok(stats.damage > previous.damage && stats.range > previous.range && stats.interval < previous.interval);
-      if (kind === 'cannon') assert.ok(stats.splash > previous.splash);
+      const stats = towerStats(kind, first.level); assert.ok(stats.damage > previous.damage && stats.range > previous.range && stats.interval === previous.interval);
       assert.equal(second.level, 1); assert.equal(second.invested, prices[kind][0]);
     }
     const before = sim.gold; assert.equal(sim.upgrade(first.id), 'Nivel máximo alcanzado'); assert.equal(sim.gold, before);
@@ -75,7 +72,7 @@ test('each placed tower pays its own prices and upgrades without changing its ne
   }
 });
 test('selling level-two towers returns exactly 70% without losing gold to floating-point rounding', () => {
-  for (const [kind, expected] of [['archer', 126], ['crossbow', 252], ['mage', 420], ['cannon', 595]] as const) {
+  for (const [kind, expected] of [['precision', 182], ['triple', 245], ['poison', 294]] as const) {
     const sim = new Simulation(MISSIONS[3]); sim.gold = 2000;
     const t = sim.build(kind, validPoint([], sim.map)); assert.notEqual(typeof t, 'string'); if (typeof t === 'string') continue;
     assert.equal(sim.upgrade(t.id), null); const before = sim.gold;
@@ -83,10 +80,10 @@ test('selling level-two towers returns exactly 70% without losing gold to floati
   }
 });
 test('enemy rewards are awarded exactly once', () => {
-  const sim = new Simulation(); sim.wave = 1; const e = sim.spawn('minion'); sim.hit(e, 10000, 'magic'); sim.hit(e, 10000, 'magic');
+  const sim = new Simulation(); sim.wave = 1; const e = sim.spawn('minion'); sim.hit(e, 10000, 'physical'); sim.hit(e, 10000, 'physical');
   assert.equal(sim.kills, 1); assert.equal(Number(sim.gold), 300 + ENEMIES.minion.reward); assert.equal(sim.score, 125);
 });
-test('all four towers fire and apply projectile damage', () => {
+test('all three crossbows fire and apply projectile damage', () => {
   for (const kind of Object.keys(TOWERS) as (keyof typeof TOWERS)[]) {
     const sim = new Simulation(MISSIONS[3]); sim.wave = 1; sim.phase = 'wave'; sim.gold = 1000;
     let p: Point | null = null;
@@ -97,15 +94,8 @@ test('all four towers fire and apply projectile damage', () => {
   }
 });
 test('towers only acquire enemies inside their actual range', () => {
-  const sim = new Simulation(); sim.phase = 'wave'; sim.wave = 1; const t = sim.build('archer', validPoint()); assert.equal(typeof t, 'object');
+  const sim = new Simulation(); sim.phase = 'wave'; sim.wave = 1; const t = sim.build('precision', validPoint()); assert.equal(typeof t, 'object');
   if (typeof t === 'string') return; t.x = -13; t.z = -11; sim.spawn('minion'); sim.update(.02); assert.equal(sim.projectiles.length, 0);
-});
-test('cannon splash damages multiple enemies within radius only', () => {
-  const sim = new Simulation(); sim.phase = 'wave'; sim.wave = 1;
-  const a = sim.spawn('beast'), b = sim.spawn('beast'), c = sim.spawn('beast'); b.progress = .6; c.progress = 5;
-  Object.assign(b, samplePath(b.progress)); Object.assign(c, samplePath(c.progress));
-  sim.projectiles.push({ id: 99, kind: 'cannon', origin: a, x: a.x, z: a.z, target: { x: a.x, z: a.z }, targetId: a.id, damage: 50, damageKind: 'physical', splash: 1.8, speed: 10, travelled: 0 });
-  sim.update(.02); assert.ok(a.hp < a.maxHp && b.hp < b.maxHp); assert.equal(c.hp, c.maxHp);
 });
 test('movement follows every waypoint and is independent of frame rate', () => {
   const a = new Simulation(), b = new Simulation(); a.wave = b.wave = 1; a.phase = b.phase = 'wave';
@@ -114,14 +104,14 @@ test('movement follows every waypoint and is independent of frame rate', () => {
 });
 test('repeated gate attacks cause defeat without gold or kills, then a new mission resets', () => {
   const sim = new Simulation(); sim.phase = 'wave'; sim.wave = 5; sim.castleHp = 100;
-  const e = sim.spawn('guardian'); e.progress = PATH_LENGTH - .01; advance(sim, 3);
+  const e = sim.spawn('guardian'); e.progress = PATH_LENGTH - .01; advance(sim, 5.5);
   assert.equal(sim.castleHp, 0); assert.equal(sim.phase, 'gameover'); assert.equal(Number(sim.gold), 300); assert.equal(sim.kills, 0);
-  assert.equal(typeof sim.build('archer', validPoint()), 'string'); assert.equal(sim.sell(1), 0);
+  assert.equal(typeof sim.build('precision', validPoint()), 'string'); assert.equal(sim.sell(1), 0);
   const wave = sim.wave; sim.startWave(); sim.update(100); assert.equal(sim.wave, wave);
   const reset = new Simulation(); assert.equal(reset.gold, 300); assert.equal(reset.castleHp, 1000); assert.equal(reset.wave, 0); assert.equal(reset.towers.length, 0);
 });
 test('missions have finite waves, introduce challenges and stop at their final wave', () => {
-  const sim = new Simulation(MISSIONS[1]); sim.startWave(); const initial = sim.waveTotal;
+  const sim = new Simulation(MISSIONS[2]); sim.startWave(); const initial = sim.waveTotal;
   sim.phase = 'preparation'; sim.wave = sim.mission.waves.length - 1; sim.startWave();
   assert.ok(sim.spawnQueue.includes('guardian')); assert.ok(sim.spawnQueue.includes('beast')); assert.ok(sim.spawnQueue.includes('runner')); assert.ok(sim.waveTotal > initial);
   sim.phase = 'preparation'; sim.startWave(); assert.equal(sim.wave, sim.mission.waves.length);

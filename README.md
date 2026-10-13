@@ -1,8 +1,8 @@
 # The Last Bastion
 
-Juego Tower Defense 3D de fantasía medieval, con bases estratégicas de construcción y una campaña de diez misiones. Three.js genera todo el escenario y los personajes mediante modelos procedurales con materiales, mampostería y animaciones de combate. No requiere recursos externos, cuentas ni claves API.
+Juego Tower Defense 3D de fantasía medieval defendido exclusivamente por ballestas, con bases estratégicas de construcción y una campaña de diez misiones. Three.js genera todo el escenario y los personajes mediante modelos procedurales con materiales, mampostería y animaciones de combate. No requiere recursos externos, cuentas ni claves API.
 
-Capturas del juego: [bases hexagonales](docs/foundations.png) · [evolución de las cuatro defensas](docs/tower-evolution.png).
+Captura del MVP: [ballesta de Veneno, objetivos y daño continuo](docs/crossbows.png).
 
 ## Ejecutar
 
@@ -40,35 +40,35 @@ Si no ves **Settings**, entra con una cuenta administradora del repositorio. Si 
 
 Defiende la **puerta de madera del castillo, con 1000–3000 puntos de salud según la misión**, usando tus **300 monedas iniciales**. Los enemigos salen de una cueva en el extremo inferior derecho y recorren un camino único hasta el castillo superior izquierdo. El tramo final sube suavemente hasta el umbral: la fortaleza descansa sobre el terreno elevado, con una planta aproximadamente tres veces más ancha y profunda que antes. No hay bifurcaciones ni agua.
 
-Al llegar, los enemigos permanecen vivos y atacan la puerta. Dos pueden golpear a la vez; los demás esperan sobre el camino y avanzan cuando se libera una posición. Las torres siguen disparándoles. Hay terreno despejado para construir en ambos flancos de la entrada; puedes construir, mejorar o vender también durante el combate. El daño por golpe y el intervalo son **8 / 1,2 s** para esbirros, **6 / 0,85 s** para corredores, **30 / 1,9 s** para bestias y **55 / 2,2 s** para guardianes. El primer golpe tiene una preparación de 0,45 s. Llegar a la puerta no concede oro ni cuenta como baja; la oleada termina al eliminar a todos los atacantes.
+Al llegar, los enemigos permanecen vivos y atacan la puerta. Dos pueden golpear a la vez; los demás esperan sobre el camino y avanzan cuando se libera una posición. Las torres siguen disparándoles. Hay terreno despejado para construir en ambos flancos de la entrada; puedes construir, mejorar o vender también durante el combate. El daño por golpe y el intervalo son **8 / 1,2 s** para esbirros, **6 / 0,85 s** para corredores, **20 / 1,9 s** para bestias y **40 / 2,2 s** para guardianes. El primer golpe tiene una preparación de 0,45 s. Llegar a la puerta no concede oro ni cuenta como baja; la oleada termina al eliminar a todos los atacantes.
 
 Los golpes generan números de daño, retroceso, destellos y astillas de madera. Los números de enemigos muestran la salud realmente perdida después de resistencias, limitada a la salud restante y redondeada para leerla. Los de la puerta aparecen en rojo. La madera muestra grietas al bajar del 65% y 30% de salud, y cae al llegar a cero.
 
 Abre **Construir defensas** con su flecha o **B**, o pulsa una base hexagonal vacía para abrir el selector. Al elegir una defensa, el menú se oculta y puedes construir en las bases disponibles. Cada misión tiene 14–16 bases de piedra repartidas junto a la entrada, las curvas y el castillo, con árboles y rocas entre ellas. La vista previa se ajusta al centro de la base: ✓ permite la compra; X explica ocupación, bloqueo o falta de oro. Vender libera la misma base. El círculo azul discontinuo muestra el alcance real. El HUD y el selector siguen compactos; la oleada y su preparación se controlan desde el panel superior.
 
-| Defensa | Oro | Ventaja |
+| Ballesta | Oro | Función |
 | --- | ---: | --- |
-| Arqueros | 100 | Ataques rápidos contra enemigos pequeños |
-| Ballesta | 200 | Gran alcance; ignora el 80% de la armadura física |
-| Mago | 350 | Magia que evita la resistencia física |
-| Cañón | 500 | Explosiones que dañan a todos los enemigos de su radio |
+| Precisión | 150 | Un virote potente e inmediato; buen alcance para rematar y defender la puerta |
+| Triple | 200 | Dos virotes a enemigos distintos; tres al alcanzar el nivel 3 |
+| Veneno | 250 | Daño continuo que ignora el 75% de la armadura; coloca una al principio del recorrido |
 
-Cada torre construida tiene su propio nivel, de **1 a 3**. Haz clic en ella para comparar los atributos actuales con los de la próxima mejora y ver su coste antes de comprar. Las mejoras aumentan daño, alcance y frecuencia; las del cañón también aumentan su radio de explosión. Puedes vender por **el 70%** de todo lo invertido en esa torre.
+Cada ballesta tiene su propio nivel, de **1 a 3**. Las mejoras aumentan potencia y alcance, conservando la cadencia: Precisión dispara cada **2,4 s**, Triple cada **2,8 s** y Veneno cada **2,7 s**. El panel compara los atributos antes de comprar y muestra el daño por **virote**, la cantidad de objetivos de Triple y el daño y duración del Veneno. Una Triple no dirige varios virotes al mismo enemigo aislado. Puedes vender por **el 70%** de todo lo invertido.
 
-| Defensa | Construcción | Nivel 1 → 2 | Nivel 2 → 3 | Total hasta nivel 3 |
+| Ballesta | Construcción | Nivel 1 → 2 | Nivel 2 → 3 | Total hasta nivel 3 |
 | --- | ---: | ---: | ---: | ---: |
-| Arqueros | 100 | 80 | 140 | 320 |
-| Ballesta | 200 | 160 | 280 | 640 |
-| Mago | 350 | 250 | 450 | 1050 |
-| Cañón | 500 | 350 | 600 | 1450 |
+| Precisión | 150 | 110 | 200 | 460 |
+| Triple | 200 | 150 | 250 | 600 |
+| Veneno | 250 | 170 | 280 | 700 |
 
-Los precios de mejora son incrementales. Otra torre cubre una posición nueva; mejorar concentra potencia en una posición que ya funciona. Magos y cañones cuestan más que el oro inicial: establece cobertura barata y ahorra recompensas para incorporarlos. Las defensas bloqueadas indican su misión; las disponibles sin suficiente oro indican cuánto falta.
+Los 300 de oro iniciales permiten dos ballestas de Precisión. Elegir una especialista deja menos cobertura inmediata. Cada mejora es un pago adicional: ampliar cubre otra curva; mejorar refuerza una posición existente. Las defensas bloqueadas indican su misión y las disponibles sin suficiente oro indican cuánto falta.
 
-Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardianes con resistencia física y mágica. Cada misión tiene una composición propia y un final definido. Durante la preparación ves los enemigos de la próxima oleada y una sugerencia de defensa; los guardianes se anuncian antes de empezar y llegan con escoltas. Tienes 20 segundos de preparación entre oleadas y puedes iniciar la siguiente antes de tiempo. Al completar una oleada recibes una bonificación de oro.
+El Veneno dura **4 / 4,5 / 5 s** y hace **20 / 30 / 42 de daño por segundo** antes de resistencia. Los números verdes se agrupan cada medio segundo y muestran salud realmente perdida. Una gota verde junto a la barra identifica el estado. Reaplicar conserva la dosis activa más potente y renueva su duración; no suma dosis ni retrasa el próximo tick. Expira también después de salir del alcance de la ballesta. En objetivo «Más resistente», una dosis activa reduce la prioridad de ese enemigo para repartir el veneno entre otras amenazas resistentes.
+
+Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardianes con armadura resistente. Cada misión tiene una composición propia y un final definido. Durante la preparación ves los enemigos de la próxima oleada y una sugerencia de defensa; los guardianes se anuncian antes de empezar y llegan con escoltas. Tienes 20 segundos de preparación entre oleadas y puedes iniciar la siguiente antes de tiempo. Al completar una oleada recibes una bonificación de oro.
 
 Las bases permanecen visibles durante la partida y su borde se ilumina al elegir una defensa. La compra usa la misma lógica que el preview y siempre coloca la torre en el centro. Los tres niveles evolucionan de piedra sencilla a refuerzos de acero y después marfil y oro, con una base más robusta, armas más grandes y un escudo numerado. La mejora produce un destello, partículas y un pulso de construcción, también en pausa táctica. El panel muestra una imagen del nivel actual.
 
-Las defensas tienen prioridades diferentes: arqueros contra la primera línea, ballestas contra amenazas acorazadas, cañones contra grupos y magos contra armadura vulnerable a magia. Combinar posiciones y mejoras conserva más salud que abandonar las torres iniciales. Los ajustes de economía, enemigos y resultados están documentados en [BALANCE.md](BALANCE.md). Para repetir las simulaciones sin abrir WebGL, ejecuta `npm run balance`.
+Cada defensa permite elegir **Primero**, **Más resistente** o **Puerta** desde su panel. Precisión y Triple empiezan apuntando al más avanzado; Veneno prioriza salud y armadura. «Puerta» atiende primero a quienes la están golpeando. Los ajustes y simulaciones de economía, enemigos y resultados están en [BALANCE.md](BALANCE.md); ejecuta `npm run balance` para repetirlos.
 
 Cuando la puerta pierde toda su salud aparece **El castillo ha caído**. Resiste la última oleada y elimina todos los enemigos para ganar: verás estrellas, puntuación y el siguiente destino desbloqueado. Cada misión comienza de nuevo con 300 de oro, la salud máxima de su puerta y ninguna torre; el progreso de campaña permanece.
 
@@ -76,16 +76,16 @@ Cuando la puerta pierde toda su salud aparece **El castillo ha caído**. Resiste
 
 | Misión | Oleadas | Salud de puerta | Escenario y reto |
 | --- | ---: | ---: | --- |
-| Aldea de los pinos | 5 | 1000 | Bosque; aprende a construir y mejorar arqueros |
-| Villa del mercado | 6 | 1200 | Pueblo; desbloquea ballestas contra armaduras |
-| Ciudadela real | 7 | 1400 | Ciudad; desbloquea magos contra bestias |
-| El último bastión | 8 | 1600 | Fortaleza; desbloquea cañones contra grupos |
+| Aldea de los pinos | 5 | 1000 | Bosque; aprende cobertura y mejoras de Precisión |
+| Villa del mercado | 6 | 1200 | Pueblo; desbloquea Triple contra grupos |
+| Ciudadela real | 7 | 1400 | Ciudad; desbloquea Veneno contra armaduras |
+| El último bastión | 8 | 1600 | Fortaleza; combina munición y prioridades |
 | Bosque de los ecos | 8 | 1800 | Bosque; muchos corredores |
 | Villa de las caravanas | 8 | 2000 | Pueblo; armaduras y escoltas |
 | Fortaleza de la colina | 9 | 2200 | Fortaleza; cobertura de curvas |
 | Aldea del viejo molino | 9 | 2400 | Pueblo; hordas numerosas |
 | Paso de los guardianes | 10 | 2700 | Bosque; guardianes y sus escoltas |
-| Castillo de la corona | 10 | 3000 | Fortaleza; combina las cuatro defensas |
+| Castillo de la corona | 10 | 3000 | Fortaleza; combina las tres ballestas |
 
 
 Ganar una misión desbloquea la siguiente. Las estrellas premian la salud de la puerta: **una** por ganar, **dos** conservando al menos 60% de salud y **tres** conservando al menos 90%. Puedes repetir cualquier misión desbloqueada para mejorar el resultado. El menú de campaña conserva la mejor puntuación y cantidad de estrellas de cada misión; una repetición peor no reduce tus marcas ni suma estrellas duplicadas.
@@ -97,7 +97,7 @@ El oro solo sirve para construir y mejorar durante cada misión. XP, niveles de 
 ### Controles
 
 - **B / flecha Construir defensas:** abrir u ocultar el menú, sin mover la cámara.
-- **1–4:** arqueros, ballesta, mago, cañón; **clic izquierdo:** construir o seleccionar torre.
+- **1–3:** Precisión, Triple y Veneno; **clic izquierdo:** construir o seleccionar torre.
 - **Escape / clic derecho:** cancelar la construcción o cerrar la selección.
 - **Rueda:** zoom; **arrastrar:** desplazar la cámara cuando no estás construyendo.
 - **Espacio:** pausar/reanudar; en pausa puedes construir, mejorar y vender.
@@ -107,7 +107,7 @@ El oro solo sirve para construir y mejorar durante cada misión. XP, niveles de 
 
 Puedes abrir la guía desde la campaña antes de empezar. Los menús mantienen el foco dentro de sus controles y dejan la batalla inactiva mientras están abiertos. Iniciar una oleada desde la pausa táctica reanuda la defensa.
 
-El juego se pausa y el audio se silencia al ocultar la pestaña. La guía detiene la simulación. Activa el sonido con el altavoz o **M**: el arco tiene un silbido breve de flecha; la ballesta combina una suelta mecánica grabada con el aire del virote, más seca y contundente. No usan cuerdas sintetizadas ni tonos de tensión. El cañón combina explosión y retumbo, y la magia aire y destellos sonoros. Hay impactos, pasos, voces distintas de los cuatro enemigos y señales de construcción, mejora y resultados. La música ambiental original acompaña el valle con cuerdas, arpegios y percusión suave. En **Ayuda → Sonido del valle** puedes apagar solo la música y ajustar el volumen; esas preferencias se guardan. Las dos muestras de disparo se incluyen con el juego, sin servicios externos; los demás efectos y la música usan síntesis procedural. La mezcla limita voces simultáneas y aplica transiciones suaves y compresión. Las fuentes y licencias de las grabaciones están en [CREDITS.md](CREDITS.md).
+El juego se pausa y el audio se silencia al ocultar la pestaña. La guía detiene la simulación. Activa el sonido con el altavoz o **M**: las tres ballestas usan una suelta mecánica grabada, corta y con variaciones pequeñas de tono y volumen. Triple produce **un solo sonido por descarga**, no uno por virote. Los ticks de Veneno no repiten voces de dolor. Los efectos limitan sonidos simultáneos y evitan disparos demasiado próximos. Hay impactos, pasos, voces distintas de los cuatro enemigos y señales de construcción, mejora y resultados. La música ambiental original sigue disponible. En **Ayuda → Sonido del valle** puedes apagar solo la música y ajustar el volumen; esas preferencias se guardan. La muestra se incluye en el juego, sin servicios externos. Las fuentes y licencias aparecen en [CREDITS.md](CREDITS.md), también accesible desde la ayuda.
 
 ## Estructura
 
@@ -160,13 +160,13 @@ El campo de batalla forma parte de un valle que continúa más allá de la zona 
 
 El escenario ocupa toda la pantalla. Los recursos, controles y tarjetas de defensas aparecen en paneles flotantes. La cámara mide el HUD compacto y el selector inferior, y centra el recorrido jugable dentro del espacio disponible. Conserva completo el castillo usando sus vértices reales antes de agruparlos para el renderizado, y reserva espacio para la entrada de la cueva y los flancos de construcción. El encuadre conserva el mismo ángulo y no modifica el terreno, el recorrido ni las colisiones. Restablecer vista recupera ese encuadre, también después de desplazar o acercar la cámara. Se puede acercar o alejar con los botones **+ / −** o la rueda, arrastrar para explorar y **Restablecer vista** para recuperar el encuadre inicial.
 
-El castillo y las torres tienen mampostería, banderas, almenas y armas reconocibles. Las torres reaccionan a los disparos y sus mejoras añaden bandas, estandartes, remates y armas más grandes. Los iconos se renderizan como primeros planos del arma y su parapeto para reconocerla mejor. El suelo, camino y piedra usan texturas procedurales distintas con relieve de material; huellas de carros, pequeñas piedras y helechos añaden detalle sin cambiar colisiones ni posiciones legales. Las flechas y virotes tienen puntas y plumas; los magos disparan orbes con estela; los cañones tienen destellos y ondas de explosión correspondientes al radio real de daño. Los enemigos tienen rostro, correas, botas, armadura y armas diferenciadas; piernas y brazos se animan al caminar, preparar golpes, atacar y recibir impactos. El cañón tiene ruedas con radios, carro de madera, abrazaderas y boca metálica. La entrada enemiga es una boca oscura rodeada de roca erosionada y bosque. Los efectos y números respetan la pausa, velocidad y cambios de misión; se limita la cantidad de etiquetas simultáneas y se reutilizan sus elementos.
+El castillo y las torres tienen mampostería, banderas, almenas y armas reconocibles. Las torres reaccionan a los disparos y sus mejoras añaden bandas, estandartes, remates y armas más grandes. Los iconos se renderizan como primeros planos del arma y su parapeto para reconocerla mejor. El suelo, camino y piedra usan texturas procedurales distintas con relieve de material; huellas de carros, pequeñas piedras y helechos añaden detalle sin cambiar colisiones ni posiciones legales. Las flechas y virotes tienen puntas y plumas; las variantes tienen mecanismos, colores y virotes distintos, con recarga visible y efectos verdes de Veneno. Los enemigos tienen rostro, correas, botas, armadura y armas diferenciadas; piernas y brazos se animan al caminar, preparar golpes, atacar y recibir impactos. La entrada enemiga es una boca oscura rodeada de roca erosionada y bosque. Los efectos y números respetan la pausa, velocidad y cambios de misión; se limita la cantidad de etiquetas simultáneas y se reutilizan sus elementos.
 
 Las pruebas geométricas usan raycasting sobre la superficie renderizada para comprobar que la altura renderizada de toda la ruta coincide con el movimiento de enemigos, incluida la rampa hasta la puerta, que la base completa de una torre legal descansa sobre terreno elevado y que el valle continúa por los cuatro lados sin convertir el paisaje de fondo en zona de construcción. Las pruebas de navegador comprueban además que ningún punto de las diez rutas quede detrás de un control a 900×700 y 1440×960, con verificaciones adicionales de las primeras cuatro a 1280×720 y 1920×1080, y que el zoom y el restablecimiento funcionen. También se revisan los menús, resultados y acciones de torre a 390×844, la navegación con teclado, el retorno desde la ayuda y el inicio desde la pausa. Las pruebas del menú plegable colocan una torre en terreno que el menú abierto cubría, tanto en escritorio como en teléfono, comprueban que la cámara permanece estable y que funcionan los atajos y el foco de teclado.
 
 ## Validación y alcance
 
-Las pruebas comprueban continuidad y ausencia de cruces de la ruta, movimiento a diferentes FPS, construcción válida a ambos lados, obstáculos, economía, niveles, venta, resistencias, adquisición de objetivos, disparos de las cuatro defensas, daño en área, recompensas únicas, oleadas finitas, asedio repetido por cada tipo de enemigo, turnos ante la puerta, bajas durante el asedio, daño mostrado sin exceso, derrota, victoria, estrellas, persistencia, desbloqueos y estado de una nueva misión.
+Las pruebas comprueban continuidad y ausencia de cruces de la ruta, movimiento a diferentes FPS, construcción válida a ambos lados, obstáculos, economía, niveles, venta, resistencias, adquisición de objetivos, descargas de las tres ballestas, objetivos distintos y Veneno sin acumulación, recompensas únicas, oleadas finitas, asedio repetido por cada tipo de enemigo, turnos ante la puerta, bajas durante el asedio, daño mostrado sin exceso, derrota, victoria, estrellas, persistencia, desbloqueos y estado de una nueva misión.
 
 Las pruebas de distribución revisan preparación, combate, construcción y selección a 1536×844 y 1920×1080. Las diez misiones mantienen su ruta visible al abrir los detalles de una torre. Las pruebas verifican los límites del castillo con su geometría real, la posición fija y transparente a clics de los avisos, el reinicio del encuadre y la coincidencia entre cursor y torre construida.
 

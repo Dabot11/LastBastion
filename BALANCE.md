@@ -1,90 +1,65 @@
-# Balance de campaña · economía y niveles individuales
+# MVP de ballestas: balance y verificación
 
-## Decisiones que debe permitir
+La defensa utiliza únicamente Precisión, Triple y Veneno. Las primeras tres misiones introducen cada especialización. Los diez mapas y sus guardados se conservan; las otras siete misiones adaptan sus oleadas al nuevo arsenal. La incendiaria y los niveles 4–5 quedan para una iteración posterior.
 
-El jugador elige entre cubrir otra curva, mejorar una torre bien situada o ahorrar para un especialista. Cada torre conserva su propio nivel e inversión. Los magos deben destacar contra armaduras y los cañones contra grupos; su precio mayor no debe convertirlos en la mejor opción para todos los enemigos.
+## Economía y cadencia
 
-Cada misión empieza con 300 de oro y la salud máxima propia de su puerta (1000–3000), sin torres. No exige tres estrellas para avanzar. Se conservan la devolución del 70% al vender y los umbrales de estrellas: victoria / 60% / 90% de salud. Los guardados existentes conservan récords; completar las cuatro misiones anteriores abre la quinta, y las otras nuevas se desbloquean en orden.
+Cada misión comienza con 300 de oro. Dos ballestas de Precisión compran cobertura inmediata; una especialista deja menos margen para el inicio. Construir cubre otra curva y mejorar concentra potencia. Vender devuelve exactamente el 70% de lo invertido. Las mejoras son precios adicionales y afectan solo a la torre seleccionada.
 
-## Precios y atributos
-
-Las mejoras son pagos adicionales sobre una torre existente, hasta nivel 3. La tabla muestra daño por disparo, alcance en metros e intervalo entre ataques. El panel compara estos atributos antes de comprar; el radio de explosión también aparece para los cañones.
-
-| Defensa | Construcción | Mejora a N2 / N3 | Daño N1 / N2 / N3 | Alcance N1 / N2 / N3 | Intervalo N1 / N2 / N3 |
+| Ballesta | Precio | Mejoras N2 / N3 | Daño por virote N1 / N2 / N3 | Alcance N1 / N2 / N3 | Cadencia constante |
 | --- | ---: | ---: | --- | --- | --- |
-| Arqueros | 100 | 80 / 140 | 18 / 30 / 48 | 4,5 / 4,8 / 5,1 | 0,70 / 0,65 / 0,60 s |
-| Ballesta | 200 | 160 / 280 | 65 / 110 / 180 | 6,0 / 6,4 / 6,8 | 2,20 / 2,10 / 2,00 s |
-| Mago | 350 | 250 / 450 | 95 / 155 / 245 | 4,8 / 5,1 / 5,4 | 1,30 / 1,20 / 1,10 s |
-| Cañón | 500 | 350 / 600 | 110 / 180 / 280 | 4,6 / 4,9 / 5,2 | 2,40 / 2,25 / 2,10 s |
+| Precisión | 150 | 110 / 200 | 65 / 90 / 120 | 6 / 6,4 / 6,8 m | 2,4 s |
+| Triple | 200 | 150 / 250 | 40 / 60 / 85 | 5,2 / 5,6 / 6 m | 2,8 s |
+| Veneno | 250 | 170 / 280 | 12 / 18 / 24 | 6 / 6,3 / 6,6 m | 2,7 s |
 
-El cañón tiene radio de explosión 2,1 / 2,5 / 2,9 metros. Su daño individual por moneda es inferior al de los arqueros: necesita alcanzar grupos para justificar la inversión. La ballesta ignora el 80% de armadura física. El mago usa resistencia mágica, por lo que es especialmente eficaz contra bestias pero pierde parte de su ventaja contra guardianes resistentes a magia.
+La Triple lanza dos virotes en N1–N2 y tres en N3, siempre a enemigos distintos. Contra uno aislado lanza un solo virote. Su ventaja depende de encontrar grupos; su daño individual y alcance son menores que los de Precisión. Cada descarga produce un único evento de disparo y un único sonido.
 
-Ejemplos: con 100 de oro puedes comprar cobertura con un arquero nuevo o invertir 80 en uno ya situado. Al comenzar la segunda misión puedes elegir tres arqueros o un arquero y una ballesta. Magos y cañones requieren ahorrar oro de bajas y oleadas; una defensa demasiado pequeña puede perder salud mientras ahorras. Vender permite corregir una posición, pero pierde el 30% invertido.
+Veneno aplica 20 / 30 / 42 DPS durante 4 / 4,5 / 5 s. Este daño ignora el 75% de la armadura. Los virotes iniciales siguen siendo físicos. Una sola dosis está activa por enemigo: reaplicar conserva el DPS mayor y renueva la duración, sin sumar dosis ni reiniciar el reloj del próximo tick. El daño se integra con el tiempo real y se muestra cada medio segundo, incluyendo el resto final de una dosis. Un muerto concede oro una sola vez.
 
-Las prioridades se mantienen: arqueros frenan la primera línea; ballestas buscan amenazas de gran salud y armadura; magos buscan armadura vulnerable a magia; cañones apuntan a grupos. Alcance, movimiento, resistencias, proyectiles y explosiones se simulan realmente.
+## Objetivos y resistencias
 
-## Progresión de diez misiones
+Cada ballesta tiene un selector propio: Primero, Más resistente o Puerta. Cambiarlo no cuesta oro, no altera el de otra torre y no provoca un disparo extra. Precisión y Triple empiezan en Primero; Veneno en Más resistente. Una dosis suficientemente activa reduce el interés de Veneno por repetirla, sin abandonar una amenaza pesada para perseguir un esbirro débil. Puerta prioriza atacantes activos y después el recorrido.
 
-| Misión | Oleadas | Salud de puerta | Defensa nueva / reto |
-| --- | ---: | ---: | --- |
-| Aldea de los pinos | 5 | 1000 | Arqueros; cobertura frente a mejoras |
-| Villa del mercado | 6 | 1200 | Ballesta; alcance y perforación |
-| Ciudadela real | 7 | 1400 | Mago; ahorro y armaduras |
-| El último bastión | 8 | 1600 | Cañón; grupos y daño de área |
-| Bosque de los ecos | 8 | 1800 | Corredores en grupos |
-| Villa de las caravanas | 8 | 2000 | Escoltas y bestias acorazadas |
-| Fortaleza de la colina | 9 | 2200 | Curvas para cobertura y alcance |
-| Aldea del viejo molino | 9 | 2400 | Hordas numerosas para artillería |
-| Paso de los guardianes | 10 | 2700 | Guardianes escoltados |
-| Castillo de la corona | 10 | 3000 | Ejército mixto y las cuatro defensas |
+Las bestias tienen 70% de armadura y los guardianes 55%. Un virote físico de 100 causa 30 / 45 de daño; una dosis de Veneno de 100 causa 82,5 / 86,25. Los corredores, sin armadura y rápidos, favorecen daño inmediato y cobertura frente a desgaste lento.
 
+## Campaña y asedio
 
-Las primeras oleadas de las misiones con especialistas caros dan margen para establecer cobertura y ahorrar. La presión aumenta después. Se conservan recompensas por baja de 10/11/26/60 y bonificación de oleada `25 + 5 × oleada`. Los puntos por baja son independientes del oro: 120/140/300/700 más el bono de puntuación de oleada.
+Precisión se desbloquea en la aldea; Triple en la villa y Veneno en la ciudadela. Las primeras dos misiones enseñan cobertura y grupos. La tercera añade armaduras y el guardián con escoltas. Las demás conservan sus rutas, bases, cantidades de oleadas y salud de puerta, ajustando la presencia de unidades pesadas y su salud al tiempo real de exposición en cada mapa. Los especialistas sustituyen funciones de armas anteriores; no se conserva la presión pensada para magia y explosiones.
 
-## Asedio de la puerta
+La salud enemiga crece un 7% por oleada. Se conservan recompensas por baja de 10 / 11 / 26 / 60 y bono de oleada `25 + 5 × oleada`. El oro solo llega por bajas y oleadas reales. Las estrellas conservan sus umbrales: ganar / 60% / 90% de salud restante de la puerta.
 
-Los enemigos ya no desaparecen al terminar la ruta. Se detienen delante de la madera, permanecen como blancos y atacan hasta morir o destruir la puerta. Dos posiciones limitan el daño simultáneo; la fila sigue el camino y un atacante muerto libera su posición. El primer golpe necesita 0,45 s de preparación. Después se aplica el intervalo de cada unidad:
-
-| Enemigo | Daño a la puerta por golpe | Intervalo |
+| Atacante | Daño a la puerta | Intervalo |
 | --- | ---: | ---: |
 | Esbirro | 8 | 1,20 s |
 | Corredor | 6 | 0,85 s |
-| Bestia | 30 | 1,90 s |
-| Guardián | 55 | 2,20 s |
+| Bestia | 20 | 1,90 s |
+| Guardián | 40 | 2,20 s |
 
-El asedio añade una última oportunidad de defensa, pero una fila sin cobertura puede bloquear el avance de la oleada y terminar en derrota. La ruta se prolonga desde la cueva y sube hasta el portón. La construcción se concentra en 14–16 bases hexagonales repartidas junto al camino; la entrada y ambos flancos de la puerta cuentan con posiciones útiles. El plan de referencia exige alcance real a **ambas posiciones de ataque**, no solo al centro del castillo. Las decisiones durante una oleada siguen disponibles para el jugador.
-
-El daño, precios, resistencias, recompensas y desbloqueos de las torres se conservan. La puerta gana resistencia con cada fortaleza; aumentar su vida no reemplaza el diseño de oleadas. Las misiones de caravanas, molino, guardianes y corona dan dos oleadas iniciales sin bestias para obtener oro antes de incorporar especialistas. La dificultad cambia con cantidades, composición, densidad, salud enemiga y geometría; la salud enemiga inicial no necesita crecer en todas las misiones. El crecimiento dentro de cada misión sigue siendo del 10% por oleada. Las estrellas se calculan con la salud restante de la puerta. Llegar o golpear no da oro: solo una baja real concede recompensa. Un superviviente impide completar la oleada y la victoria.
+La puerta tiene 1000–3000 de salud según la misión. Dos enemigos atacan a la vez, los demás esperan y todos siguen siendo objetivos. La cadencia más lenta exige adaptar el daño de asedio además de las oleadas. Los 14–16 hexágonos mantienen decisiones entre entrada, curvas y puerta; el mapa y su geometría no cambian.
 
 ## Evidencia reproducible
 
-`npm run balance` ejecuta 103 escenarios de referencia usando la simulación de producción. Compra en posiciones legales, usa únicamente oro inicial y ganado, toma decisiones durante preparación y reserva cobertura para las dos posiciones de ataque ante la puerta y combate a pasos de 20 ms. Excluye estrategias que requieren defensas todavía bloqueadas. No inventa daño, salud ni recompensas. Para obtener todos los resultados:
+`npm test` verifica impactos, resistencia, compras, prioridades independientes, separación de objetivos, una descarga por recarga, Veneno sin acumulación, expiración y daño independiente de la frecuencia de actualización. Incluye economía y estrategias de campaña con posiciones legales y solo oro ganado.
 
-```sh
-npm run --silent balance -- --json
-```
+`npm run balance` compara inversiones fijas, una sola munición, expansión, mejoras y combinaciones. Las compras usan la API del juego y las posiciones realmente permitidas. Las estrategias activas reaccionan cada dos segundos, también durante combate como permite la interfaz; las aperturas fijas no reinvierten. La simulación usa pasos de 20 ms y no modifica oro, salud, daño ni bajas para fabricar victorias. Las comparaciones son referencias, no sustituyen pruebas con jugadores.
 
-Resultados de referencia con inversión mixta en las bases de cada misión:
+Las pruebas de navegador comprueban compras y mejoras nativas, selector de objetivos, modelos distintos, virotes separados, números y estado de Veneno, sonido grabado, preferencias, campaña y encuadre. Una escena de combate controlada sirve para observar efectos; los resultados de balance provienen de oleadas completas sin esas escenas de prueba.
 
-| Misión: ampliar y mejorar | Salud final / máxima | Estrellas | Combate a 1× | Con preparación |
-| --- | ---: | ---: | ---: | ---: |
-| Aldea de los pinos | 1000 / 1000 | 3 | 187 s | 4.8 min |
-| Villa del mercado | 1200 / 1200 | 3 | 245 s | 6.1 min |
-| Ciudadela real | 1384 / 1400 | 3 | 402 s | 9 min |
-| El último bastión | 1494 / 1600 | 3 | 393 s | 9.2 min |
-| Bosque de los ecos | 1746 / 1800 | 3 | 418 s | 9.6 min |
-| Villa de las caravanas | 1802 / 2000 | 3 | 385 s | 9.1 min |
-| Fortaleza de la colina | 1696 / 2200 | 2 | 465 s | 10.8 min |
-| Aldea del viejo molino | 2296 / 2400 | 3 | 493 s | 11.2 min |
-| Paso de los guardianes | 2310 / 2700 | 2 | 551 s | 12.5 min |
-| Castillo de la corona | 2722 / 3000 | 3 | 549 s | 12.5 min |
+## Resultados de referencia
 
-Los 103 escenarios terminan: 65 victorias y 38 derrotas. La apertura de tres arqueros sin reinvertir conserva 808 / 1000 de salud en la aldea y logra dos estrellas, pero las aperturas estáticas no completan las regiones posteriores.
+Se completaron 114 escenarios: 53 victorias y 61 derrotas. Las aperturas sin reinversión pierden; cada mapa tiene una combinación legal con tres estrellas.
 
-Las pruebas comparan expansión y mejoras en las bases disponibles. Ambos planes mixtos pueden ganar; al menos un plan equilibrado conserva salud para dos estrellas y una estrategia legal con las armas desbloqueadas puede lograr tres en cada misión. El límite de bases hace más importantes las mejoras: el plan de expansión también reinvierte en ellas cuando la mayoría de bases están ocupadas y no puede financiar la siguiente compra. Las bases cercanas a la entrada, curvas y puerta favorecen decisiones diferentes. Se eliminó la antigua referencia de torres fuera de cobertura porque todas las nuevas bases están diseñadas para cubrir el camino. Sin defensas se pierde.
+| Misión | Combinación | Salud final | Estrellas | Combate |
+| --- | --- | ---: | ---: | ---: |
+| pines | mixed | 1000 / 1000 | 3 | 188 s |
+| market | mixed | 1200 / 1200 | 3 | 282 s |
+| citadel | mixed-expand | 1320 / 1400 | 3 | 435 s |
+| siege | poison-front | 1480 / 1600 | 3 | 449 s |
+| woodland | mixed-expand | 1800 / 1800 | 3 | 437 s |
+| crossroads | poison-front | 1840 / 2000 | 3 | 408 s |
+| watch | poison-front | 2120 / 2200 | 3 | 516 s |
+| river | poison-front | 2400 / 2400 | 3 | 563 s |
+| highlands | poison-front | 2480 / 2700 | 3 | 530 s |
+| crown | mixed-expand | 2968 / 3000 | 3 | 549 s |
 
-La ruta extendida y el remate de supervivientes añaden tiempo de combate. Las comprobaciones limitan los dos planes mixtos de prueba a una media de 65 segundos por oleada y ninguna oleada de referencia puede prolongarse más de 90 segundos. La tabla incluye combate y duración con todos los periodos de preparación. Las misiones nuevas duran alrededor de 9–13 minutos a 1× con ese plan, y menos al iniciar antes o usar 2×. Iniciar antes, usar 2×, pausar o tomar más tiempo para decidir modifica la duración. Las pruebas verifican además compras, precios de cada mejora, independencia entre torres, venta, bloqueo de armas, guardados anteriores y geometría real de los diez mapas. El navegador comprueba la comparación de mejoras, los cuatro desbloqueos y los encuadres de toda la campaña.
-
-## Próxima revisión con jugadores
-
-Las simulaciones verifican viabilidad y regresiones; no representan todas las posiciones ni la dificultad humana. Probar si un jugador nuevo entiende la diferencia entre ampliar y mejorar, si el ahorro para magia/artillería crea una decisión útil y si las misiones de nueve y diez oleadas resultan demasiado largas. Anotar salud final, torres, tiempo y la oleada donde la decisión fue interesante o frustrante. Afinar esos puntos antes de añadir monedas persistentes o XP.
+Los tiempos de combate excluyen preparación y pausas humanas. Las pruebas permiten construir y mejorar durante una oleada, como el juego. Una sola munición puede ganar algunos mapas, pero la combinación preserva mejor la puerta ante armaduras; estas referencias no son una garantía de dificultad percibida.

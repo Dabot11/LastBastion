@@ -3,10 +3,10 @@ import { gatePoint, placementError, samplePath, type Point, type GameMap } from 
 import { type Mission } from '../src/game/missions';
 import { Simulation } from '../src/game/simulation';
 
-export type Strategy = 'none' | 'opening-archers' | 'opening-crossbows' | 'opening-mixed' | 'archers' | 'crossbows' | 'mixed' | 'mixed-expand' | 'mixed-upgrades' | 'artillery' | 'arcane';
-export const STRATEGIES: Strategy[] = ['none', 'opening-archers', 'opening-crossbows', 'opening-mixed', 'archers', 'crossbows', 'mixed', 'mixed-expand', 'mixed-upgrades', 'artillery', 'arcane'];
+export type Strategy = 'none' | 'opening-precision' | 'opening-triple' | 'opening-mixed' | 'precision' | 'triple' | 'poison' | 'mixed' | 'mixed-expand' | 'mixed-upgrades' | 'poison-front' | 'balanced';
+export const STRATEGIES: Strategy[] = ['none', 'opening-precision', 'opening-triple', 'opening-mixed', 'precision', 'triple', 'poison', 'mixed', 'mixed-expand', 'mixed-upgrades', 'poison-front', 'balanced'];
 export function strategiesForMission(mission: Mission): Strategy[] {
-  return STRATEGIES.filter(s => (!s.includes('crossbows') || mission.towers.includes('crossbow')) && (s !== 'arcane' || mission.towers.includes('mage')) && (s !== 'artillery' || mission.towers.includes('cannon')));
+  return STRATEGIES.filter(s => (!s.includes('triple') || mission.towers.includes('triple')) && (!s.includes('poison') || mission.towers.includes('poison')));
 }
 interface Site extends Point { distances: number[]; }
 const layouts = new WeakMap<GameMap, Map<number, Site[]>>();
@@ -25,7 +25,7 @@ function sites(map: GameMap, offset: number): Site[] {
 function coverage(site: Site, range: number): number {
   return site.distances.reduce((score, d, i) => score + (d <= range * range ? 1.25 - .5 * i / site.distances.length : 0), 0);
 }
-function place(sim: Simulation, kind: TowerKind, candidates: Site[]): boolean {
+function place(sim: Simulation, kind: TowerKind, candidates: Site[], role: 'coverage' | 'early' | 'gate' = 'coverage'): boolean {
   let best: Site | undefined, highest = -Infinity;
   for (const site of candidates) {
     if (placementError(site, sim.towers, sim.gold, TOWERS[kind].cost, sim.map)) continue;
@@ -35,12 +35,13 @@ function place(sim: Simulation, kind: TowerKind, candidates: Site[]): boolean {
     const coversGate = (p: Point, range: number) => attackPositions.every(gate => Math.hypot(p.x - gate.x, p.z - gate.z) < range - .2);
     const coveredGate = sim.towers.some(t => coversGate(t, towerStats(t.kind, t.level).range));
     const protectsGate = coversGate(site, TOWERS[kind].range);
-    const score = covered / (1 + nearby * .45) + (!coveredGate && protectsGate ? 30 : 0);
+    const roleScore = role === 'gate' ? (protectsGate ? 100 : -100) : role === 'early' ? -Math.min(...site.distances.map((d, i) => d < TOWERS[kind].range ** 2 ? i : Infinity)) * 2 : 0;
+    const score = roleScore + covered / (1 + nearby * .45) + (!coveredGate && protectsGate && kind === 'precision' ? 30 : 0) - (kind === 'poison' ? Math.min(...site.distances.map((d, i) => d < TOWERS[kind].range ** 2 ? i : Infinity)) * .18 : 0);
     if (score > highest) { highest = score; best = site; }
   }
   if (!best) return false;
   const result = sim.build(kind, { x: best.x, z: best.z });
-  if (typeof result === 'string') throw new Error(`Illegal purchase: ${result}`); return true;
+  if (typeof result === 'string') throw new Error(`Illegal purchase: ${result}`); if ((kind === 'precision' || role === 'gate') && [gatePoint(-.8, .85, sim.map), gatePoint(.8, .85, sim.map)].every(g => Math.hypot(result.x - g.x, result.z - g.z) < TOWERS[kind].range - .2)) sim.setPriority(result.id, 'gate'); return true;
 }
 function improve(sim: Simulation, candidates: Site[]): boolean {
   let bestId: number | undefined, highest = -Infinity;
@@ -48,7 +49,7 @@ function improve(sim: Simulation, candidates: Site[]): boolean {
     if (t.level >= 3 || upgradeCost(t.kind, t.level) > sim.gold) continue;
     const site = candidates.find(p => p.x === t.x && p.z === t.z)!;
     const current = towerStats(t.kind, t.level), next = towerStats(t.kind, t.level + 1);
-    const score = (coverage(site, next.range) * next.damage / next.interval - coverage(site, current.range) * current.damage / current.interval) / upgradeCost(t.kind, t.level);
+    const score = (coverage(site, next.range) * (next.damage * next.bolts / next.interval + next.poisonDps) - coverage(site, current.range) * (current.damage * current.bolts / current.interval + current.poisonDps)) / upgradeCost(t.kind, t.level);
     if (score > highest) { highest = score; bestId = t.id; }
   }
   if (bestId === undefined) return false;
@@ -60,24 +61,44 @@ export interface BalanceResult {
   wave: number; kills: number; gold: number; spent: number; combatSeconds: number; minutesWithPreparation: number;
   towers: { kind: TowerKind; level: number; x: number; z: number }[]; waves: WaveResult[];
 }
-// Decisions are only made during preparation, with earned gold and legal build sites.
+// Purchases use earned gold and legal foundations, including during combat as the UI allows.
 // Combat uses the same fixed 20 ms steps, projectiles, resistances and movement as the browser.
 // No enemy HP, castle health, gold, queue or damage is manufactured by this runner.
 export function scenarioPlanner(mission: Mission, strategy: Strategy, offset = 0): (sim: Simulation) => void {
   if (!strategiesForMission(mission).includes(strategy)) throw new Error(`${strategy} needs a defense locked in ${mission.id}`);
   const candidates = sites(mission.map, offset);
-  const single: TowerKind = strategy.includes('crossbows') ? 'crossbow' : 'archer';
-  const mixed = strategy.includes('mixed') || strategy === 'artillery' || strategy === 'arcane';
-  // Establish cheap coverage before saving for a specialist; do not wait for a 500-gold cannon behind one archer.
-  const preference: TowerKind[] = strategy === 'arcane' ? ['archer', 'archer', 'crossbow', 'mage', 'cannon'] : strategy === 'artillery' ? ['archer', 'archer', 'crossbow', 'cannon', 'mage'] : mission.towers;
+  const single: TowerKind = strategy.includes('triple') ? 'triple' : strategy === 'poison' ? 'poison' : 'precision';
+  const mixed = strategy.includes('mixed') || strategy === 'poison-front' || strategy === 'balanced';
+  const preference: TowerKind[] = strategy === 'poison-front' ? ['poison', 'precision', 'triple', 'precision'] : ['triple', 'precision', 'poison'];
   const order = mixed ? preference.filter(kind => mission.towers.includes(kind)) : [single];
   const frozen = strategy.startsWith('opening-');
   let purchases = 0;
   return sim => {
-    if (sim.phase !== 'preparation' || sim.finished) return;
+    if (sim.finished) return;
     if (strategy !== 'none' && (!frozen || sim.wave === 0)) {
+      if (mixed && sim.wave === 0) while (sim.towers.length < 2 && place(sim, 'precision', candidates)) { /* establish coverage with the real opening budget */ }
+      if (strategy === 'balanced') {
+        for (let decision = 0; decision < 100; decision++) {
+          const has = (kind: TowerKind) => sim.towers.filter(t => t.kind === kind).length;
+          const gate = [gatePoint(-.8, .85, sim.map), gatePoint(.8, .85, sim.map)];
+          const poisonGate = sim.towers.some(t => t.kind === 'poison' && gate.every(p => Math.hypot(p.x - t.x, p.z - t.z) < towerStats(t.kind, t.level).range - .2));
+          const unlocked = (kind: TowerKind) => mission.towers.includes(kind);
+          if (unlocked('triple') && !has('triple')) { if (place(sim, 'triple', candidates)) continue; break; }
+          if (unlocked('poison') && !has('poison')) { if (place(sim, 'poison', candidates, 'early')) continue; break; }
+          if (unlocked('poison') && !poisonGate) { if (place(sim, 'poison', candidates, 'gate')) continue; break; }
+          const specialists = sim.towers.filter(t => t.kind !== 'precision' && t.level < 3);
+          specialists.sort((a, b) => (a.kind === 'poison' ? -1 : 1) - (b.kind === 'poison' ? -1 : 1) || a.id - b.id);
+          if (sim.towers.length >= 5 && specialists[0]) { if (upgradeCost(specialists[0].kind, specialists[0].level) <= sim.gold) { sim.upgrade(specialists[0].id); continue; } break; }
+          if (sim.towers.length >= 7 && improve(sim, candidates)) continue;
+          const desired = unlocked('triple') && has('triple') < 3 ? 'triple' : unlocked('poison') && has('poison') < 3 ? 'poison' : 'precision';
+          if (place(sim, desired, candidates)) continue;
+          if (improve(sim, candidates)) continue;
+          break;
+        }
+        return;
+      }
       for (let decision = 0; decision < 100; decision++) {
-        const expand = strategy === 'mixed-expand' || sim.towers.length < (strategy === 'mixed-upgrades' ? 2 : 4);
+        const expand = strategy === 'mixed-expand' || sim.towers.length < (strategy === 'mixed-upgrades' ? 2 : 6);
         if (!expand && improve(sim, candidates)) continue;
         const kind = order[purchases % order.length];
         if (!place(sim, kind, candidates)) { if (sim.towers.length >= Math.ceil(sim.map.pads.length * .75) && improve(sim, candidates)) continue; break; } purchases++;
@@ -87,12 +108,13 @@ export function scenarioPlanner(mission: Mission, strategy: Strategy, offset = 0
 }
 export function runScenario(mission: Mission, strategy: Strategy, offset = 0): BalanceResult {
   const sim = new Simulation(mission), plan = scenarioPlanner(mission, strategy, offset), waves: WaveResult[] = [];
-  let combatSeconds = 0;
+  let combatSeconds = 0, nextDecision = 0;
   while (!sim.finished && combatSeconds < 1200) {
     if (sim.phase === 'preparation') {
-      plan(sim);
+      plan(sim); nextDecision = combatSeconds + 2;
       sim.startWave();
     }
+    if (combatSeconds >= nextDecision) { plan(sim); nextDecision = combatSeconds + 2; }
     const before = sim.phase; sim.update(.02); combatSeconds += .02;
     if (before === 'wave' && sim.phase !== 'wave') waves.push({ wave: sim.wave, hp: sim.castleHp, gold: sim.gold, seconds: Math.round(combatSeconds) });
     sim.events.length = 0;

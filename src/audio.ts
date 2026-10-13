@@ -3,7 +3,6 @@ import { AUDIO_SAMPLE_RATE, renderMusic, renderSound, type SoundName } from './a
 
 // Vite bundles and fingerprints these recordings, including under /LastBastion/.
 const weaponSamples = [
-  ['arrow', new URL('./audio/samples/arrow.wav', import.meta.url).href],
   ['crossbow', new URL('./audio/samples/crossbow.wav', import.meta.url).href],
 ] as const;
 
@@ -29,7 +28,7 @@ export class AudioEffects {
     this.master.gain.value = 0; this.master.connect(limiter); limiter.connect(this.context.destination); this.musicGain.connect(this.master);
     for (const [name, url] of weaponSamples) void this.loadWeaponSample(name, url, this.context);
   }
-  private async loadWeaponSample(name: 'arrow' | 'crossbow', url: string, context: AudioContext): Promise<void> {
+  private async loadWeaponSample(name: 'crossbow', url: string, context: AudioContext): Promise<void> {
     try {
       const response = await fetch(url); if (!response.ok) return;
       const buffer = await context.decodeAudioData(await response.arrayBuffer());
@@ -70,11 +69,10 @@ export class AudioEffects {
     source.onended = () => { source.disconnect(); gain.disconnect(); pan.disconnect(); this.voices--; }; source.start();
   }
   play(event: GameEvent): void {
-    const weapon = event.kind === 'archer' ? 'arrow' : event.kind === 'mage' ? 'magic' : event.kind;
-    if (event.type === 'shot' && weapon) this.emit(weapon, event.x, event.z, event.kind === 'cannon' ? .55 : event.kind === 'crossbow' ? .48 : .40);
-    else if (event.type === 'impact' && weapon) this.emit(`impact-${weapon}`, event.x, event.z, .28, .10);
+    if (event.type === 'shot' && event.kind) this.emit('crossbow', event.x, event.z, event.kind === 'triple' ? .38 : event.kind === 'poison' ? .32 : .36, .12);
+    else if (event.type === 'impact' && event.kind) this.emit('impact-crossbow', event.x, event.z, .18, .14);
     else if (event.type === 'spawn' || event.type === 'kill' || event.type === 'damage') {
-      if (event.enemyKind && (event.type !== 'spawn' || event.enemyKind === 'guardian' || event.enemyKind === 'beast' || (event.enemyId ?? 0) % 5 === 0)) this.emit(`voice-${event.enemyKind}`, event.x, event.z, event.type === 'spawn' ? .22 : .13, .85);
+      if (event.damageKind !== 'poison' && event.enemyKind && (event.type !== 'spawn' || event.enemyKind === 'guardian' || event.enemyKind === 'beast' || (event.enemyId ?? 0) % 5 === 0)) this.emit(`voice-${event.enemyKind}`, event.x, event.z, event.type === 'spawn' ? .22 : .13, .85);
     } else if (event.type === 'gateHit') { this.emit('gate', event.x, event.z, .34, .15); if (event.enemyKind) this.emit(`voice-${event.enemyKind}`, event.x, event.z, .20, .8); }
     else if (['build', 'upgrade', 'wave', 'victory'].includes(event.type)) this.emit(event.type as SoundName, event.x, event.z, .30, .12);
     else if (event.type === 'gameover') this.emit('defeat', 0, 0, .35, 1);

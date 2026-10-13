@@ -41,7 +41,7 @@ test('attackers occupy distinct gate positions and followers queue; a kill frees
   assert.equal(front.length, 2); assert.ok(distance(front[0], front[1]) >= 1.5);
   assert.ok(others.slice(1).every(e => e.state === 'waiting'));
   assert.ok(distance(others[1], others[2]) >= 1);
-  const hp = sim.castleHp; sim.hit(enemy, 10000, 'magic'); assert.equal(sim.kills, 1);
+  const hp = sim.castleHp; sim.hit(enemy, 10000, 'physical'); assert.equal(sim.kills, 1);
   advance(sim, 2); assert.ok(sim.enemies.some(e => e.id === others[1].id && e.state === 'attacking'));
   assert.ok(sim.castleHp < hp); assert.equal(sim.enemies.some(e => e.id === enemy.id), false);
 });
@@ -50,7 +50,7 @@ test('killing the final attacker stops gate damage and allows victory; actual da
   advance(sim, .5); assert.equal(sim.phase, 'wave'); const hp = sim.castleHp, before = enemy.hp;
   sim.hit(enemy, 40, 'physical');
   assert.equal(sim.events.filter(e => e.type === 'damage').at(-1)!.damage, damageAfterResistance(40, 'physical', ENEMIES.guardian));
-  const remaining = enemy.hp; sim.hit(enemy, 10000, 'magic'); sim.hit(enemy, 10000, 'magic');
+  const remaining = enemy.hp; sim.hit(enemy, 10000, 'physical'); sim.hit(enemy, 10000, 'physical');
   assert.equal(enemy.hp, 0); assert.equal(sim.kills, 1);
   const damages = sim.events.filter(e => e.type === 'damage'); assert.equal(damages.length, 2); assert.equal(damages[1].damage, remaining);
   assert.ok(Math.abs(damages.reduce((sum, e) => sum + e.damage!, 0) - before) < 1e-8);
@@ -61,7 +61,7 @@ test('a fast follower cannot overtake or jitter backwards through a slower unit 
   const other = sim.spawn('minion'); other.progress = sim.map.length - .85;
   const slow = sim.spawn('beast'); slow.progress = sim.map.length - 2.25;
   const fast = sim.spawn('runner'); fast.progress = sim.map.length - 3.65;
-  sim.update(.02); sim.hit(enemy, 10000, 'magic');
+  sim.update(.02); sim.hit(enemy, 10000, 'physical');
   for (let tick = 0; tick < 100; tick++) {
     const before = fast.progress; sim.update(.02);
     assert.ok(fast.progress >= before - 1e-8, 'Queued units must keep moving towards the gate');
@@ -72,8 +72,8 @@ test('a fast follower cannot overtake or jitter backwards through a slower unit 
 test('a legally placed tower can kill an attacker at the gate with real projectiles', () => {
   const { sim, enemy } = arrival('minion'); let built = false;
   for (const p of sim.map.pads) {
-    if (placementError(p, [], sim.gold, TOWERS.archer.cost, sim.map) || distance(p, gatePoint(-.8, .85, sim.map)) > TOWERS.archer.range - .2) continue;
-    assert.equal(typeof sim.build('archer', p), 'object'); built = true; break;
+    if (placementError(p, [], sim.gold, TOWERS.precision.cost, sim.map) || distance(p, gatePoint(-.8, .85, sim.map)) > TOWERS.precision.range - .2) continue;
+    assert.equal(typeof sim.build('precision', p), 'object'); built = true; break;
   }
   assert.ok(built); advance(sim, 4); assert.equal(enemy.hp, 0); assert.equal(sim.kills, 1);
   assert.ok(sim.castleHp > 950); assert.ok(sim.events.some(e => e.type === 'damage'));

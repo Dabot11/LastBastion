@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { MISSIONS } from '../../src/game/missions';
-async function chooseArcher(page: Page): Promise<void> {
+async function choosePrecision(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Construir defensas', exact: true }).click();
-  await page.getByRole('button', { name: 'Construir torre Arqueros, 100 oro', exact: true }).click();
+  await page.getByRole('button', { name: 'Construir torre Precisión, 150 oro', exact: true }).click();
   await expect(page.locator('#defenses-menu')).toBeHidden();
 }
 async function buildPoint(page: Page, index: number, y = 1.84): Promise<{ x: number; y: number }> {
@@ -34,13 +34,13 @@ test('real gate siege shows wood, surviving attackers, exact damage numbers and 
     // Controlled arrival fixture. Gate HP, tower damage, attacks and rewards use the production simulation.
     sim.startWave(); sim.spawnQueue = []; sim.spawned = sim.waveTotal;
     for (const kind of ['guardian', 'minion']) { const e = sim.spawn(kind); e.progress = sim.map.length - .85; }
-    if (typeof sim.build('archer', gateDefenceSites(sim.map)[1]) === 'string') throw new Error('Gate flank is not buildable');
+    if (typeof sim.build('precision', gateDefenceSites(sim.map)[1]) === 'string') throw new Error('Gate flank is not buildable');
     for (let i = 0; i < 100; i++) sim.update(.02);
     return { hp: sim.castleHp, maxHp: sim.maxGateHp, gateDamage: sim.events.filter((e: any) => e.type === 'gateHit').map((e: any) => e.damage), enemyDamage: sim.events.filter((e: any) => e.type === 'damage').map((e: any) => e.damage), alive: sim.enemies.length, state: sim.enemies[0].state, door: !!view.scene.getObjectByName('castle-door'), cave: !!view.scene.getObjectByName('enemy-cave') };
   });
   expect(state.alive).toBe(2); expect(state.state).toBe('attacking'); expect(state.door && state.cave).toBe(true);
   expect(state.hp).toBe(state.maxHp - state.gateDamage.reduce((sum: number, value: number) => sum + value, 0));
-  expect(state.gateDamage).toEqual([55, 8, 8]); expect(state.enemyDamage.length).toBeGreaterThan(0);
+  expect(state.gateDamage).toEqual([40, 8, 8]); expect(state.enemyDamage.length).toBeGreaterThan(0);
   await expect(page.locator('#hp')).toHaveText(String(state.hp)); await expect(page.locator('.gate-label')).toContainText(`${state.hp} / ${state.maxHp}`);
   await expect(page.locator('#wave-status')).toContainText('2 atacando la puerta');
   await expect(page.locator('#next-label')).toContainText('Refuerza sus flancos');
@@ -61,33 +61,33 @@ test('real WebGL gameplay: foundation placement, upgrades, selling, pause, speed
   await page.getByRole('button', { name: 'Jugar: Aldea de los pinos', exact: true }).click();
   await page.getByRole('button', { name: 'Pausar', exact: true }).click();
   await expect(page.locator('canvas')).toHaveCount(1);
-  await chooseArcher(page);
+  await choosePrecision(page);
   const blocked = await buildPoint(page, -1, .15); await page.mouse.move(blocked.x, blocked.y);
   await expect(page.locator('#placement-hint')).toContainText('Sobre el camino');
   await page.mouse.click(blocked.x, blocked.y); await expect(page.locator('#gold')).toHaveText('300');
   const p = await buildPoint(page, 0); await page.mouse.move(p.x, p.y); await expect(page.locator('#placement-hint')).toContainText('Ubicación válida');
-  await page.mouse.click(p.x, p.y); await expect(page.locator('#gold')).toHaveText('200');
+  await page.mouse.click(p.x, p.y); await expect(page.locator('#gold')).toHaveText('150');
   await page.keyboard.press('Escape'); const pick = await buildPoint(page, 0, 2.7); await page.mouse.click(pick.x, pick.y);
   await expect(page.locator('#tower-panel')).toBeVisible(); await expect(page.locator('#tower-panel')).toContainText('NIVEL 1 / 3');
-  await page.getByRole('button', { name: /Mejorar/ }).click(); await expect(page.locator('#gold')).toHaveText('120'); await expect(page.locator('#tower-panel')).toContainText('NIVEL 2 / 3');
-  await expect(page.locator('.tower-stats')).toContainText('30→48');
+  await page.getByRole('button', { name: /Mejorar/ }).click(); await expect(page.locator('#gold')).toHaveText('40'); await expect(page.locator('#tower-panel')).toContainText('NIVEL 2 / 3');
+  await expect(page.locator('.tower-stats')).toContainText('90→120');
   await expect(page.getByRole('button', { name: /Mejorar a nivel 3/ })).toBeDisabled();
-  await expect(page.locator('.upgrade-shortfall')).toHaveText('Te faltan 20 de oro');
+  await expect(page.locator('.upgrade-shortfall')).toHaveText('Te faltan 160 de oro');
   await page.screenshot({ animations: 'disabled', path: 'test-results/tower-upgrade-preview.png' });
-  await page.getByRole('button', { name: 'Vender por 126 oro' }).click(); await expect(page.locator('#gold')).toHaveText('246');
-  await chooseArcher(page); await page.mouse.click(p.x, p.y); await expect(page.locator('#gold')).toHaveText('146'); await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Vender por 182 oro' }).click(); await expect(page.locator('#gold')).toHaveText('222');
+  await choosePrecision(page); await page.mouse.click(p.x, p.y); await expect(page.locator('#gold')).toHaveText('72'); await page.keyboard.press('Escape');
   await expect(page.locator('#pause-tag')).toBeVisible();
   await page.getByRole('button', { name: 'Abrir campaña', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Continuar misión actual' })).toBeVisible();
   await page.getByRole('button', { name: 'Continuar misión actual' }).click();
-  await expect(page.locator('#gold')).toHaveText('146');
+  await expect(page.locator('#gold')).toHaveText('72');
   const countdown = await page.locator('#next-countdown').textContent(); await page.waitForTimeout(1100); expect(await page.locator('#next-countdown').textContent()).toBe(countdown);
   await page.getByRole('button', { name: 'Reanudar', exact: true }).click();
   await page.getByRole('button', { name: 'Cambiar velocidad a 2x' }).click(); await expect(page.locator('#speed')).toHaveText('2×');
   await page.getByRole('button', { name: 'Cómo jugar', exact: true }).click(); await expect(page.getByRole('heading', { name: 'Cada posición importa.' })).toBeVisible(); await page.getByRole('button', { name: 'Volver al valle' }).click();
   await page.getByRole('button', { name: 'Iniciar oleada 1' }).click(); await expect(page.locator('#wave-status')).toContainText('en el valle');
   // Software rendering advances fewer simulation frames while enemy/projectile shaders first compile.
-  await expect.poll(async () => Number(await page.locator('#gold').textContent()), { timeout: 45000 }).toBeGreaterThan(146);
+  await expect.poll(async () => Number(await page.locator('#gold').textContent()), { timeout: 45000 }).toBeGreaterThan(72);
   expect(errors).toEqual([]); await page.screenshot({ animations: 'disabled', path: 'test-results/bastion-desktop.png' });
 });
 test('responsive interface fits small desktop and keeps controls usable', async ({ page }) => {
@@ -101,7 +101,7 @@ test('preparation forecasts the actual enemies and warns about an escorted guard
   await page.addInitScript(() => localStorage.setItem('last-bastion-campaign-v1', JSON.stringify({ pines: { stars: 3, score: 1000 }, market: { stars: 3, score: 1000 }, citadel: { stars: 3, score: 1000 } })));
   await page.goto('/'); await page.getByRole('button', { name: 'Jugar: Ciudadela real', exact: true }).click();
   await page.getByRole('button', { name: 'Pausar', exact: true }).click();
-  await expect(page.locator('#wave-status')).toContainText('9 esbirros · 3 rápidos');
+  await expect(page.locator('#wave-status')).toContainText('10 esbirros · 4 rápidos');
   const state = await page.evaluate(async () => {
     const load = (url: string): Promise<any> => import(/* @vite-ignore */ url);
     const { simulation: sim } = await load(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
@@ -117,7 +117,7 @@ test('preparation forecasts the actual enemies and warns about an escorted guard
   await expect(page.locator('#wave')).toHaveText('Oleada 5 / 7');
   await expect(page.locator('#wave-status')).toContainText('1 guardián');
   await expect(page.locator('#challenge')).toBeVisible(); await expect(page.locator('#challenge')).toHaveText('GUARDIÁN');
-  await expect(page.locator('#next-label')).toContainText('Guardián con escolta');
+  await expect(page.locator('#next-label')).toContainText('Guardián:');
   await page.screenshot({ animations: 'disabled', path: 'test-results/balance-preview.png' });
   await page.getByRole('button', { name: 'Reanudar', exact: true }).click(); await page.getByRole('button', { name: 'Iniciar oleada 5', exact: true }).click();
   await expect(page.locator('#wave-status')).toContainText('en el valle'); await expect(page.locator('#challenge')).toHaveText('HORDA DE ÉLITE');
@@ -191,9 +191,9 @@ test('campaign victory unlocks maps and weapons, preserves progress on reload an
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Bloqueada: Villa del mercado', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Jugar: Aldea de los pinos', exact: true }).click();
-  await expect(page.locator('[data-tower="cannon"]')).toBeDisabled(); await expect(page.locator('[data-tower="mage"]')).toBeDisabled();
+  await expect(page.locator('[data-tower="triple"]')).toBeDisabled(); await expect(page.locator('[data-tower="poison"]')).toBeDisabled();
   await page.getByRole('button', { name: 'Pausar', exact: true }).click();
-  await chooseArcher(page); const p = await buildPoint(page, 0); await page.mouse.click(p.x, p.y); await expect(page.locator('#gold')).toHaveText('200');
+  await choosePrecision(page); const p = await buildPoint(page, 0); await page.mouse.click(p.x, p.y); await expect(page.locator('#gold')).toHaveText('150');
   await page.keyboard.press('Escape');
   // Keep the built tower shooting; deterministically defeat surviving enemies to exercise actual mission completion.
   async function win(): Promise<void> {
@@ -202,7 +202,7 @@ test('campaign victory unlocks maps and weapons, preserves progress on reload an
       const { simulation: sim } = await importModule(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
       // This fast-forward checks campaign state. Consume intermediate graphics events as normal frames do;
       // live tower damage and damage labels are covered by the dedicated gameplay/siege checks.
-      for (let i = 0; i < 100000 && !sim.finished; i++) { sim.update(.02); for (const enemy of sim.enemies) sim.hit(enemy, 100000, 'magic'); sim.events.length = 0; }
+      for (let i = 0; i < 100000 && !sim.finished; i++) { sim.update(.02); for (const enemy of sim.enemies) sim.hit(enemy, 100000, 'physical'); sim.events.length = 0; }
     });
     await expect(page.getByRole('heading', { name: '¡Castillo defendido!', exact: true })).toBeVisible();
   }
@@ -210,17 +210,17 @@ test('campaign victory unlocks maps and weapons, preserves progress on reload an
   await expect(page.locator('.victory-reward')).toContainText('Villa del mercado'); await page.screenshot({ animations: 'disabled', path: 'test-results/campaign-victory.png' });
   await page.getByRole('button', { name: 'Siguiente misión', exact: true }).click();
   await expect(page.locator('#mission-title')).toHaveText('VILLA DEL MERCADO'); await expect(page.locator('#gold')).toHaveText('300'); await expect(page.locator('#hp')).toHaveText('1200');
-  await expect(page.locator('[data-tower="crossbow"]')).toBeEnabled(); await expect(page.locator('[data-tower="cannon"]')).toHaveClass(/locked/); await expect(page.locator('[data-tower="mage"]')).toBeDisabled();
+  await expect(page.locator('[data-tower="triple"]')).toBeEnabled(); await expect(page.locator('[data-tower="poison"]')).toBeDisabled();
   expect(await page.evaluate(async () => { const importModule = (url: string): Promise<any> => import(/* @vite-ignore */ url); const module = await importModule(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); return { towers: module.simulation.towers.length, wave: module.simulation.wave, map: module.simulation.map.theme }; })).toEqual({ towers: 0, wave: 0, map: 'village' });
   await page.getByRole('button', { name: 'Pausar', exact: true }).click(); await page.screenshot({ animations: 'disabled', path: 'test-results/campaign-village.png' });
   await win(); await page.getByRole('button', { name: 'Siguiente misión', exact: true }).click();
-  await expect(page.locator('#mission-title')).toHaveText('CIUDADELA REAL'); await expect(page.locator('[data-tower="mage"]')).not.toHaveClass(/locked/); await expect(page.locator('[data-tower="mage"]')).toContainText('Te faltan 50 de oro'); await expect(page.locator('[data-tower="cannon"]')).toHaveClass(/locked/);
+  await expect(page.locator('#mission-title')).toHaveText('CIUDADELA REAL'); await expect(page.locator('[data-tower="poison"]')).not.toHaveClass(/locked/); await expect(page.locator('[data-tower="poison"]')).toContainText('Contra armaduras');
   await page.getByRole('button', { name: 'Pausar', exact: true }).click(); await page.screenshot({ animations: 'disabled', path: 'test-results/campaign-citadel.png' });
-  await win(); await expect(page.locator('.victory-reward')).toContainText('Cañón');
+  await win(); await expect(page.locator('.victory-reward')).toContainText('El último bastión');
   await page.getByRole('button', { name: 'Siguiente misión', exact: true }).click();
   await expect(page.locator('#mission-title')).toHaveText('EL ÚLTIMO BASTIÓN');
-  await expect(page.locator('[data-tower="cannon"]')).not.toHaveClass(/locked/); await expect(page.locator('[data-tower="cannon"]')).toContainText('Te faltan 200 de oro');
-  expect(await page.locator('[data-tower]').evaluateAll(cards => cards.map(card => (card as HTMLElement).dataset.tower))).toEqual(['archer', 'crossbow', 'mage', 'cannon']);
+  await expect(page.locator('[data-tower="poison"]')).toBeEnabled();
+  expect(await page.locator('[data-tower]').evaluateAll(cards => cards.map(card => (card as HTMLElement).dataset.tower))).toEqual(['precision', 'triple', 'poison']);
   await page.getByRole('button', { name: 'Pausar', exact: true }).click();
   await page.screenshot({ animations: 'disabled', path: 'test-results/campaign-siege.png' });
   await win(); await expect(page.locator('.victory-reward')).toContainText('Bosque de los ecos');
@@ -278,15 +278,15 @@ test('portrait menus, tower actions and battle results fit a phone viewport', as
     const { simulation: sim, battlefield: view } = await load(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
     const { placementError } = await load('/src/game/path.ts');
     for (const { x, z } of sim.map.pads) if (!placementError({ x, z }, [], sim.gold, 100, sim.map)) {
-      sim.build('archer', { x, z }); const v = view.camera.position.clone().set(x, 2.7, z).project(view.camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight };
+      sim.build('precision', { x, z }); const v = view.camera.position.clone().set(x, 2.7, z).project(view.camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight };
     }
     throw new Error('No legal build point');
   });
-  await expect(page.locator('#gold')).toHaveText('200'); await page.mouse.click(p.x, p.y);
+  await expect(page.locator('#gold')).toHaveText('150'); await page.mouse.click(p.x, p.y);
   await expect(page.locator('#tower-panel')).toBeVisible();
   const upgrade = await page.locator('#upgrade').boundingBox(), dock = await page.locator('.command-strip').boundingBox();
   expect(upgrade!.y + upgrade!.height).toBeLessThan(dock!.y);
-  await page.locator('#upgrade').click(); await expect(page.locator('#gold')).toHaveText('120');
+  await page.locator('#upgrade').click(); await expect(page.locator('#gold')).toHaveText('40');
   const notice = await page.locator('#toast').boundingBox(), details = await page.locator('#tower-panel').boundingBox();
   expect(details!.y).toBeGreaterThan(notice!.y + notice!.height);
   await page.screenshot({ path: 'test-results/ui-upgrade-phone.png', animations: 'disabled' });
@@ -294,7 +294,7 @@ test('portrait menus, tower actions and battle results fit a phone viewport', as
   await expect(page.getByRole('heading', { name: 'El castillo ha caído.', exact: true })).toBeVisible(); await fits();
   await page.screenshot({ path: 'test-results/ui-defeat-phone.png', animations: 'disabled' });
   await page.getByRole('button', { name: 'Reintentar misión', exact: true }).click();
-  await page.evaluate(async () => { const { simulation: sim } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); for (let i = 0; i < 100000 && !sim.finished; i++) { sim.update(.02); for (const e of sim.enemies) sim.hit(e, 100000, 'magic'); } });
+  await page.evaluate(async () => { const { simulation: sim } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); for (let i = 0; i < 100000 && !sim.finished; i++) { sim.update(.02); for (const e of sim.enemies) sim.hit(e, 100000, 'physical'); } });
   await expect(page.getByRole('heading', { name: '¡Castillo defendido!', exact: true })).toBeVisible(); await fits();
   await page.getByRole('button', { name: 'Siguiente misión', exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: 'test-results/ui-victory-phone.png', animations: 'disabled' });
@@ -323,7 +323,7 @@ for (const viewport of [{ width: 1440, height: 960 }, { width: 390, height: 844 
   await expect(page.locator('#defenses-toggle')).toHaveAttribute('aria-expanded', 'true');
   const drawer = await page.locator('#defenses-menu').boundingBox(); expect(drawer!.height).toBeGreaterThan(130);
   await page.screenshot({ path: `test-results/defenses-open-${viewport.width}.png`, animations: 'disabled' });
-  await page.locator('[data-tower="archer"]').focus(); await page.keyboard.press('Enter');
+  await page.locator('[data-tower="precision"]').focus(); await page.keyboard.press('Enter');
   await expect(page.locator('#defenses-menu')).toBeHidden(); await expect(page.locator('#defenses-toggle')).toBeFocused();
   expect(await camera()).toEqual(before); await expect(page.locator('#cancel')).toBeVisible();
   const point = await page.evaluate(async rect => {
@@ -343,9 +343,9 @@ for (const viewport of [{ width: 1440, height: 960 }, { width: 390, height: 844 
     throw new Error('There must be a clear buildable position after choosing a defense');
   }, drawer!);
   await page.mouse.move(point.x, point.y); await expect(page.locator('#placement-hint')).toContainText('Ubicación válida');
-  await page.mouse.click(point.x, point.y); await expect(page.locator('#gold')).toHaveText('200');
+  await page.mouse.click(point.x, point.y); await expect(page.locator('#gold')).toHaveText('150');
   await page.keyboard.press('Escape'); await expect(page.locator('#cancel')).toBeHidden();
-  await page.keyboard.press('b'); await page.locator('[data-tower="archer"]').focus(); await page.keyboard.press('b');
+  await page.keyboard.press('b'); await page.locator('[data-tower="precision"]').focus(); await page.keyboard.press('b');
   await expect(page.locator('#defenses-toggle')).toBeFocused(); await expect(page.locator('#defenses-menu')).toBeHidden();
   await page.keyboard.press('1'); await expect(page.locator('#cancel')).toBeVisible(); await expect(page.locator('#defenses-menu')).toBeHidden();
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Iniciar oleada 1', exact: true }).click();
@@ -367,7 +367,7 @@ for (const start of [4, 7]) test(`saved campaign continues through missions ${st
     await expect(page.locator('#hp')).toHaveText(String(mission.gateHp)); await expect(page.locator('#hp-max')).toHaveText(String(mission.gateHp));
     await expect(page.locator('.gate-label')).toContainText(`${mission.gateHp} / ${mission.gateHp}`);
     await expect(page.locator('#gold')).toHaveText('300'); await expect(page.locator('#defenses-menu')).toBeHidden();
-    await page.evaluate(async () => { const { simulation: sim } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); for (let ticks = 0; ticks < 100000 && !sim.finished; ticks++) { sim.update(.02); for (const enemy of sim.enemies) sim.hit(enemy, 100000, 'magic'); sim.events.length = 0; } });
+    await page.evaluate(async () => { const { simulation: sim } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); for (let ticks = 0; ticks < 100000 && !sim.finished; ticks++) { sim.update(.02); for (const enemy of sim.enemies) sim.hit(enemy, 100000, 'physical'); sim.events.length = 0; } });
     await expect(page.locator('.victory-stars')).toHaveAttribute('aria-label', '3 de 3 estrellas');
     await expect(page.locator('.results')).toContainText('100%');
     if (i < start + 2) await page.getByRole('button', { name: 'Siguiente misión', exact: true }).click();

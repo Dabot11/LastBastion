@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ENEMIES, TOWERS, WORLD, towerStats, type TowerKind } from '../game/config';
-import { gatePoint, placementIssue, roadHeight, type GameMap, type Point } from '../game/path';
+import { PAD_HEIGHT, gatePoint, padAt, placementIssue, roadHeight, type GameMap, type Point } from '../game/path';
 import { type Simulation, type Tower } from '../game/simulation';
 import { createTerrain } from './terrain';
 import { box, circle, enemyModel, orb, projectileModel, towerModel } from './models';
@@ -8,7 +8,7 @@ import { DamageLabels } from './damage-labels';
 interface EnemyVisual { group: THREE.Group; health: THREE.Mesh; hit: THREE.Mesh; }
 import { Effects } from './effects';
 import { battlefieldFraming, CAMERA_OFFSET } from './framing';
-import { ConstructionAreas, PlacementFootprint } from './construction';
+import { ConstructionPads, PlacementFootprint } from './construction';
 export class GameView {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -20,6 +20,8 @@ export class GameView {
   readonly towers = new Map<number, THREE.Group>();
   readonly projectiles = new Map<number, THREE.Group>();
   private readonly effects: Effects;
+  private readonly upgradeEffects: Effects;
+  private lastVisualTime = 0;
   private readonly damageLabels: DamageLabels;
   private door: THREE.Group; private gateRecoil = 0;
   private castleFraming: THREE.Vector3[] = [];
@@ -28,7 +30,7 @@ export class GameView {
   private readonly terrainRoot = new THREE.Group();
   private map: GameMap;
   readonly range: THREE.Mesh;
-  readonly constructionAreas = new ConstructionAreas();
+  readonly constructionPads = new ConstructionPads();
   readonly footprint = new PlacementFootprint();
   ghost: THREE.Group | null = null; ghostKind: TowerKind | null = null; hover: Point | null = null;
   private hoverHeight = WORLD.elevation + .05;
@@ -44,7 +46,7 @@ export class GameView {
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setClearColor(0xb8d0db); this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1;
-    this.renderer.domElement.setAttribute('aria-label', 'Campo de batalla 3D: selecciona una defensa para ver las zonas disponibles y construir libremente');
+    this.renderer.domElement.setAttribute('aria-label', 'Campo de batalla 3D: construye defensas en las bases hexagonales junto al camino');
     this.renderer.domElement.tabIndex = 0;
     container.append(this.renderer.domElement);
     this.scene.fog = new THREE.Fog(0xb7cfcc, 40, 92);
@@ -54,15 +56,16 @@ export class GameView {
     sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = -25; sun.shadow.camera.right = 25;
     sun.shadow.camera.top = 25; sun.shadow.camera.bottom = -25; sun.shadow.camera.far = 80; sun.shadow.normalBias = .06; sun.shadow.bias = .00025; this.scene.add(sun); this.renderer.shadowMap.autoUpdate = false; this.renderer.shadowMap.needsUpdate = true;
     this.effects = new Effects(this.scene);
+    this.upgradeEffects = new Effects(this.scene);
     this.map = map; this.scene.add(this.terrainRoot);
-    const terrain = createTerrain(this.terrainRoot, map); this.surfaces = terrain.surfaces; this.door = terrain.door; this.castleFraming = terrain.castleFraming; this.collectFlames();
+    const terrain = createTerrain(this.terrainRoot, map); this.constructionPads.load(map); this.surfaces = [...terrain.surfaces, this.constructionPads.foundations]; this.door = terrain.door; this.castleFraming = terrain.castleFraming; this.collectFlames();
     this.damageLabels = new DamageLabels(container);
     const rangeMat = new THREE.MeshBasicMaterial({ color: 0x9edcf3, transparent: true, opacity: .045, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
     this.range = new THREE.Mesh(new THREE.CircleGeometry(1, 80), rangeMat); this.range.rotation.x = -Math.PI / 2; this.range.visible = false;
     this.range.name = 'attack-range';
     const ringPoints = Array.from({ length: 97 }, (_, i) => new THREE.Vector3(Math.cos(i / 96 * Math.PI * 2), Math.sin(i / 96 * Math.PI * 2), 0));
     const ring = new THREE.Line(new THREE.BufferGeometry().setFromPoints(ringPoints), new THREE.LineDashedMaterial({ color: 0xc4e6f6, transparent: true, opacity: .55, dashSize: .045, gapSize: .028, depthWrite: false, toneMapped: false }));
-    ring.computeLineDistances(); this.range.add(ring); this.scene.add(this.range, this.constructionAreas.group, this.footprint.group);
+    ring.computeLineDistances(); this.range.add(ring); this.scene.add(this.range, this.constructionPads.group, this.footprint.group);
     this.observer = new ResizeObserver(() => this.resize()); this.observer.observe(container);
     for (const selector of ['.topbar', '.command-strip']) { const element = container.parentElement?.querySelector(selector); if (element) this.observer.observe(element); }
     this.resize();
@@ -115,9 +118,9 @@ export class GameView {
   setGhost(kind: TowerKind | null): void {
     if (this.ghost) { this.scene.remove(this.ghost); this.ghost.traverse(o => { if (o instanceof THREE.Mesh || o instanceof THREE.Sprite) (o.material as THREE.Material).dispose(); }); }
     this.ghost = null; this.ghostKind = kind; this.ghostValid = null;
-    this.constructionAreas.hide(); this.footprint.group.visible = false; this.range.visible = false;
+    this.footprint.group.visible = false; this.range.visible = false;
     if (kind) {
-      this.ghost = towerModel(kind); this.ghost.traverse(o => { if (o instanceof THREE.Mesh || o instanceof THREE.Sprite) { o.material = (o.material as THREE.Material).clone(); const m = o.material; m.transparent = true; m.opacity = .60; m.depthWrite = false; o.castShadow = false; } });
+      this.ghost = towerModel(kind); this.ghost.traverse(o => { if (o.name === 'tower-level-shield') o.visible = false; if (o instanceof THREE.Mesh || o instanceof THREE.Sprite) { o.material = (o.material as THREE.Material).clone(); const m = o.material; m.transparent = true; m.opacity = .60; m.depthWrite = false; o.castShadow = false; } });
       this.scene.add(this.ghost); this.ghost.visible = false;
     }
   }
@@ -125,7 +128,7 @@ export class GameView {
     if (!this.ghostKind) return null;
     if (sim.finished) return 'La partida ha terminado';
     if (!sim.mission.towers.includes(this.ghostKind)) return 'Defensa bloqueada en esta misión';
-    if (!this.hover) return sim.gold < TOWERS[this.ghostKind].cost ? 'No tienes suficiente oro' : 'Zonas verdes: aquí cabe tu defensa';
+    if (!this.hover) return sim.gold < TOWERS[this.ghostKind].cost ? 'No tienes suficiente oro' : 'Elige una base hexagonal junto al camino';
     return placementIssue(this.hover, sim.towers, sim.gold, TOWERS[this.ghostKind].cost, sim.map)?.brief ?? null;
   }
   private createEnemy(id: number, kind: Parameters<typeof enemyModel>[0]): EnemyVisual {
@@ -141,8 +144,8 @@ export class GameView {
   private syncTower(t: Tower): THREE.Group {
     let group = this.towers.get(t.id);
     if (!group || group.userData.level !== t.level) {
-      if (group) this.scene.remove(group); group = towerModel(t.kind, t.level); group.position.set(t.x, WORLD.elevation + .07, t.z);
-      group.userData = { towerId: t.id, level: t.level }; this.towers.set(t.id, group); this.scene.add(group); this.renderer.shadowMap.needsUpdate = true; this.collectFlames();
+      const upgrading = !!group; if (group) this.scene.remove(group); group = towerModel(t.kind, t.level); group.position.set(t.x, WORLD.elevation + .07 + PAD_HEIGHT, t.z);
+      group.userData = { towerId: t.id, level: t.level, upgradePulse: upgrading ? .8 : 0 }; this.towers.set(t.id, group); this.scene.add(group); this.renderer.shadowMap.needsUpdate = true; this.collectFlames();
     }
     const turret = group.getObjectByName('turret'); if (turret) { turret.rotation.y = t.targetAngle; turret.position.y = Number(turret.userData.restY) + Math.sin(Number(group.userData.recoil ?? 0) * 16) * .045; const barrel = turret.getObjectByName('barrel'); if (barrel) barrel.position.z = .24 - Number(group.userData.recoil ?? 0) * .5; } return group;
   }
@@ -174,7 +177,7 @@ export class GameView {
     }
     const towerIds = new Set(sim.towers.map(t => t.id));
     for (const [id, g] of this.towers) if (!towerIds.has(id)) { this.scene.remove(g); this.towers.delete(id); this.renderer.shadowMap.needsUpdate = true; this.collectFlames(); }
-    sim.towers.forEach(t => { const g = this.syncTower(t); g.userData.recoil = Math.max(0, Number(g.userData.recoil ?? 0) - visualDt); });
+    sim.towers.forEach(t => { const g = this.syncTower(t); g.userData.recoil = Math.max(0, Number(g.userData.recoil ?? 0) - visualDt); g.userData.upgradePulse = Math.max(0, Number(g.userData.upgradePulse) - Math.max(0, Math.min(.1, time - this.lastVisualTime))); const pulse = Math.sin((1 - Number(g.userData.upgradePulse) / .8) * Math.PI) * .08; g.scale.set(1 + pulse * .3, 1 + pulse, 1 + pulse * .3); });
     const projectileIds = new Set(sim.projectiles.map(p => p.id));
     for (const [id, m] of this.projectiles) if (!projectileIds.has(id)) { this.scene.remove(m); this.projectiles.delete(id); }
     for (const p of sim.projectiles) {
@@ -204,7 +207,12 @@ export class GameView {
         this.damageLabels.add(position, event.damage, event.damageKind ?? 'physical');
       }
       if (event.type === 'kill') { this.effects.burst(position, 0x94618f, 6); this.effects.burst(position, 0xe7b64e, 3, .05); }
-      if (event.type === 'build' || event.type === 'upgrade') { position.y = WORLD.elevation + 1; this.effects.burst(position, 0xfbd584, 12); this.effects.pulse(new THREE.Vector3(event.x, WORLD.elevation + .10, event.z), 0xb6d79f, .9); }
+      if (event.type === 'build' || event.type === 'upgrade') {
+        const effects = event.type === 'upgrade' ? this.upgradeEffects : this.effects;
+        position.y = WORLD.elevation + 1 + PAD_HEIGHT; effects.burst(position, 0xfbd584, event.type === 'upgrade' ? 24 : 12);
+        effects.pulse(new THREE.Vector3(event.x, WORLD.elevation + .10 + PAD_HEIGHT, event.z), event.type === 'upgrade' ? 0xffd16f : 0xb6d79f, event.type === 'upgrade' ? 1.4 : .9, event.type === 'upgrade' ? .8 : .42);
+        if (event.type === 'upgrade') effects.flash(position, 0xffe0a0, 1.3, .6);
+      }
       if (event.type === 'gateHit') {
         const attacker = sim.enemies.find(e => e.id === event.enemyId);
         this.gateRecoil = .24; position.y = WORLD.elevation + (attacker ? ENEMIES[attacker.kind].scale * 1.35 * .7 : 1.2);
@@ -221,36 +229,39 @@ export class GameView {
     const gateLabel = gatePoint(0, .6, this.map);
     this.damageLabels.update(visualDt, this.camera, this.container.clientWidth, this.container.clientHeight, new THREE.Vector3(gateLabel.x, WORLD.elevation + 4.8, gateLabel.z), sim.castleHp, sim.maxGateHp);
     this.effects.update(visualDt);
+    this.upgradeEffects.update(Math.max(0, Math.min(.1, time - this.lastVisualTime))); this.lastVisualTime = time;
     this.flames.forEach((flame, i) => flame.scale.setScalar(Number(flame.userData.baseSize) * (1 + .09 * Math.sin(time * 5 + i * 2.3))));
     let rangeCenter: Point | null = null, radius = 0;
-    this.constructionAreas.update(sim, this.ghostKind);
+    const hoveredPad = this.hover ? padAt(this.hover, this.map) : null;
+    const previewPoint = hoveredPad ?? this.hover, previewHeight = hoveredPad ? WORLD.elevation + .05 + PAD_HEIGHT : this.hoverHeight;
+    this.constructionPads.update(sim, this.ghostKind, hoveredPad);
     if (this.ghost && this.ghostKind) {
       this.ghost.visible = !!this.hover;
-      this.footprint.update(this.hover, this.hoverHeight, !this.placementMessage(sim));
+      this.footprint.update(previewPoint, previewHeight, !this.placementMessage(sim));
       if (this.hover) {
         const valid = !this.placementMessage(sim);
         if (valid !== this.ghostValid) { this.ghost.traverse(o => { if (o instanceof THREE.Mesh) { const m = o.material as THREE.MeshStandardMaterial; m.opacity = valid ? .60 : .40; m.emissive.setHex(valid ? 0x141e28 : 0x572525); } }); this.ghostValid = valid; }
-        this.ghost.position.set(this.hover.x, this.hoverHeight + .02, this.hover.z); rangeCenter = this.hover; radius = TOWERS[this.ghostKind].range;
+        this.ghost.position.set(previewPoint!.x, previewHeight + .02, previewPoint!.z); rangeCenter = previewPoint; radius = TOWERS[this.ghostKind].range;
         (this.range.material as THREE.MeshBasicMaterial).color.setHex(0x9edcf3);
       }
     } else if (this.selectedId !== null) {
       const t = sim.towers.find(t => t.id === this.selectedId); if (t) { rangeCenter = t; radius = towerStats(t.kind, t.level).range; (this.range.material as THREE.MeshBasicMaterial).color.setHex(0xa6d9f0); }
     }
     this.range.visible = !!rangeCenter;
-    if (rangeCenter) { this.range.position.set(rangeCenter.x, WORLD.elevation + .13, rangeCenter.z); this.range.scale.set(radius, radius, 1); }
+    if (rangeCenter) { this.range.position.set(rangeCenter.x, WORLD.elevation + .13 + PAD_HEIGHT, rangeCenter.z); this.range.scale.set(radius, radius, 1); }
     this.renderer.render(this.scene, this.camera);
   }
-  towerIcons(): Record<TowerKind, string> {
+  towerIcons(): Record<string, string> {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); renderer.setSize(320, 288); renderer.setPixelRatio(1);
     renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
     const scene = new THREE.Scene(); scene.add(new THREE.HemisphereLight(0xffffff, 0x657b88, 3)); const light = new THREE.DirectionalLight(0xffeac5, 4); light.position.set(-3, 5, 4); scene.add(light);
     const camera = new THREE.OrthographicCamera(-1.05, 1.05, .945, -.945, .1, 30);
-    const icons = {} as Record<TowerKind, string>;
+    const icons: Record<string, string> = {};
     // Frame the weapon and its parapet, rather than shrinking an entire tower into a card.
     const centers: Record<TowerKind, number> = { archer: 2.35, crossbow: 2.2, mage: 2.45, cannon: 1.65 };
-    for (const kind of Object.keys(TOWERS) as TowerKind[]) {
+    for (const kind of Object.keys(TOWERS) as TowerKind[]) for (const level of [1, 2, 3]) {
       camera.position.set(3, centers[kind] + 2.1, 5); camera.lookAt(0, centers[kind], 0);
-      const g = towerModel(kind); scene.add(g); renderer.render(scene, camera); icons[kind] = renderer.domElement.toDataURL(); scene.remove(g);
+      const g = towerModel(kind, level); g.getObjectByName('tower-level-shield')!.visible = false; scene.add(g); renderer.render(scene, camera); icons[`${kind}-${level}`] = renderer.domElement.toDataURL(); if (level === 1) icons[kind] = icons[`${kind}-${level}`]; scene.remove(g);
     }
     renderer.dispose(); return icons;
   }
@@ -260,13 +271,13 @@ export class GameView {
     for (const group of this.towers.values()) this.scene.remove(group);
     for (const projectile of this.projectiles.values()) this.scene.remove(projectile);
     this.enemies.clear(); this.towers.clear(); this.projectiles.clear();
-    this.effects.clear(); this.damageLabels.clear(); this.gateRecoil = 0;
+    this.effects.clear(); this.upgradeEffects.clear(); this.damageLabels.clear(); this.gateRecoil = 0;
     // Terrain geometry and cloned materials belong to this map and can be released safely.
     const geometries = new Set<THREE.BufferGeometry>();
     this.terrainRoot.traverse(o => { if (o instanceof THREE.Mesh) { if (!o.geometry.userData.shared) geometries.add(o.geometry); const materials = Array.isArray(o.material) ? o.material : [o.material]; materials.filter(m => m.userData.owned).forEach(m => m.dispose()); if (o instanceof THREE.InstancedMesh) o.dispose(); } });
     geometries.forEach(g => g.dispose()); this.terrainRoot.clear();
-    this.map = map; const terrain = createTerrain(this.terrainRoot, map); this.surfaces = terrain.surfaces; this.door = terrain.door; this.castleFraming = terrain.castleFraming; this.collectFlames();
+    this.map = map; const terrain = createTerrain(this.terrainRoot, map); this.constructionPads.load(map); this.surfaces = [...terrain.surfaces, this.constructionPads.foundations]; this.door = terrain.door; this.castleFraming = terrain.castleFraming; this.collectFlames();
     this.range.visible = false; this.renderer.shadowMap.needsUpdate = true; this.resetCamera();
   }
-  dispose(): void { this.observer.disconnect(); this.setGhost(null); this.constructionAreas.dispose(); this.footprint.dispose(); this.range.geometry.dispose(); (this.range.material as THREE.Material).dispose(); this.range.children.forEach(o => { if (o instanceof THREE.Line) { o.geometry.dispose(); (o.material as THREE.Material).dispose(); } }); this.effects.dispose(); this.damageLabels.dispose(); this.hitMaterial.dispose(); this.healthMaterial.dispose(); this.healthBackground.dispose(); this.enemyShade.dispose(); this.renderer.dispose(); }
+  dispose(): void { this.observer.disconnect(); this.setGhost(null); this.constructionPads.dispose(); this.footprint.dispose(); this.range.geometry.dispose(); (this.range.material as THREE.Material).dispose(); this.range.children.forEach(o => { if (o instanceof THREE.Line) { o.geometry.dispose(); (o.material as THREE.Material).dispose(); } }); this.effects.dispose(); this.upgradeEffects.dispose(); this.damageLabels.dispose(); this.hitMaterial.dispose(); this.healthMaterial.dispose(); this.healthBackground.dispose(); this.enemyShade.dispose(); this.renderer.dispose(); }
 }

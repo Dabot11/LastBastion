@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { WORLD } from '../src/game/config';
 import { MISSIONS } from '../src/game/missions';
-import { gateLocal, roadHeight, placementError, samplePath } from '../src/game/path';
+import { PAD_RADIUS, gateLocal, roadHeight, placementError, samplePath } from '../src/game/path';
 import { landscape } from '../src/scene/landscape';
 
 for (const mission of MISSIONS) test(`rendered terrain matches road and complete tower footprints: ${mission.name}`, () => {
@@ -20,11 +20,11 @@ for (const mission of MISSIONS) test(`rendered terrain matches road and complete
   assert.ok(Math.abs(height(gate.x, gate.z) - (WORLD.elevation + .05)) < .015, 'The road must meet the elevated wooden threshold');
   assert.ok(Math.abs(gateLocal(gate, mission.map).z) < .000001);
   let checked = 0;
-  for (let x = -13; x <= 13; x += 2) for (let z = -11; z <= 11; z += 2) {
+  for (const { x, z } of mission.map.pads) {
     if (placementError({ x, z }, [], 10000, 100, mission.map)) continue;
     checked++;
     for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
-      const h = height(x + Math.cos(angle) * WORLD.towerRadius, z + Math.sin(angle) * WORLD.towerRadius);
+      const h = height(x + Math.cos(angle) * PAD_RADIUS, z + Math.sin(angle) * PAD_RADIUS);
       assert.ok(Math.abs(h - (WORLD.elevation + .05)) < .001, `A legal tower footprint falls off the plateau at ${x}, ${z}`);
     }
   }

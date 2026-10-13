@@ -1,6 +1,8 @@
 # The Last Bastion
 
-Juego Tower Defense 3D de fantasía medieval, con construcción libre y una campaña de diez misiones. Three.js genera todo el escenario y los personajes mediante modelos procedurales con materiales, mampostería y animaciones de combate. No requiere recursos externos, cuentas ni claves API.
+Juego Tower Defense 3D de fantasía medieval, con bases estratégicas de construcción y una campaña de diez misiones. Three.js genera todo el escenario y los personajes mediante modelos procedurales con materiales, mampostería y animaciones de combate. No requiere recursos externos, cuentas ni claves API.
+
+Capturas del juego: [bases hexagonales](docs/foundations.png) · [evolución de las cuatro defensas](docs/tower-evolution.png).
 
 ## Ejecutar
 
@@ -49,7 +51,7 @@ Al llegar, los enemigos permanecen vivos y atacan la puerta. Dos pueden golpear 
 
 Los golpes generan números de daño, retroceso, destellos y astillas de madera. Los números de enemigos muestran la salud realmente perdida después de resistencias, limitada a la salud restante y redondeada para leerla. Los de la puerta aparecen en rojo. La madera muestra grietas al bajar del 65% y 30% de salud, y cae al llegar a cero.
 
-Abre **Construir defensas** con su flecha o **B**. Las ilustraciones muestran el arma de cerca. Al elegir, el menú se oculta para liberar terreno; la selección permanece activa y puedes colocar varias torres. La cámara no se mueve al desplegarlo. El botón de oleada, el tiempo de preparación y una única barra de progreso están en el panel superior de oleada. El selector inferior ocupa una franja compacta; las instrucciones de construcción aparecen al elegir una defensa. Selecciona una torre y mueve el cursor sobre el césped. La vista previa verde permite construir; la roja indica un obstáculo, el camino, falta de espacio o falta de oro. No hay casillas ni espacios de construcción predeterminados. El círculo muestra el alcance real.
+Abre **Construir defensas** con su flecha o **B**, o pulsa una base hexagonal vacía para abrir el selector. Al elegir una defensa, el menú se oculta y puedes construir en las bases disponibles. Cada misión tiene 14–16 bases de piedra repartidas junto a la entrada, las curvas y el castillo, con árboles y rocas entre ellas. La vista previa se ajusta al centro de la base: ✓ permite la compra; X explica ocupación, bloqueo o falta de oro. Vender libera la misma base. El círculo azul discontinuo muestra el alcance real. El HUD y el selector siguen compactos; la oleada y su preparación se controlan desde el panel superior.
 
 | Defensa | Oro | Ventaja |
 | --- | ---: | --- |
@@ -71,7 +73,7 @@ Los precios de mejora son incrementales. Otra torre cubre una posición nueva; m
 
 Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardianes con resistencia física y mágica. Cada misión tiene una composición propia y un final definido. Durante la preparación ves los enemigos de la próxima oleada y una sugerencia de defensa; los guardianes se anuncian antes de empezar y llegan con escoltas. Tienes 20 segundos de preparación entre oleadas y puedes iniciar la siguiente antes de tiempo. Al completar una oleada recibes una bonificación de oro.
 
-Al seleccionar una defensa se resaltan en verde suave las zonas donde cabe su base completa. Los contornos excluyen el camino y sus márgenes, el acceso a la puerta, los obstáculos sólidos y el espacio ocupado por otras torres. La exclusión de árboles y rocas contempla el tamaño del modelo visible, y la base debe quedar íntegra sobre el césped junto al acceso a la puerta. El preview conserva el modelo semitransparente, muestra una base verde con ✓ o roja con X y explica los rechazos; el círculo azul discontinuo representa el alcance de ataque. El pasto, las flores y los helechos no bloquean. Puedes colocar libremente, sin casillas ni ajuste a una cuadrícula. Las zonas se actualizan al construir, vender o cambiar de defensa y se ocultan si no alcanza el oro o al cancelar. El preview sigue al cursor también al cambiar el zoom, mover la cámara o redimensionar la ventana.
+Las bases permanecen visibles durante la partida y su borde se ilumina al elegir una defensa. La compra usa la misma lógica que el preview y siempre coloca la torre en el centro. Los tres niveles evolucionan de piedra sencilla a refuerzos de acero y después marfil y oro, con una base más robusta, armas más grandes y un escudo numerado. La mejora produce un destello, partículas y un pulso de construcción, también en pausa táctica. El panel muestra una imagen del nivel actual.
 
 Las defensas tienen prioridades diferentes: arqueros contra la primera línea, ballestas contra amenazas acorazadas, cañones contra grupos y magos contra armadura vulnerable a magia. Combinar posiciones y mejoras conserva más salud que abandonar las torres iniciales. Los ajustes de economía, enemigos y resultados están documentados en [BALANCE.md](BALANCE.md). Para repetir las simulaciones sin abrir WebGL, ejecuta `npm run balance`.
 
@@ -112,7 +114,7 @@ El oro solo sirve para construir y mejorar durante cada misión. XP, niveles de 
 
 Puedes abrir la guía desde la campaña antes de empezar. Los menús mantienen el foco dentro de sus controles y dejan la batalla inactiva mientras están abiertos. Iniciar una oleada desde la pausa táctica reanuda la defensa.
 
-El juego se pausa al ocultar la pestaña. La guía también detiene la simulación. El sonido comienza silenciado y solo se activa tras una interacción.
+El juego se pausa y el audio se silencia al ocultar la pestaña. La guía detiene la simulación. Activa el sonido con el altavoz o **M**: el arco combina cuerda y aire, la ballesta un mecanismo más pesado, el cañón explosión y retumbo, y la magia un efecto de aire y destellos sonoros. Hay impactos, pasos, voces distintas de los cuatro enemigos y señales de construcción, mejora y resultados. La música ambiental original acompaña el valle con cuerdas, arpegios y percusión suave. En **Ayuda → Sonido del valle** puedes apagar solo la música y ajustar el volumen; esas preferencias se guardan. Los sonidos están diseñados por síntesis procedural y funcionan sin descargar archivos externos. La mezcla limita voces simultáneas y aplica transiciones suaves y compresión.
 
 ## Estructura
 
@@ -126,7 +128,8 @@ src/
     progress.ts     Estrellas, desbloqueos y guardado de campaña
   scene/
     models.ts       Geometría y materiales reutilizables
-    terrain.ts      Decoración, vegetación y superficies de construcción
+    terrain.ts      Decoración, vegetación y superficies del terreno
+    construction.ts  Bases hexagonales, selección y preview
     fortress.ts     Castillo grande, puerta animable y cueva
     damage-labels.ts  Números de daño y salud de puerta proyectados sobre el mundo
     landscape.ts    Valle continuo y paredes de cañón por contornos
@@ -135,7 +138,8 @@ src/
     effects.ts      Partículas agrupadas, destellos y anillos de impacto
     view.ts         Renderizado, cámara, raycasting, vista previa y efectos
     framing.ts      Encuadre del recorrido y límites reales del castillo
-  audio.ts          Sonidos sintéticos con Web Audio
+  audio.ts          Mezcla Web Audio, música, volumen y voces
+  audio/sound-design.ts  Diseño sonoro y composición ambiental originales
   illustrations.ts  Vistas de los mapas reales e ilustración del castillo
   ui.ts             Campaña, HUD, mejoras, ayuda y resultados de batalla
   main.ts           Controles, ciclo de pasos fijos y campaña persistente
@@ -173,7 +177,7 @@ Las pruebas comprueban continuidad y ausencia de cruces de la ruta, movimiento a
 
 Las pruebas de distribución revisan preparación, combate, construcción y selección a 1536×844 y 1920×1080. Las diez misiones mantienen su ruta visible al abrir los detalles de una torre. Las pruebas verifican los límites del castillo con su geometría real, la posición fija y transparente a clics de los avisos, el reinicio del encuadre y la coincidencia entre cursor y torre construida.
 
-Las pruebas de construcción comprueban el interior y los bordes de todos los contornos en las diez misiones, incluyendo la separación de torres. El cálculo conserva un pequeño margen interior para que la interpolación nunca prometa un punto inválido; este margen visual no restringe la colocación real. En navegador se revisan las zonas antes de mover el cursor, los motivos de rechazo, la huella y el alcance, la colocación exacta, la venta, el cambio de defensa y la falta de oro en laptop y pantalla completa.
+Las pruebas comprueban las bases de las diez misiones, su separación, cobertura de diferentes tramos y apoyo completo sobre el terreno. Verifican compras dentro del hexágono, rechazo de terreno sin base, ocupación única, venta y reutilización. En navegador se revisan los tres niveles, su escudo e imagen, el fin de la animación durante la pausa, las compras exactas, el audio real y la persistencia de música y volumen, en laptop, pantalla completa y teléfono. Las pruebas de audio comprueban señales distintas, margen de amplitud y continuidad del bucle estéreo.
 
 Las pruebas de navegador comprueban WebGL real, colocación con cursor, selección, mejoras, venta, falta de oro, pausa, velocidad, guía, combate con recompensa, adaptación a una ventana de escritorio pequeña, derrota real, victoria, guardado de las estrellas, desbloqueo de todas las misiones y defensas, cambio de mapa y reinicio completo.
 

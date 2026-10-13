@@ -52,38 +52,38 @@ Los enemigos ya no desaparecen al terminar la ruta. Se detienen delante de la ma
 | Bestia | 30 | 1,90 s |
 | Guardián | 55 | 2,20 s |
 
-El asedio añade una última oportunidad de defensa, pero una fila sin cobertura puede bloquear el avance de la oleada y terminar en derrota. La ruta se prolonga desde la cueva y sube hasta el portón. El terreno lateral de la entrada queda libre para construir; la superficie de construcción crece ligeramente en anchura para permitir ambos flancos. El plan de referencia exige alcance real a **ambas posiciones de ataque**, no solo al centro del castillo. Las decisiones durante una oleada siguen disponibles para el jugador.
+El asedio añade una última oportunidad de defensa, pero una fila sin cobertura puede bloquear el avance de la oleada y terminar en derrota. La ruta se prolonga desde la cueva y sube hasta el portón. La construcción se concentra en 14–16 bases hexagonales repartidas junto al camino; la entrada y ambos flancos de la puerta cuentan con posiciones útiles. El plan de referencia exige alcance real a **ambas posiciones de ataque**, no solo al centro del castillo. Las decisiones durante una oleada siguen disponibles para el jugador.
 
 El daño, precios, resistencias, recompensas y desbloqueos de las torres se conservan. La puerta gana resistencia con cada fortaleza; aumentar su vida no reemplaza el diseño de oleadas. Las misiones de caravanas, molino, guardianes y corona dan dos oleadas iniciales sin bestias para obtener oro antes de incorporar especialistas. La dificultad cambia con cantidades, composición, densidad, salud enemiga y geometría; la salud enemiga inicial no necesita crecer en todas las misiones. El crecimiento dentro de cada misión sigue siendo del 10% por oleada. Las estrellas se calculan con la salud restante de la puerta. Llegar o golpear no da oro: solo una baja real concede recompensa. Un superviviente impide completar la oleada y la victoria.
 
 ## Evidencia reproducible
 
-`npm run balance` ejecuta 113 escenarios de referencia usando la simulación de producción. Compra en posiciones legales, usa únicamente oro inicial y ganado, toma decisiones durante preparación y reserva cobertura para las dos posiciones de ataque ante la puerta y combate a pasos de 20 ms. Excluye estrategias que requieren defensas todavía bloqueadas. No inventa daño, salud ni recompensas. Para obtener todos los resultados:
+`npm run balance` ejecuta 103 escenarios de referencia usando la simulación de producción. Compra en posiciones legales, usa únicamente oro inicial y ganado, toma decisiones durante preparación y reserva cobertura para las dos posiciones de ataque ante la puerta y combate a pasos de 20 ms. Excluye estrategias que requieren defensas todavía bloqueadas. No inventa daño, salud ni recompensas. Para obtener todos los resultados:
 
 ```sh
 npm run --silent balance -- --json
 ```
 
-Resultados de referencia en la cuadrícula sin desplazamiento:
+Resultados de referencia con inversión mixta en las bases de cada misión:
 
 | Misión: ampliar y mejorar | Salud final / máxima | Estrellas | Combate a 1× | Con preparación |
 | --- | ---: | ---: | ---: | ---: |
-| Aldea de los pinos | 1000 / 1000 | 3 | 192 s | 4.9 min |
-| Villa del mercado | 1200 / 1200 | 3 | 230 s | 5.8 min |
-| Ciudadela real | 1400 / 1400 | 3 | 370 s | 8.5 min |
-| El último bastión | 1528 / 1600 | 3 | 415 s | 9.6 min |
-| Bosque de los ecos | 1762 / 1800 | 3 | 402 s | 9.4 min |
-| Villa de las caravanas | 1900 / 2000 | 3 | 378 s | 9 min |
-| Fortaleza de la colina | 1922 / 2200 | 2 | 458 s | 10.6 min |
-| Aldea del viejo molino | 2304 / 2400 | 3 | 489 s | 11.1 min |
-| Paso de los guardianes | 2576 / 2700 | 3 | 504 s | 11.7 min |
-| Castillo de la corona | 2912 / 3000 | 3 | 529 s | 12.1 min |
+| Aldea de los pinos | 1000 / 1000 | 3 | 187 s | 4.8 min |
+| Villa del mercado | 1200 / 1200 | 3 | 245 s | 6.1 min |
+| Ciudadela real | 1384 / 1400 | 3 | 402 s | 9 min |
+| El último bastión | 1494 / 1600 | 3 | 393 s | 9.2 min |
+| Bosque de los ecos | 1746 / 1800 | 3 | 418 s | 9.6 min |
+| Villa de las caravanas | 1802 / 2000 | 3 | 385 s | 9.1 min |
+| Fortaleza de la colina | 1696 / 2200 | 2 | 465 s | 10.8 min |
+| Aldea del viejo molino | 2296 / 2400 | 3 | 493 s | 11.2 min |
+| Paso de los guardianes | 2310 / 2700 | 2 | 551 s | 12.5 min |
+| Castillo de la corona | 2722 / 3000 | 3 | 549 s | 12.5 min |
 
-Los 113 escenarios terminan: 65 victorias y 48 derrotas; estas últimas corresponden a estrategias que dejan de reinvertir o cubren mal el camino, entre otras aperturas débiles. La aldea con tres arqueros sin reinvertir conserva 816 / 1000 de salud y logra dos estrellas.
+Los 103 escenarios terminan: 65 victorias y 38 derrotas. La apertura de tres arqueros sin reinvertir conserva 808 / 1000 de salud en la aldea y logra dos estrellas, pero las aperturas estáticas no completan las regiones posteriores.
 
-Las pruebas repiten dos políticas por misión en cuadrículas desplazadas 0 / 0,25 / 0,5 metros: todas ganan con al menos dos estrellas y tres estrellas son alcanzables en cada misión. Una política compra nuevas torres y otra permite mejoras, salvo la ciudadela, donde se compara la combinación estándar con una apertura que establece dos arqueros antes de ahorrar para magia. Sin torres o con cobertura ineficaz se pierde; abandonar la apertura no completa las regiones posteriores. Una política que concentra mejoras demasiado pronto puede obtener solo una estrella en el último bastión.
+Las pruebas comparan expansión y mejoras en las bases disponibles. Ambos planes mixtos pueden ganar; al menos un plan equilibrado conserva salud para dos estrellas y una estrategia legal con las armas desbloqueadas puede lograr tres en cada misión. El límite de bases hace más importantes las mejoras: el plan de expansión también reinvierte en ellas cuando la mayoría de bases están ocupadas y no puede financiar la siguiente compra. Las bases cercanas a la entrada, curvas y puerta favorecen decisiones diferentes. Se eliminó la antigua referencia de torres fuera de cobertura porque todas las nuevas bases están diseñadas para cubrir el camino. Sin defensas se pierde.
 
-La ruta extendida y el remate de supervivientes añaden tiempo de combate. Las comprobaciones limitan las estrategias vencedoras a una media de 65 segundos por oleada y ninguna oleada de referencia puede prolongarse más de 90 segundos. La tabla incluye combate y duración con todos los periodos de preparación. Las misiones nuevas duran alrededor de 9–12 minutos a 1× con ese plan, y menos al iniciar antes o usar 2×. Iniciar antes, usar 2×, pausar o tomar más tiempo para decidir modifica la duración. Las pruebas verifican además compras, precios de cada mejora, independencia entre torres, venta, bloqueo de armas, guardados anteriores y geometría real de los diez mapas. El navegador comprueba la comparación de mejoras, los cuatro desbloqueos y los encuadres de toda la campaña.
+La ruta extendida y el remate de supervivientes añaden tiempo de combate. Las comprobaciones limitan los dos planes mixtos de prueba a una media de 65 segundos por oleada y ninguna oleada de referencia puede prolongarse más de 90 segundos. La tabla incluye combate y duración con todos los periodos de preparación. Las misiones nuevas duran alrededor de 9–13 minutos a 1× con ese plan, y menos al iniciar antes o usar 2×. Iniciar antes, usar 2×, pausar o tomar más tiempo para decidir modifica la duración. Las pruebas verifican además compras, precios de cada mejora, independencia entre torres, venta, bloqueo de armas, guardados anteriores y geometría real de los diez mapas. El navegador comprueba la comparación de mejoras, los cuatro desbloqueos y los encuadres de toda la campaña.
 
 ## Próxima revisión con jugadores
 

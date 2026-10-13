@@ -5,9 +5,7 @@ import { DEFAULT_MAP, FENCES, OBSTACLES, PATH, PATH_LENGTH, TORCHES, SEGMENTS, d
 import { MISSIONS } from '../src/game/missions';
 import { Simulation } from '../src/game/simulation';
 function validPoint(towers: Point[] = [], map: GameMap = DEFAULT_MAP): Point {
-  for (let x = -13; x < 14; x += .5) for (let z = -11; z < 12; z += .5) {
-    const p = { x, z }; if (!placementError(p, towers, 1000, 100, map)) return p;
-  }
+  for (const p of map.pads) if (!placementError(p, towers, 1000, 100, map)) return p;
   throw new Error('No free build location');
 }
 function advance(sim: Simulation, seconds: number, dt = .02): void { for (let t = 0; t < seconds; t += dt) sim.update(Math.min(dt, seconds - t)); }
@@ -36,12 +34,8 @@ test('placement rejects route, scenery, overlap, castle, cave, boundaries and in
   const p = validPoint(); assert.equal(placementError(p, [], 100, 100), null);
   assert.ok(placementError(p, [p], 1000, 100)); assert.ok(placementError(p, [], 99, 100));
 });
-test('free construction works on both sides of all three long sections', () => {
-  for (const z of [8.5, 1.5, -5.5]) for (const side of [-1, 1]) {
-    let found = false;
-    for (let x = -6; x <= 6; x += .2) { if (!placementError({ x, z: z + side * 2.8 }, [], 1000, 100)) { found = true; break; } }
-    assert.ok(found, `No buildable land on side ${side} of z=${z}`);
-  }
+test('stone foundations span the entry, middle and castle approaches', () => {
+  for (const fraction of [.12, .45, .85]) assert.ok(DEFAULT_MAP.pads.some(p => Math.abs(p.progress / DEFAULT_MAP.length - fraction) < .18));
 });
 test('economy, three levels, actual stat changes, sale and rejection are transactional', () => {
   const sim = new Simulation(), p = validPoint(); const t = sim.build('archer', p); assert.equal(typeof t, 'object'); if (typeof t === 'string') return;
@@ -96,10 +90,7 @@ test('all four towers fire and apply projectile damage', () => {
   for (const kind of Object.keys(TOWERS) as (keyof typeof TOWERS)[]) {
     const sim = new Simulation(MISSIONS[3]); sim.wave = 1; sim.phase = 'wave'; sim.gold = 1000;
     let p: Point | null = null;
-    for (let x = 7; x < 14 && !p; x += .25) for (let z = 7; z < 12; z += .25) {
-      const candidate = { x, z };
-      if (!placementError(candidate, [], 1000, TOWERS[kind].cost, sim.map) && distance(candidate, samplePath(9, sim.map)) < 3.9) { p = candidate; break; }
-    }
+    p = sim.map.pads.find(candidate => !placementError(candidate, [], 1000, TOWERS[kind].cost, sim.map) && distance(candidate, samplePath(9, sim.map)) < 3.9) ?? null;
     assert.ok(p); const t = sim.build(kind, p); assert.equal(typeof t, 'object');
     const target = sim.spawn('guardian'); target.progress = 9; Object.assign(target, samplePath(9, sim.map)); const hp = target.hp;
     advance(sim, 2.5); assert.ok(target.hp < hp, `${kind} did not damage its target`);

@@ -3,8 +3,8 @@ import { gatePoint, placementError, samplePath, type Point, type GameMap } from 
 import { type Mission } from '../src/game/missions';
 import { Simulation } from '../src/game/simulation';
 
-export type Strategy = 'none' | 'opening-archers' | 'opening-crossbows' | 'opening-mixed' | 'archers' | 'crossbows' | 'mixed' | 'mixed-expand' | 'mixed-upgrades' | 'artillery' | 'arcane' | 'poor-positions';
-export const STRATEGIES: Strategy[] = ['none', 'opening-archers', 'opening-crossbows', 'opening-mixed', 'archers', 'crossbows', 'mixed', 'mixed-expand', 'mixed-upgrades', 'artillery', 'arcane', 'poor-positions'];
+export type Strategy = 'none' | 'opening-archers' | 'opening-crossbows' | 'opening-mixed' | 'archers' | 'crossbows' | 'mixed' | 'mixed-expand' | 'mixed-upgrades' | 'artillery' | 'arcane';
+export const STRATEGIES: Strategy[] = ['none', 'opening-archers', 'opening-crossbows', 'opening-mixed', 'archers', 'crossbows', 'mixed', 'mixed-expand', 'mixed-upgrades', 'artillery', 'arcane'];
 export function strategiesForMission(mission: Mission): Strategy[] {
   return STRATEGIES.filter(s => (!s.includes('crossbows') || mission.towers.includes('crossbow')) && (s !== 'arcane' || mission.towers.includes('mage')) && (s !== 'artillery' || mission.towers.includes('cannon')));
 }
@@ -15,10 +15,9 @@ function sites(map: GameMap, offset: number): Site[] {
   if (!known.has(offset)) {
     const route: Point[] = []; for (let d = 0; d < map.length; d += .8) route.push(samplePath(d, map));
     const candidates: Site[] = [];
-    for (let x = -15.75 + offset; x < 16; x += .75) for (let z = -11.5 + offset; z < 12; z += .75) {
-      if (placementError({ x, z }, [], Number.MAX_SAFE_INTEGER, 0, map)) continue;
-      candidates.push({ x, z, distances: route.map(p => (p.x - x) ** 2 + (p.z - z) ** 2) });
-    }
+    const order = [...map.pads]; const shift = Math.round(offset * 4) % order.length;
+    order.push(...order.splice(0, shift));
+    for (const { x, z } of order) candidates.push({ x, z, distances: route.map(p => (p.x - x) ** 2 + (p.z - z) ** 2) });
     known.set(offset, candidates);
   }
   return known.get(offset)!;
@@ -26,7 +25,7 @@ function sites(map: GameMap, offset: number): Site[] {
 function coverage(site: Site, range: number): number {
   return site.distances.reduce((score, d, i) => score + (d <= range * range ? 1.25 - .5 * i / site.distances.length : 0), 0);
 }
-function place(sim: Simulation, kind: TowerKind, candidates: Site[], poor: boolean): boolean {
+function place(sim: Simulation, kind: TowerKind, candidates: Site[]): boolean {
   let best: Site | undefined, highest = -Infinity;
   for (const site of candidates) {
     if (placementError(site, sim.towers, sim.gold, TOWERS[kind].cost, sim.map)) continue;
@@ -36,7 +35,7 @@ function place(sim: Simulation, kind: TowerKind, candidates: Site[], poor: boole
     const coversGate = (p: Point, range: number) => attackPositions.every(gate => Math.hypot(p.x - gate.x, p.z - gate.z) < range - .2);
     const coveredGate = sim.towers.some(t => coversGate(t, towerStats(t.kind, t.level).range));
     const protectsGate = coversGate(site, TOWERS[kind].range);
-    const score = poor ? -covered : covered / (1 + nearby * .45) + (!coveredGate && protectsGate ? 30 : 0);
+    const score = covered / (1 + nearby * .45) + (!coveredGate && protectsGate ? 30 : 0);
     if (score > highest) { highest = score; best = site; }
   }
   if (!best) return false;
@@ -72,16 +71,16 @@ export function scenarioPlanner(mission: Mission, strategy: Strategy, offset = 0
   // Establish cheap coverage before saving for a specialist; do not wait for a 500-gold cannon behind one archer.
   const preference: TowerKind[] = strategy === 'arcane' ? ['archer', 'archer', 'crossbow', 'mage', 'cannon'] : strategy === 'artillery' ? ['archer', 'archer', 'crossbow', 'cannon', 'mage'] : mission.towers;
   const order = mixed ? preference.filter(kind => mission.towers.includes(kind)) : [single];
-  const frozen = strategy.startsWith('opening-'), poor = strategy === 'poor-positions';
+  const frozen = strategy.startsWith('opening-');
   let purchases = 0;
   return sim => {
     if (sim.phase !== 'preparation' || sim.finished) return;
     if (strategy !== 'none' && (!frozen || sim.wave === 0)) {
       for (let decision = 0; decision < 100; decision++) {
-        const expand = strategy === 'mixed-expand' || poor || sim.towers.length < (strategy === 'mixed-upgrades' ? 2 : 4);
+        const expand = strategy === 'mixed-expand' || sim.towers.length < (strategy === 'mixed-upgrades' ? 2 : 4);
         if (!expand && improve(sim, candidates)) continue;
         const kind = order[purchases % order.length];
-        if (!place(sim, kind, candidates, poor)) break; purchases++;
+        if (!place(sim, kind, candidates)) { if (sim.towers.length >= Math.ceil(sim.map.pads.length * .75) && improve(sim, candidates)) continue; break; } purchases++;
       }
     }
   };

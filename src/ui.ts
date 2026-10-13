@@ -22,13 +22,13 @@ export const ICONS = {
 export function icon(name: keyof typeof ICONS): string { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`; }
 function stars(count: number, className: string): string { return `<span class="${className}" aria-label="${count} de 3 estrellas">${[1, 2, 3].map(n => `<span class="${n <= count ? 'earned' : 'empty'}">${icon('star')}</span>`).join('')}</span>`; }
 function format(n: number): string { return n.toLocaleString('es-MX'); }
-export interface Actions { select: (kind: TowerKind) => void; pause: () => void; speed: () => void; sound: () => boolean; nextWave: () => void; upgrade: () => void; sell: () => void; cancel: () => void; mission: (index: number) => void; campaign: () => void; resume: () => void; nextMission: () => void; help: () => void; closeHelp: () => void; restart: () => void; resetCamera: () => void; zoom: (delta: number) => void; }
+export interface Actions { select: (kind: TowerKind) => void; pause: () => void; speed: () => void; sound: () => boolean; music: (enabled: boolean) => void; volume: (value: number) => void; audioSettings: () => { muted: boolean; music: boolean; volume: number }; nextWave: () => void; upgrade: () => void; sell: () => void; cancel: () => void; mission: (index: number) => void; campaign: () => void; resume: () => void; nextMission: () => void; help: () => void; closeHelp: () => void; restart: () => void; resetCamera: () => void; zoom: (delta: number) => void; }
 export class UI {
   readonly board: HTMLElement; selectedId: number | null = null; selectedKind: TowerKind | null = null;
   private toastTimer = 0; private lastPanel = ''; private lastWave = -1;
   private lastPaused: boolean | null = null; private lastSpeed = 0; private lastWaveAction = '';
-  private icons: Partial<Record<TowerKind, string>> = {}; private returnFocus: HTMLElement | null = null;
-  constructor(root: HTMLElement, actions: Actions, progress: CampaignProgress) {
+  private icons: Record<string, string> = {}; private returnFocus: HTMLElement | null = null;
+  constructor(root: HTMLElement, private readonly actions: Actions, progress: CampaignProgress) {
     root.innerHTML = `
       <main class="game-shell">
         <header class="topbar">
@@ -88,11 +88,11 @@ export class UI {
     this.el('defenses-toggle-label').textContent = open ? 'Ocultar defensas' : 'Construir defensas';
     this.board.parentElement!.classList.toggle('defenses-open', open);
   }
-  private towerImage(kind: TowerKind, className = ''): string { return `<img class="tower-illustration ${className}" data-icon="${kind}" ${this.icons[kind] ? `src="${this.icons[kind]}"` : ''} alt=""/>`; }
-  setIcons(icons: Record<TowerKind, string>): void {
+  private towerImage(kind: TowerKind, className = '', level = 1): string { return `<img class="tower-illustration ${className}" data-icon="${kind}" data-level="${level}" ${this.icons[kind] ? `src="${this.icons[`${kind}-${level}`] ?? this.icons[kind]}"` : ''} alt=""/>`; }
+  setIcons(icons: Record<string, string>): void {
     this.icons = icons;
-    for (const kind of Object.keys(icons) as TowerKind[]) (this.el(`icon-${kind}`) as HTMLImageElement).src = icons[kind];
-    document.querySelectorAll<HTMLImageElement>('[data-icon]').forEach(img => { img.src = icons[img.dataset.icon as TowerKind]; });
+    for (const kind of Object.keys(TOWERS) as TowerKind[]) (this.el(`icon-${kind}`) as HTMLImageElement).src = icons[kind];
+    document.querySelectorAll<HTMLImageElement>('[data-icon]').forEach(img => { img.src = icons[`${img.dataset.icon}-${img.dataset.level ?? 1}`] ?? icons[img.dataset.icon as TowerKind]; });
   }
   private showDialog(kind: string, content: string): void {
     if (this.el('overlay').hidden && document.activeElement instanceof HTMLElement) this.returnFocus = document.activeElement;
@@ -116,13 +116,17 @@ export class UI {
   briefing(sim: Simulation): void { this.setDefensesOpen(false); this.lastWave = -1; this.el('mission-title').textContent = sim.mission.name.toUpperCase(); this.el('map-name').textContent = sim.mission.region; this.toast(`${sim.mission.name} · ${sim.mission.objective}`); }
   flashCastle(): void { this.el('castle-resource').classList.remove('damaged'); void this.el('castle-resource').offsetWidth; this.el('castle-resource').classList.add('damaged'); }
   help(fromCampaign = false): void {
+    const settings = this.actions.audioSettings();
     const steps = [
-      ['castle', 'Elige y construye', 'Abre Construir defensas y elige un arma. Las zonas verdes muestran dónde cabe. Coloca libremente: la base con ✓ confirma; la X indica un bloqueo y su motivo aparece arriba.'],
+      ['castle', 'Elige y construye', 'Las bases hexagonales de piedra indican dónde construir. Elige una defensa y una base vacía: ✓ confirma la compra y X indica un bloqueo. Vender libera la base.'],
       ['target', 'Aprovecha las curvas', 'El círculo azul discontinuo muestra el alcance real, distinto de la base de colocación. Cubre tramos largos y reserva defensas para la puerta: los enemigos que llegan seguirán atacándola.'],
       ['plus', 'Invierte con estrategia', 'Cada torre sube del nivel 1 al 3. Compara su próxima mejora o compra cobertura nueva. Vender devuelve el 70%.'],
       ['shield', 'Defiende y avanza', 'Lee la próxima oleada y prepara tus defensas. Gana para abrir otra misión; conserva la salud para ganar más estrellas.'],
     ] as const;
-    this.showDialog('help', `<div class="dialog-topline"><span class="tiny-label">GUÍA DEL COMANDANTE</span><button id="help-dismiss" class="text-button" aria-label="Cerrar ayuda">${icon('close')}</button></div><div class="help-heading"><span class="dialog-emblem">${icon('shield')}</span><h2 id="dialog-title">Cada posición importa.</h2><p>La horda sale de la cueva y sigue el camino hasta la puerta de madera.<br>Si llega, se detiene para golpearla. Tus torres aún pueden detenerla.</p></div><div class="help-grid">${steps.map(([symbol, title, text], i) => `<article class="help-card"><span class="help-icon">${icon(symbol)}</span><span class="help-step">${String(i + 1).padStart(2, '0')}</span><h3>${title}</h3><p>${text}</p></article>`).join('')}</div><div class="help-controls"><span><kbd>B</kbd> Abrir / ocultar defensas</span><span><kbd>1–4</kbd> Elegir torre</span><span><kbd>Espacio</kbd> Pausa táctica</span><span><kbd>Esc</kbd> Cancelar</span><span><kbd>M</kbd> Sonido</span><span><kbd>Rueda</kbd> Acercar / alejar</span><span><kbd>Arrastrar</kbd> Mover vista</span></div><button id="close-help" class="primary">${fromCampaign ? 'Volver a la campaña' : 'Volver al valle'} ${icon('arrow')}</button>`);
+    this.showDialog('help', `<div class="dialog-topline"><span class="tiny-label">GUÍA DEL COMANDANTE</span><button id="help-dismiss" class="text-button" aria-label="Cerrar ayuda">${icon('close')}</button></div><div class="help-heading"><span class="dialog-emblem">${icon('shield')}</span><h2 id="dialog-title">Cada posición importa.</h2><p>La horda sale de la cueva y sigue el camino hasta la puerta de madera.<br>Si llega, se detiene para golpearla. Tus torres aún pueden detenerla.</p></div><div class="help-grid">${steps.map(([symbol, title, text], i) => `<article class="help-card"><span class="help-icon">${icon(symbol)}</span><span class="help-step">${String(i + 1).padStart(2, '0')}</span><h3>${title}</h3><p>${text}</p></article>`).join('')}</div><fieldset class="audio-settings"><legend>Sonido del valle</legend><button id="audio-toggle" class="secondary" type="button">${settings.muted ? 'Activar sonido' : 'Silenciar'}</button><label><input id="music-enabled" type="checkbox" ${settings.music ? 'checked' : ''}/> Música ambiental</label><label class="volume-control">Volumen <input id="audio-volume" type="range" min="0" max="100" step="5" value="${Math.round(settings.volume * 100)}"/><output id="volume-value">${Math.round(settings.volume * 100)}%</output></label></fieldset><div class="help-controls"><span><kbd>B</kbd> Abrir / ocultar defensas</span><span><kbd>1–4</kbd> Elegir torre</span><span><kbd>Espacio</kbd> Pausa táctica</span><span><kbd>Esc</kbd> Cancelar</span><span><kbd>M</kbd> Sonido</span><span><kbd>Rueda</kbd> Acercar / alejar</span><span><kbd>Arrastrar</kbd> Mover vista</span></div><button id="close-help" class="primary">${fromCampaign ? 'Volver a la campaña' : 'Volver al valle'} ${icon('arrow')}</button>`);
+    this.el('audio-toggle').onclick = () => { this.el('sound').click(); this.el('audio-toggle').textContent = this.actions.audioSettings().muted ? 'Activar sonido' : 'Silenciar'; };
+    (this.el('music-enabled') as HTMLInputElement).onchange = event => this.actions.music((event.target as HTMLInputElement).checked);
+    (this.el('audio-volume') as HTMLInputElement).oninput = event => { const value = Number((event.target as HTMLInputElement).value); this.actions.volume(value / 100); this.el('volume-value').textContent = `${value}%`; };
   }
   hideOverlay(): void {
     this.el('overlay').hidden = true;
@@ -174,7 +178,7 @@ export class UI {
     });
     this.el('cancel').hidden = !this.selectedKind && this.selectedId === null;
     this.el('build-status').hidden = !this.selectedKind && this.selectedId === null;
-    const guidance = placement === 'Zonas verdes: aquí cabe tu defensa';
+    const guidance = placement === 'Elige una base hexagonal junto al camino';
     const hint = this.el('placement-hint'), hintText = guidance ? placement : placement ? `✕ ${placement}` : '✓ Ubicación válida · Clic para construir';
     hint.hidden = !this.selectedKind; if (hint.textContent !== hintText) hint.textContent = hintText; hint.classList.toggle('invalid', !!placement && !guidance);
     this.el('build-tip').hidden = !this.selectedKind;
@@ -188,7 +192,7 @@ export class UI {
       if (key !== this.lastPanel) {
         this.lastPanel = key; const nextStats = towerStats(t.kind, t.level + 1);
         const comparison = (current: string, improved: string) => `<b>${current}${maxed ? '' : `<span class="stat-arrow">→</span><em>${improved}</em>`}</b>`;
-        panel.innerHTML = `<div class="panel-heading"><span class="tiny-label">DEFENSA SELECCIONADA</span><button id="deselect" class="text-button" aria-label="Cerrar panel">${icon('close')}</button></div><div class="tower-profile">${this.towerImage(t.kind)}<h2>${stats.name}<small>NIVEL ${t.level} / ${MAX_TOWER_LEVEL}</small><span class="level-pips" aria-hidden="true">${[1, 2, 3].map(n => `<i class="${n <= t.level ? 'earned' : ''}"></i>`).join('')}</span></h2></div><div class="panel-body"><p>${stats.description}</p><div class="upgrade-caption">${maxed ? 'ATRIBUTOS ACTUALES' : `ACTUAL → NIVEL ${t.level + 1}`}</div><div class="tower-stats"><span>Daño por disparo${comparison(String(stats.damage), String(nextStats.damage))}</span><span>Alcance (m)${comparison(stats.range.toFixed(1), nextStats.range.toFixed(1))}</span><span>Ataques por segundo${comparison((1 / stats.interval).toFixed(2), (1 / nextStats.interval).toFixed(2))}</span>${stats.splash ? `<span>Explosión (m)${comparison(stats.splash.toFixed(1), nextStats.splash.toFixed(1))}</span>` : ''}</div></div><div class="panel-actions"><button id="upgrade" class="primary" ${maxed || sim.gold < cost || sim.finished ? 'disabled' : ''}>${maxed ? 'Nivel máximo alcanzado' : `Mejorar a nivel ${t.level + 1} ${icon('coin')} ${cost}`}</button>${!maxed && sim.gold < cost && !sim.finished ? `<small class="upgrade-shortfall">Te faltan ${cost - sim.gold} de oro</small>` : ''}<button id="sell" class="sell-button" ${sim.finished ? 'disabled' : ''}>Vender por ${refundGold(t.invested)} oro</button><small class="investment">Invertido: ${t.invested} oro · Recuperas el 70%</small></div>`;
+        panel.innerHTML = `<div class="panel-heading"><span class="tiny-label">DEFENSA SELECCIONADA</span><button id="deselect" class="text-button" aria-label="Cerrar panel">${icon('close')}</button></div><div class="tower-profile">${this.towerImage(t.kind, '', t.level)}<h2>${stats.name}<small>NIVEL ${t.level} / ${MAX_TOWER_LEVEL}</small><span class="level-pips" aria-hidden="true">${[1, 2, 3].map(n => `<i class="${n <= t.level ? 'earned' : ''}"></i>`).join('')}</span></h2></div><div class="panel-body"><p>${stats.description}</p><div class="upgrade-caption">${maxed ? 'ATRIBUTOS ACTUALES' : `ACTUAL → NIVEL ${t.level + 1}`}</div><div class="tower-stats"><span>Daño por disparo${comparison(String(stats.damage), String(nextStats.damage))}</span><span>Alcance (m)${comparison(stats.range.toFixed(1), nextStats.range.toFixed(1))}</span><span>Ataques por segundo${comparison((1 / stats.interval).toFixed(2), (1 / nextStats.interval).toFixed(2))}</span>${stats.splash ? `<span>Explosión (m)${comparison(stats.splash.toFixed(1), nextStats.splash.toFixed(1))}</span>` : ''}</div></div><div class="panel-actions"><button id="upgrade" class="primary" ${maxed || sim.gold < cost || sim.finished ? 'disabled' : ''}>${maxed ? 'Nivel máximo alcanzado' : `Mejorar a nivel ${t.level + 1} ${icon('coin')} ${cost}`}</button>${!maxed && sim.gold < cost && !sim.finished ? `<small class="upgrade-shortfall">Te faltan ${cost - sim.gold} de oro</small>` : ''}<button id="sell" class="sell-button" ${sim.finished ? 'disabled' : ''}>Vender por ${refundGold(t.invested)} oro</button><small class="investment">Invertido: ${t.invested} oro · Recuperas el 70%</small></div>`;
       }
     } else this.lastPanel = '';
   }

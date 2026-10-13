@@ -1,39 +1,45 @@
 import * as THREE from 'three';
-import { TOWERS, WORLD, type TowerKind } from '../game/config';
-import { buildArea, createPlacementField, type PlacementField } from '../game/build-areas';
+import { TOWERS, type TowerKind } from '../game/config';
 import type { Simulation } from '../game/simulation';
-import type { Point } from '../game/path';
+import { PAD_HEIGHT, PAD_RADIUS, placementIssue, type Point, type GameMap } from '../game/path';
 import { valleyHeight } from './surfaces';
 
-function geometry(points: Point[]): THREE.BufferGeometry {
-  const positions = new Float32Array(points.length * 3);
-  points.forEach((p, i) => { positions[i * 3] = p.x; positions[i * 3 + 1] = valleyHeight(p.x, p.z) + .022; positions[i * 3 + 2] = p.z; });
-  return new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(positions, 3));
-}
-
-export class ConstructionAreas {
+export class ConstructionPads {
   readonly group = new THREE.Group();
-  readonly fill = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0x63dfa6, transparent: true, opacity: .23, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
-  readonly border = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xc0f4c4, transparent: true, opacity: .66, depthWrite: false, toneMapped: false }));
-  private field: PlacementField | null = null;
-  private map: Simulation['map'] | null = null;
-  private signature = '';
+  readonly foundations = new THREE.InstancedMesh(new THREE.CylinderGeometry(PAD_RADIUS * .94, PAD_RADIUS, PAD_HEIGHT, 6, 1, false, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xc6c0a7, roughness: .92 }), 18);
+  readonly rims = new THREE.InstancedMesh(new THREE.RingGeometry(PAD_RADIUS * .82, PAD_RADIUS * .92, 6), new THREE.MeshBasicMaterial({ transparent: true, opacity: .72, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }), 18);
+  private readonly engravings = new THREE.InstancedMesh(new THREE.BoxGeometry(.32, .008, .058), new THREE.MeshStandardMaterial({ color: 0x8f805e, roughness: .75 }), 36);
+  private map: GameMap | null = null;
+  private readonly transform = new THREE.Object3D();
+  private readonly color = new THREE.Color();
   constructor() {
-    this.group.name = 'construction-areas'; this.fill.name = 'buildable-terrain'; this.border.name = 'buildable-boundary';
-    this.fill.renderOrder = 1; this.border.renderOrder = 2; this.group.add(this.fill, this.border); this.group.visible = false;
+    this.group.name = 'construction-pads'; this.foundations.name = 'hexagonal-foundations'; this.rims.name = 'foundation-rims';
+    this.foundations.castShadow = this.foundations.receiveShadow = true; this.rims.renderOrder = 1;
+    this.group.add(this.foundations, this.rims, this.engravings);
   }
-  update(sim: Simulation, kind: TowerKind | null): void {
-    this.group.visible = !!kind && !sim.finished && sim.mission.towers.includes(kind) && sim.gold >= TOWERS[kind].cost;
-    if (!this.group.visible) return;
-    if (this.map !== sim.map) { this.map = sim.map; this.field = createPlacementField(sim.map); this.signature = ''; }
-    const signature = `${kind};${sim.towers.map(t => `${t.id}:${t.x}:${t.z}`).join(';')}`;
-    if (signature === this.signature) return;
-    const area = buildArea(this.field!, sim.towers);
-    this.fill.geometry.dispose(); this.border.geometry.dispose();
-    this.fill.geometry = geometry(area.triangles); this.border.geometry = geometry(area.boundary); this.signature = signature;
+  load(map: GameMap): void {
+    this.map = map; this.foundations.count = this.rims.count = map.pads.length; this.engravings.count = map.pads.length * 2;
+    map.pads.forEach((pad, i) => {
+      const ground = valleyHeight(pad.x, pad.z);
+      this.transform.position.set(pad.x, ground + PAD_HEIGHT / 2, pad.z); this.transform.rotation.set(0, 0, 0); this.transform.updateMatrix(); this.foundations.setMatrixAt(i, this.transform.matrix);
+      this.transform.position.y = ground + PAD_HEIGHT + .006; this.transform.rotation.x = -Math.PI / 2; this.transform.updateMatrix(); this.rims.setMatrixAt(i, this.transform.matrix);
+      for (let j = 0; j < 2; j++) { this.transform.rotation.set(0, j * Math.PI / 2, 0); this.transform.updateMatrix(); this.engravings.setMatrixAt(i * 2 + j, this.transform.matrix); }
+      this.rims.setColorAt(i, this.color.setHex(0xbda46f));
+    });
+    for (const mesh of [this.foundations, this.rims, this.engravings]) { mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); }
+    if (this.rims.instanceColor) this.rims.instanceColor.needsUpdate = true;
   }
-  hide(): void { this.group.visible = false; }
-  dispose(): void { this.fill.geometry.dispose(); this.border.geometry.dispose(); this.fill.material.dispose(); this.border.material.dispose(); this.field = null; }
+  update(sim: Simulation, kind: TowerKind | null, hover: Point | null): void {
+    if (this.map !== sim.map) this.load(sim.map);
+    sim.map.pads.forEach((pad, i) => {
+      const occupied = sim.towers.some(t => t.padId === pad.id);
+      const ready = kind && !sim.finished && sim.mission.towers.includes(kind) && !placementIssue(pad, sim.towers, sim.gold, TOWERS[kind].cost, sim.map);
+      const focused = hover && Math.hypot(hover.x - pad.x, hover.z - pad.z) < .1;
+      this.rims.setColorAt(i, this.color.setHex(occupied ? 0x74817b : ready && focused ? 0x92e8b4 : ready ? 0xffd281 : 0xbda46f));
+    });
+    if (this.rims.instanceColor) this.rims.instanceColor.needsUpdate = true;
+  }
+  dispose(): void { for (const mesh of [this.foundations, this.rims, this.engravings]) { mesh.geometry.dispose(); mesh.material.dispose(); mesh.dispose(); } }
 }
 
 function marker(valid: boolean): THREE.Sprite {
@@ -53,8 +59,8 @@ function marker(valid: boolean): THREE.Sprite {
 
 export class PlacementFootprint {
   readonly group = new THREE.Group();
-  readonly base = new THREE.Mesh(new THREE.CircleGeometry(WORLD.towerRadius, 48), new THREE.MeshBasicMaterial({ transparent: true, opacity: .38, side: THREE.DoubleSide, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-  private readonly rim = new THREE.Mesh(new THREE.RingGeometry(WORLD.towerRadius - .035, WORLD.towerRadius, 48), new THREE.MeshBasicMaterial({ transparent: true, opacity: .95, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }));
+  readonly base = new THREE.Mesh(new THREE.CircleGeometry(PAD_RADIUS * .91, 6), new THREE.MeshBasicMaterial({ transparent: true, opacity: .22, side: THREE.DoubleSide, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  private readonly rim = new THREE.Mesh(new THREE.RingGeometry(PAD_RADIUS * .90, PAD_RADIUS * .94, 6), new THREE.MeshBasicMaterial({ transparent: true, opacity: .95, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }));
   readonly confirmation = marker(true);
   readonly rejection = marker(false);
   constructor() {

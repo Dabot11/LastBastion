@@ -37,10 +37,10 @@ async function point(page: Page, road = false, tower = false): Promise<{ x: numb
     const { simulation: sim, battlefield: view } = await load(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
     const { placementError, samplePath, distance, roadHeight } = await load('/src/game/path.ts');
     const target = samplePath(14, sim.map), candidates: { x: number; z: number }[] = [];
-    for (let x = 7; x < 14; x += .3) for (let z = 6; z < 12; z += .3) if (!placementError({ x, z }, [], 300, 100, sim.map)) candidates.push({ x, z });
+    for (const p of sim.map.pads) if (!placementError(p, [], 300, 100, sim.map)) candidates.push(p);
     candidates.sort((a, b) => distance(a, target) - distance(b, target));
     const p = road ? samplePath(sim.map.length * .55, sim.map) : tower ? sim.towers[0] : candidates[0];
-    const v = view.camera.position.clone().set(p.x, road ? roadHeight(p, sim.map) : tower ? 2.7 : 1.7, p.z).project(view.camera);
+    const v = view.camera.position.clone().set(p.x, road ? roadHeight(p, sim.map) : tower ? 2.7 : 1.84, p.z).project(view.camera);
     return { x: p.x, z: p.z, px: (v.x + 1) / 2 * innerWidth, py: (1 - v.y) / 2 * innerHeight };
   }, { road, tower });
 }

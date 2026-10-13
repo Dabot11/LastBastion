@@ -1,10 +1,10 @@
 import { BALANCE, ENEMIES, MAX_TOWER_LEVEL, TOWERS, WORLD, damageAfterResistance, refundGold, towerStats, upgradeCost, waveGold, type EnemyKind, type TowerKind, type DamageKind } from './config';
-import { distance, gatePoint, placementError, samplePath, type Point } from './path';
+import { distance, gatePoint, padAt, placementError, samplePath, type Point } from './path';
 import { MISSIONS, earnedStars, spawnInterval, waveEnemies, type Mission } from './missions';
 export interface Enemy extends Point { id: number; kind: EnemyKind; hp: number; maxHp: number; progress: number; angle: number; siegeSlot: number | null; attackCooldown: number; hitFlash: number; attackPulse: number; state: 'marching' | 'waiting' | 'attacking'; }
-export interface Tower extends Point { id: number; kind: TowerKind; level: number; cooldown: number; invested: number; targetAngle: number; }
+export interface Tower extends Point { id: number; padId: string; kind: TowerKind; level: number; cooldown: number; invested: number; targetAngle: number; }
 export interface Projectile extends Point { id: number; kind: TowerKind; targetId: number; target: Point; damage: number; damageKind: DamageKind; splash: number; speed: number; origin: Point; travelled: number; }
-export type GameEvent = { type: 'shot' | 'impact' | 'damage' | 'gateHit' | 'kill' | 'build' | 'upgrade' | 'wave' | 'gameover' | 'victory'; x: number; z: number; kind?: TowerKind; radius?: number; damage?: number; enemyId?: number; damageKind?: DamageKind };
+export type GameEvent = { type: 'shot' | 'impact' | 'damage' | 'gateHit' | 'kill' | 'build' | 'upgrade' | 'wave' | 'gameover' | 'victory' | 'spawn'; x: number; z: number; kind?: TowerKind; enemyKind?: EnemyKind; level?: number; radius?: number; damage?: number; enemyId?: number; damageKind?: DamageKind };
 export class Simulation {
   gold = WORLD.initialGold; castleHp: number; wave = 0; kills = 0; score = 0;
   phase: 'preparation' | 'wave' | 'gameover' | 'victory' = 'preparation'; preparation = WORLD.preparation;
@@ -20,15 +20,16 @@ export class Simulation {
     if (this.finished) return 'La partida ha terminado';
     if (!this.mission.towers.includes(kind)) return 'Esta defensa se desbloquea en otra misión';
     const error = placementError(p, this.towers, this.gold, TOWERS[kind].cost, this.map); if (error) return error;
+    const pad = padAt(p, this.map)!;
     this.gold -= TOWERS[kind].cost;
-    const tower: Tower = { ...p, id: this.nextId++, kind, level: 1, cooldown: 0, invested: TOWERS[kind].cost, targetAngle: 0 };
-    this.towers.push(tower); this.events.push({ type: 'build', ...p }); return tower;
+    const tower: Tower = { x: pad.x, z: pad.z, padId: pad.id, id: this.nextId++, kind, level: 1, cooldown: 0, invested: TOWERS[kind].cost, targetAngle: 0 };
+    this.towers.push(tower); this.events.push({ type: 'build', x: pad.x, z: pad.z, kind }); return tower;
   }
   upgrade(id: number): string | null {
     const t = this.towers.find(t => t.id === id); if (!t || this.finished) return 'Torre no disponible';
     if (t.level >= MAX_TOWER_LEVEL) return 'Nivel máximo alcanzado';
     const cost = upgradeCost(t.kind, t.level); if (this.gold < cost) return 'No tienes suficiente oro';
-    this.gold -= cost; t.invested += cost; t.level++; this.events.push({ type: 'upgrade', x: t.x, z: t.z }); return null;
+    this.gold -= cost; t.invested += cost; t.level++; this.events.push({ type: 'upgrade', x: t.x, z: t.z, kind: t.kind, level: t.level }); return null;
   }
   sell(id: number): number {
     if (this.finished) return 0;
@@ -45,15 +46,15 @@ export class Simulation {
   spawn(kind: EnemyKind): Enemy {
     const hp = ENEMIES[kind].hp * this.mission.healthMultiplier * Math.pow(BALANCE.healthGrowth, Math.max(0, this.wave - 1));
     const e: Enemy = { id: this.nextId++, kind, hp, maxHp: hp, progress: 0, siegeSlot: null, attackCooldown: .45, hitFlash: 0, attackPulse: 0, state: 'marching', ...samplePath(0, this.map) };
-    this.enemies.push(e); return e;
+    this.enemies.push(e); this.events.push({ type: 'spawn', x: e.x, z: e.z, enemyKind: kind, enemyId: e.id }); return e;
   }
   hit(e: Enemy, damage: number, kind: DamageKind): void {
     if (e.hp <= 0) return;
     const removed = Math.min(e.hp, Math.max(0, damageAfterResistance(damage, kind, ENEMIES[e.kind])));
     if (!removed) return;
     e.hp = Math.max(0, e.hp - removed); e.hitFlash = .24;
-    this.events.push({ type: 'damage', x: e.x, z: e.z, damage: removed, damageKind: kind, enemyId: e.id });
-    if (e.hp <= 0) { this.kills++; this.gold += ENEMIES[e.kind].reward; this.score += ENEMIES[e.kind].score + this.wave * 5; this.events.push({ type: 'kill', x: e.x, z: e.z }); }
+    this.events.push({ type: 'damage', x: e.x, z: e.z, damage: removed, damageKind: kind, enemyId: e.id, enemyKind: e.kind });
+    if (e.hp <= 0) { this.kills++; this.gold += ENEMIES[e.kind].reward; this.score += ENEMIES[e.kind].score + this.wave * 5; this.events.push({ type: 'kill', x: e.x, z: e.z, enemyKind: e.kind }); }
   }
   update(dt: number): void {
     if (this.finished || dt <= 0) return;
@@ -90,7 +91,7 @@ export class Simulation {
           const damage = Math.min(this.castleHp, stats.gateDamage); this.castleHp -= damage;
           e.attackCooldown += stats.attackInterval; e.attackPulse = .24;
           const gate = this.map.path.at(-1)!;
-          this.events.push({ type: 'gateHit', ...gatePoint(e.siegeSlot === 0 ? -.8 : .8, 0, this.map), damage, enemyId: e.id });
+          this.events.push({ type: 'gateHit', ...gatePoint(e.siegeSlot === 0 ? -.8 : .8, 0, this.map), damage, enemyId: e.id, enemyKind: e.kind });
           if (!this.castleHp) { this.phase = 'gameover'; this.events.push({ type: 'gameover', ...gate }); return; }
         }
       }

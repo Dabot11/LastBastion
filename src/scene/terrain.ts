@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { WORLD } from '../game/config';
-import { DEFAULT_MAP, placementError, roadHeight, samplePath, type GameMap } from '../game/path';
+import { DEFAULT_MAP, PAD_RADIUS, distance, terrainPlacementError, roadHeight, samplePath, type GameMap } from '../game/path';
 import { box, cone, orb, cottage, mesh, pine, torch } from './models';
 import { fortressModel, caveModel } from './fortress';
 import { landscape } from './landscape';
@@ -85,7 +85,7 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
   const rand = (): number => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   for (let i = 0; i < 1300; i++) {
     const p = { x: (rand() - .5) * 28, z: (rand() - .5) * 24 };
-    if (placementError(p, [], 10000, 0, map)) continue;
+    if (terrainPlacementError(p, [], 10000, 0, map) || map.pads.some(pad => distance(pad, p) < PAD_RADIUS + .08)) continue;
     const y = WORLD.elevation + .07;
     if (i % 5 === 0) {
       for (let j = 0; j < 3; j++) { const flower = mesh(group, orb(.045), j % 2 ? 0xf6d689 : 0xe2c5d0, p.x + (j - 1) * .09, y + .045, p.z + Math.sin(j) * .08); flower.castShadow = false; }
@@ -96,7 +96,7 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
   // Ferns and clover add silhouette detail around existing scenery; the build rules stay authoritative.
   for (const [i, o] of map.obstacles.entries()) if (o.type !== 'house') {
     const p = { x: o.x + .6 * Math.sin(i * 3), z: o.z + .6 * Math.cos(i * 3) };
-    if (placementError(p, [], 10000, 0, map)) continue;
+    if (terrainPlacementError(p, [], 10000, 0, map) || map.pads.some(pad => distance(pad, p) < PAD_RADIUS + .08)) continue;
     for (let j = 0; j < 5; j++) {
       const angle = j * Math.PI * .4;
       const leaf = mesh(group, cone(.08, .38, 4), j % 2 ? 0x467b42 : 0x78a255, p.x + Math.sin(angle) * .12, WORLD.elevation + .2, p.z + Math.cos(angle) * .12);

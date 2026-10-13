@@ -5,16 +5,14 @@ async function chooseArcher(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Construir torre Arqueros, 100 oro', exact: true }).click();
   await expect(page.locator('#defenses-menu')).toBeHidden();
 }
-async function buildPoint(page: Page, index: number, y = 1.7): Promise<{ x: number; y: number }> {
+async function buildPoint(page: Page, index: number, y = 1.84): Promise<{ x: number; y: number }> {
   return page.evaluate(async ({ index, y }) => {
     // Use the production route/obstacles, and project a real world position into the canvas.
     const importModule = (url: string): Promise<any> => import(/* @vite-ignore */ url);
     const THREE = await importModule('/node_modules/three/build/three.module.js');
-    const { placementError, samplePath, distance } = await importModule('/src/game/path.ts');
+    const { DEFAULT_MAP, samplePath, distance } = await importModule('/src/game/path.ts');
     const candidates: { x: number; z: number }[] = [];
-    for (let x = 7; x < 14; x += .3) for (let z = 7; z < 12; z += .3) {
-      const p = { x, z }; if (!placementError(p, [], 1000, 100) && distance(p, samplePath(9)) < 4.2) candidates.push(p);
-    }
+    for (const p of DEFAULT_MAP.pads) candidates.push(p);
     candidates.sort((a, b) => distance(a, samplePath(9)) - distance(b, samplePath(9)));
     const p = index < 0 ? samplePath(9) : candidates[index]; if (!p) throw new Error('No placement candidate');
     const { battlefield } = await importModule(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
@@ -55,7 +53,7 @@ test('real gate siege shows wood, surviving attackers, exact damage numbers and 
   await expect(page.locator('#hp')).toHaveText('1000'); await expect(page.locator('.damage-number')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
-test('real WebGL gameplay: free placement, upgrades, selling, pause, speed, help and live combat', async ({ page }) => {
+test('real WebGL gameplay: foundation placement, upgrades, selling, pause, speed, help and live combat', async ({ page }) => {
   // Covers many pointer interactions plus live combat on the software WebGL renderer.
   test.setTimeout(210000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
@@ -279,7 +277,7 @@ test('portrait menus, tower actions and battle results fit a phone viewport', as
     const load = (url: string): Promise<any> => import(/* @vite-ignore */ url);
     const { simulation: sim, battlefield: view } = await load(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
     const { placementError } = await load('/src/game/path.ts');
-    for (let x = 7; x < 14; x += .3) for (let z = 7; z < 12; z += .3) if (!placementError({ x, z }, [], sim.gold, 100, sim.map)) {
+    for (const { x, z } of sim.map.pads) if (!placementError({ x, z }, [], sim.gold, 100, sim.map)) {
       sim.build('archer', { x, z }); const v = view.camera.position.clone().set(x, 2.7, z).project(view.camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight };
     }
     throw new Error('No legal build point');
@@ -333,9 +331,9 @@ for (const viewport of [{ width: 1440, height: 960 }, { width: 390, height: 844 
     const load = (url: string): Promise<any> => import(/* @vite-ignore */ url);
     const { placementError } = await load('/src/game/path.ts');
     let visible: { x: number; y: number } | undefined;
-    for (let x = -15.5; x < 16; x += .3) for (let z = -11.5; z < 12; z += .3) {
+    for (const { x, z } of sim.map.pads) {
       if (placementError({ x, z }, sim.towers, sim.gold, 100, sim.map)) continue;
-      const p = view.camera.position.clone().set(x, 1.7, z).project(view.camera);
+      const p = view.camera.position.clone().set(x, 1.84, z).project(view.camera);
       const px = (p.x + 1) / 2 * innerWidth, py = (1 - p.y) / 2 * innerHeight;
       if (!visible && document.elementFromPoint(px, py) === view.renderer.domElement) visible = { x: px, y: py };
       if (px > rect.x + 10 && px < rect.x + rect.width - 10 && py > rect.y + 10 && py < rect.y + rect.height - 10 && document.elementFromPoint(px, py) === view.renderer.domElement) return { x: px, y: py };

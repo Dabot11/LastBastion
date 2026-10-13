@@ -71,9 +71,9 @@ test('a fast follower cannot overtake or jitter backwards through a slower unit 
 });
 test('a legally placed tower can kill an attacker at the gate with real projectiles', () => {
   const { sim, enemy } = arrival('minion'); let built = false;
-  for (let x = -13; x <= 13 && !built; x += .25) for (let z = -11; z <= 11; z += .25) {
-    if (placementError({ x, z }, [], sim.gold, TOWERS.archer.cost, sim.map) || distance({ x, z }, gatePoint(-.8, .85, sim.map)) > TOWERS.archer.range - .2) continue;
-    assert.equal(typeof sim.build('archer', { x, z }), 'object'); built = true; break;
+  for (const p of sim.map.pads) {
+    if (placementError(p, [], sim.gold, TOWERS.archer.cost, sim.map) || distance(p, gatePoint(-.8, .85, sim.map)) > TOWERS.archer.range - .2) continue;
+    assert.equal(typeof sim.build('archer', p), 'object'); built = true; break;
   }
   assert.ok(built); advance(sim, 4); assert.equal(enemy.hp, 0); assert.equal(sim.kills, 1);
   assert.ok(sim.castleHp > 950); assert.ok(sim.events.some(e => e.type === 'damage'));

@@ -1,67 +1,49 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { WORLD } from '../src/game/config';
+import { TOWERS } from '../src/game/config';
 import { MISSIONS } from '../src/game/missions';
 import { Simulation } from '../src/game/simulation';
-import { buildArea, createPlacementField } from '../src/game/build-areas';
-import { distance, gateDefenceSites, gatePoint, obstacleRadius, placementError, placementIssue, type GameMap, type Point } from '../src/game/path';
+import { PAD_RADIUS, distance, padAt, placementError, placementIssue, terrainPlacementError, terrainClearance, type Point } from '../src/game/path';
 
-function emptyMap(): GameMap { return { ...MISSIONS[0].map, obstacles: [], torches: [], fences: [] }; }
-function openPoint(map: GameMap): Point {
-  for (let x = -15; x <= 15; x += .3) for (let z = -11; z <= 11; z += .3) if (!placementError({ x, z }, [], 1000, 100, map)) return { x, z };
-  throw new Error('No open terrain');
-}
-
-for (const mission of MISSIONS) test(`every construction contour stays legal beside roads, obstacles and a tower: ${mission.name}`, () => {
-  const towers = [gateDefenceSites(mission.map)[0]], area = buildArea(createPlacementField(mission.map), towers);
-  assert.ok(area.triangles.length > 1000); assert.ok(area.boundary.length > 100);
-  for (let i = 0; i < area.triangles.length; i += 3) {
-    const [a, b, c] = area.triangles.slice(i, i + 3);
-    // Interior interpolation can cross a circular obstruction even when all corners are legal.
-    for (const weights of [[1 / 3, 1 / 3, 1 / 3], [.1, .45, .45]]) {
-      const p = { x: a.x * weights[0] + b.x * weights[1] + c.x * weights[2], z: a.z * weights[0] + b.z * weights[1] + c.z * weights[2] };
-      assert.equal(placementError(p, towers, 10000, 500, mission.map), null, `False green interior at ${p.x}, ${p.z}`);
-    }
+for (const mission of MISSIONS) test(`hexagonal foundations are clear, spaced and useful along the route: ${mission.name}`, () => {
+  const map = mission.map;
+  assert.ok(map.pads.length >= 12 && map.pads.length <= 16);
+  assert.equal(new Set(map.pads.map(p => p.id)).size, map.pads.length);
+  for (const [i, pad] of map.pads.entries()) {
+    assert.equal(placementError(pad, [], 10000, 500, map), null);
+    assert.ok(terrainClearance(pad, [], map) >= PAD_RADIUS - .72 + .04);
+    for (const other of map.pads.slice(i + 1)) assert.ok(distance(pad, other) >= 3.1 - 1e-6);
   }
-  for (const p of area.boundary) assert.equal(placementError(p, towers, 10000, 500, mission.map), null, 'The visible outline must also remain legal');
+  for (const [low, high] of [[0, .3], [.3, .7], [.7, 1]]) assert.ok(map.pads.some(p => p.progress / map.length >= low && p.progress / map.length <= high));
 });
 
-test('road, solid obstacle and tower margins include the complete footprint and expose brief reasons', () => {
-  const map = emptyMap(), p = { x: 5, z: -10 }, road = map.segments.find(s => distance(s.start, s.end) > 4 && Math.abs((s.start.x + s.end.x) / 2) < 10 && Math.abs((s.start.z + s.end.z) / 2) < 10)!;
-  assert.equal(placementError(p, [], 1000, 100, map), null);
-  const mid = { x: (road.start.x + road.end.x) / 2, z: (road.start.z + road.end.z) / 2 };
-  assert.equal(placementIssue(mid, [], 1000, 100, map)?.brief, 'Sobre el camino');
-  assert.equal(placementIssue(p, [p], 1000, 100, map)?.brief, 'Demasiado cerca de otra defensa');
-  const radius = WORLD.towerRadius * 2 + .15;
-  assert.equal(placementIssue({ x: p.x + radius - .001, z: p.z }, [p], 1000, 100, map)?.code, 'tower');
-  assert.equal(placementError({ x: p.x + radius + .001, z: p.z }, [p], 1000, 100, map), null);
-  map.obstacles = [{ ...p, radius: .38, type: 'rock' }];
-  const rockRadius = obstacleRadius(map.obstacles[0], 0) + WORLD.towerRadius;
-  assert.equal(placementIssue({ x: p.x + rockRadius - .001, z: p.z }, [], 1000, 100, map)?.code, 'obstacle');
-  assert.equal(placementError({ x: p.x + rockRadius + .001, z: p.z }, [], 1000, 100, map), null);
-  assert.equal(placementIssue(p, [], 1000, 100, map)?.brief, 'Obstáculo · Árbol, roca o edificio');
-  // The widened gate approach is terrain carved by landscape.ts, not a hidden solid prop.
-  assert.equal(placementIssue(gatePoint(2.65, 2.1, map), [], 1000, 100, map)?.code, 'road');
+test('a purchase snaps inside the hexagon, never duplicates a tower, and selling frees that same base', () => {
+  const sim = new Simulation(), pad = sim.map.pads[0];
+  const hit = { x: pad.x + .32, z: pad.z + .18 };
+  assert.equal(padAt(hit, sim.map)?.id, pad.id);
+  const tower = sim.build('archer', hit); assert.notEqual(typeof tower, 'string'); if (typeof tower === 'string') return;
+  assert.equal(tower.x, pad.x); assert.equal(tower.z, pad.z); assert.equal(tower.padId, pad.id);
+  assert.equal(sim.gold, 200); assert.equal(placementIssue(hit, sim.towers, sim.gold, 100, sim.map)?.code, 'occupied');
+  assert.equal(typeof sim.build('archer', hit), 'string'); assert.equal(sim.gold, 200);
+  assert.equal(sim.sell(tower.id), 70); assert.equal(placementError(pad, sim.towers, sim.gold, 100, sim.map), null);
+  assert.equal(typeof sim.build('archer', pad), 'object'); assert.equal(sim.gold, 170);
 });
-
-function areaSize(points: Point[]): number {
-  let area = 0;
-  for (let i = 0; i < points.length; i += 3) { const [a, b, c] = points.slice(i, i + 3); area += Math.abs((b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x)) / 2; }
-  return area;
-}
-test('building removes available terrain; selling restores it without constraining arbitrary coordinates', () => {
-  const sim = new Simulation(), field = createPlacementField(sim.map), original = areaSize(buildArea(field, sim.towers).triangles);
-  const p = gateDefenceSites(sim.map)[1], arbitrary = { x: p.x + .0371, z: p.z + .0293 };
-  const tower = sim.build('archer', arbitrary); assert.notEqual(typeof tower, 'string'); if (typeof tower === 'string') return;
-  assert.equal(tower.x, arbitrary.x); assert.equal(tower.z, arbitrary.z);
-  const occupied = areaSize(buildArea(field, sim.towers).triangles); assert.ok(occupied < original - 1);
-  assert.equal(sim.sell(tower.id), 70); assert.equal(areaSize(buildArea(field, sim.towers).triangles), original);
+test('clear grass is not a hidden construction slot; road and solid obstacles retain their own reasons', () => {
+  const sim = new Simulation(), map = sim.map; let clear: Point | undefined;
+  for (let x = -14; x <= 14 && !clear; x += .3) for (let z = -11; z <= 11; z += .3) if (!terrainPlacementError({ x, z }, [], 1000, 100, map) && !padAt({ x, z }, map)) { clear = { x, z }; break; }
+  assert.ok(clear); assert.equal(placementIssue(clear, [], 1000, 100, map)?.code, 'pad');
+  assert.equal(typeof sim.build('archer', clear), 'string'); assert.equal(sim.gold, 300);
+  assert.equal(placementIssue(map.path[20], [], 1000, 100, map)?.code, 'road');
+  for (const rock of map.obstacles.filter(o => o.type === 'rock')) assert.ok(placementError(rock, [], 1000, 100, map));
+  assert.equal(placementIssue(map.pads[0], [], 99, TOWERS.archer.cost, map)?.code, 'gold');
+  assert.equal(sim.build('cannon', map.pads[0]), 'Esta defensa se desbloquea en otra misión');
 });
-test('only recognizable solid scenery blocks construction, without adding decorative collision regions', () => {
-  const map = emptyMap(), p = openPoint(map);
-  assert.equal(placementError(p, [], 1000, 100, map), null);
-  for (const type of ['tree', 'rock', 'house'] as const) { map.obstacles = [{ ...p, radius: .38, type }]; assert.equal(placementIssue(p, [], 1000, 100, map)?.code, 'obstacle'); }
-  map.obstacles = []; map.fences = [p]; assert.equal(placementIssue(p, [], 1000, 100, map)?.code, 'fence');
-  map.fences = []; map.torches = [p]; assert.equal(placementIssue(p, [], 1000, 100, map)?.code, 'torch');
-  map.torches = []; assert.equal(placementIssue(p, [], 99, 100, map)?.code, 'gold');
+test('all defense levels share a single foundation and keep their own cost and upgrade animation events', () => {
+  const sim = new Simulation(MISSIONS[3]); sim.gold = 6000;
+  for (const [i, kind] of sim.mission.towers.entries()) {
+    const pad = sim.map.pads[i], tower = sim.build(kind, pad); assert.notEqual(typeof tower, 'string'); if (typeof tower === 'string') continue;
+    const before = sim.towers.length; assert.equal(sim.upgrade(tower.id), null); assert.equal(sim.upgrade(tower.id), null);
+    assert.equal(tower.level, 3); assert.equal(tower.padId, pad.id); assert.equal(sim.towers.length, before);
+    assert.ok(sim.events.some(e => e.type === 'upgrade' && e.kind === kind && e.level === 3));
+  }
 });

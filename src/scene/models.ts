@@ -25,7 +25,7 @@ export function material(color: number, emissive = 0): THREE.MeshStandardMateria
     const metal = [0xe9b849, 0x303f46, 0x626174, 0x9692a4, 0x454c4b].includes(color);
     m = new THREE.MeshStandardMaterial({ color, roughness: metal ? .38 : .86, metalness: metal ? .55 : 0, flatShading: false, emissive, emissiveIntensity: emissive ? .9 : 0 });
     const wood = [0x805737, 0xae8146, 0x513d2e, 0x674629, 0x93633b].includes(color);
-    if (wood || [0xbebdab, 0xe1dac0, 0x95988a, 0x858d82].includes(color)) { m.map = m.bumpMap = grainTexture(wood); m.bumpScale = wood ? .025 : .035; }
+    if (wood || [0xbebdab, 0xe1dac0, 0x95988a, 0x858d82, 0xa4afb5, 0xe8e0c7].includes(color)) { m.map = m.bumpMap = grainTexture(wood); m.bumpScale = wood ? .025 : .035; }
     mats.set(key, m);
   } return m;
 }
@@ -122,12 +122,29 @@ function person(g: THREE.Group, mage: boolean): void {
   for (const x of [-.09, .09]) mesh(g, box(.10, .13, .15), DARK, x, .065, .025);
   for (const x of [-.20, .20]) { const arm = mesh(g, box(.10, .26, .10), BLUE, x, .41, .08); arm.rotation.z = -x * 1.6; mesh(g, orb(.052), 0xe2b181, x * .9, .36, .17); }
 }
+const levelShields = new Map<number, THREE.SpriteMaterial>();
+function levelShield(level: number): THREE.Sprite {
+  if (!levelShields.has(level)) {
+    const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 152;
+    const ctx = canvas.getContext('2d')!;
+    ctx.beginPath(); ctx.moveTo(14, 10); ctx.lineTo(114, 10); ctx.lineTo(108, 90); ctx.quadraticCurveTo(100, 119, 64, 141); ctx.quadraticCurveTo(28, 119, 20, 90); ctx.closePath();
+    ctx.fillStyle = ['#253c43', '#21496c', '#30265b'][level - 1]; ctx.fill();
+    ctx.lineWidth = 9; ctx.strokeStyle = ['#b7a275', '#d4e6ea', '#f9d37d'][level - 1]; ctx.stroke();
+    ctx.font = 'bold 76px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff4d9'; ctx.fillText(String(level), 64, 70);
+    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+    levelShields.set(level, new THREE.SpriteMaterial({ map: texture, depthWrite: false, toneMapped: false }));
+  }
+  const sprite = new THREE.Sprite(levelShields.get(level)!); sprite.name = 'tower-level-shield'; sprite.userData.level = level;
+  sprite.scale.set(.62, .74, 1); return sprite;
+}
 function makeTower(kind: TowerKind, level: number): THREE.Group {
   const g = new THREE.Group();
-  mesh(g, cylinder(.70, .14, 8), 0x858c80, 0, .07, 0);
+  const stone = level === 3 ? 0xe8e0c7 : level === 2 ? 0xa4afb5 : STONE;
+  const base = mesh(g, cylinder(.70 + (level - 1) * .07, .14 + (level - 1) * .04, 6), level === 3 ? GOLD : level === 2 ? DARK : 0x858c80, 0, .07 + (level - 1) * .02, 0); base.rotation.y = Math.PI / 2;
+  if (level >= 2) mesh(g, cylinder(.68, .08, 6), level === 3 ? EDGE : 0x9692a4, 0, .20, 0).rotation.y = Math.PI / 2;
   mesh(g, softBox(.99, .17, .99), EDGE, 0, .22, 0);
   const height = kind === 'cannon' ? .9 : 1.5;
-  mesh(g, softBox(.86, height, .86), STONE, 0, .31 + height / 2, 0); stoneBands(g, .86, .86, .31, height);
+  mesh(g, softBox(.86, height, .86), stone, 0, .31 + height / 2, 0); stoneBands(g, .86, .86, .31, height);
   for (const x of [-.44, .44]) for (const z of [-.44, .44]) mesh(g, softBox(.14, height, .14), EDGE, x, .31 + height / 2, z);
   for (const x of [-.29, .29]) mesh(g, softBox(.17, .045, .017), 0x678562, x, .37, .447);
   crenellations(g, .87, height + .60);
@@ -179,9 +196,11 @@ function makeTower(kind: TowerKind, level: number): THREE.Group {
       mesh(g, box(.06, height * .6, .06), EDGE, x, height * .5 + .35, z);
     }
     banner(g, -.29, .98, .48, .65);
-    turret.scale.setScalar(level === 3 ? 1.10 : 1.04);
+    turret.scale.setScalar(level === 3 ? 1.23 : 1.12);
+    for (const x of [-.46, .46]) { mesh(g, softBox(.14, height * .8, .16), level === 3 ? GOLD : DARK, x, .35 + height * .4, .42); }
   }
   if (level === 3) {
+    for (const x of [-.4, .4]) for (const z of [-.4, .4]) mesh(g, cylinder(.12, .22, 6), GOLD, x, height + .68, z);
     for (const x of [-.45, .45]) {
       mesh(g, cylinder(.065, .40, 6), GOLD, x, height + .81, -.44);
       mesh(g, octa(.09), TOWERS[kind].color, x, height + 1.06, -.44, kind === 'mage' ? 0x008da7 : 0);
@@ -189,6 +208,8 @@ function makeTower(kind: TowerKind, level: number): THREE.Group {
     mesh(g, box(.26, .12, .08), GOLD, 0, height + .23, .47);
     mesh(g, octa(.075), TOWERS[kind].color, 0, height + .24, .54);
   }
+  const shield = levelShield(level); shield.position.set(-.51, height + .15, .60); g.add(shield);
+  g.userData.level = level;
   compact(g, ['turret']); compact(turret, ['barrel']); return g;
 }
 export function towerModel(kind: TowerKind, level = 1): THREE.Group {

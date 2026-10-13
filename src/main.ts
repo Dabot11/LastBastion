@@ -1,6 +1,7 @@
 import './style.css';
 import { TOWERS, type TowerKind } from './game/config';
 import { Simulation } from './game/simulation';
+import { padAt } from './game/path';
 import { MISSIONS } from './game/missions';
 import { CampaignProgress } from './game/progress';
 import { GameView } from './scene/view';
@@ -34,7 +35,7 @@ function closeHelp(): void { if (helpReturn === 'campaign') showCampaign(); else
 const ui = new UI(root, {
   select, cancel, mission: startMission, campaign: showCampaign, resume: () => { overlay = null; ui.hideOverlay(); }, nextMission: () => startMission(missionIndex + 1),
   pause: () => { if (!overlay && !sim.finished) paused = !paused; },
-  speed: () => { speed = speed === 1 ? 2 : 1; }, sound: () => audio.toggle(),
+  speed: () => { speed = speed === 1 ? 2 : 1; }, sound: () => audio.toggle(), music: enabled => audio.setMusic(enabled), volume: value => audio.setVolume(value), audioSettings: () => ({ muted: audio.muted, music: audio.musicEnabled, volume: audio.volume }),
   nextWave: () => { if (!overlay && sim.phase === 'preparation') { paused = false; sim.startWave(); } },
   upgrade: () => { if (ui.selectedId !== null) { const error = sim.upgrade(ui.selectedId); if (error) ui.toast(error); else ui.toast('Torre mejorada: más daño, alcance y velocidad'); } },
   sell: () => { if (ui.selectedId !== null) { const refund = sim.sell(ui.selectedId); ui.toast(`Torre vendida · +${refund} oro`); cancel(); } },
@@ -66,9 +67,9 @@ canvas.addEventListener('pointerup', event => {
   if (!click || overlay || sim.finished) return;
   view.setPointer(event);
   if (ui.selectedKind) {
-    const error = view.placementMessage(sim); if (error || !view.hover) { ui.toast(error ?? 'Elige una zona verde'); return; }
+    const error = view.placementMessage(sim); if (error || !view.hover) { ui.toast(error ?? 'Elige una base hexagonal'); return; }
     const tower = sim.build(ui.selectedKind, view.hover); if (typeof tower === 'string') ui.toast(tower); else ui.toast('Defensa construida');
-  } else { const id = view.pickTower(event); ui.selectedId = id; view.selectedId = id; if (id !== null) ui.setDefensesOpen(false); }
+  } else { const id = view.pickTower(event); ui.selectedId = id; view.selectedId = id; if (id !== null) ui.setDefensesOpen(false); else if (view.hover && padAt(view.hover, sim.map)) ui.setDefensesOpen(true); }
 });
 canvas.addEventListener('pointercancel', () => { drag = null; });
 canvas.addEventListener('pointerleave', () => { if (!drag) view.hover = null; });
@@ -88,7 +89,7 @@ window.addEventListener('keydown', event => {
   if (event.key.toLowerCase() === 'b') ui.el('defenses-toggle').click();
   if (event.key.toLowerCase() === 'm') ui.el('sound').click();
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden && !overlay && !sim.finished) paused = true; });
+document.addEventListener('visibilitychange', () => { audio.setVisible(!document.hidden); if (document.hidden && !overlay && !sim.finished) paused = true; });
 let last = performance.now(), uiAccumulator = 0, simulationAccumulator = 0;
 function frame(now: number): void {
   requestAnimationFrame(frame);
@@ -104,6 +105,7 @@ function frame(now: number): void {
       ui.victory(sim, progress, missionIndex, saved);
     } else { overlay = 'gameover'; ui.gameOver(sim); }
   }
+  audio.update(sim, !paused && !overlay, dt);
   for (const event of sim.events) { audio.play(event); if (event.type === 'gateHit') ui.flashCastle(); }
   uiAccumulator += dt;
   if (uiAccumulator >= .08) { ui.update(sim, paused, speed, view.placementMessage(sim), progress); uiAccumulator = 0; }
@@ -111,4 +113,4 @@ function frame(now: number): void {
   view.update(sim, paused || overlay ? 0 : dt * speed, now / 1000); sim.events.length = 0;
 }
 ui.update(sim, paused, speed, view.placementMessage(sim), progress); requestAnimationFrame(frame);
-export { sim as simulation, view as battlefield };
+export { sim as simulation, view as battlefield, audio as gameAudio };

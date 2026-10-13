@@ -38,6 +38,7 @@ export function battlefieldFraming(map: GameMap, viewport: Viewport, castlePoint
     if (Math.abs(site.x) <= WORLD.width / 2 && Math.abs(site.z) <= WORLD.depth / 2 && !castleSpace(site, map)) points.push(new THREE.Vector3(site.x, WORLD.elevation + .15, site.z));
   }
   for (const dx of [-1.8, 1.8]) for (const dz of [-1.8, 1.8]) points.push(new THREE.Vector3(map.path[0].x + dx, 4.6, map.path[0].z + dz));
+  for (const pad of map.pads) for (let i = 0; i < 6; i++) points.push(new THREE.Vector3(pad.x + Math.cos(i * Math.PI / 3) * 1.2, WORLD.elevation + .2, pad.z + Math.sin(i * Math.PI / 3) * 1.2));
   let minY = Infinity, maxY = -Infinity, minX = Infinity, maxX = -Infinity;
   const include = (point: THREE.Vector3) => {
     const y = point.dot(up), x = point.dot(right);

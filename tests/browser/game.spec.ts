@@ -289,6 +289,8 @@ test('portrait menus, tower actions and battle results fit a phone viewport', as
   const upgrade = await page.locator('#upgrade').boundingBox(), dock = await page.locator('.command-strip').boundingBox();
   expect(upgrade!.y + upgrade!.height).toBeLessThan(dock!.y);
   await page.locator('#upgrade').click(); await expect(page.locator('#gold')).toHaveText('120');
+  const notice = await page.locator('#toast').boundingBox(), details = await page.locator('#tower-panel').boundingBox();
+  expect(details!.y).toBeGreaterThan(notice!.y + notice!.height);
   await page.screenshot({ path: 'test-results/ui-upgrade-phone.png', animations: 'disabled' });
   await page.evaluate(async () => { const { simulation: sim } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); sim.towers = []; for (let i = 0; i < 100000 && !sim.finished; i++) sim.update(.02); });
   await expect(page.getByRole('heading', { name: 'El castillo ha caído.', exact: true })).toBeVisible(); await fits();
@@ -330,13 +332,17 @@ for (const viewport of [{ width: 1440, height: 960 }, { width: 390, height: 844 
     const { simulation: sim, battlefield: view } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
     const load = (url: string): Promise<any> => import(/* @vite-ignore */ url);
     const { placementError } = await load('/src/game/path.ts');
+    let visible: { x: number; y: number } | undefined;
     for (let x = -15.5; x < 16; x += .3) for (let z = -11.5; z < 12; z += .3) {
       if (placementError({ x, z }, sim.towers, sim.gold, 100, sim.map)) continue;
       const p = view.camera.position.clone().set(x, 1.7, z).project(view.camera);
       const px = (p.x + 1) / 2 * innerWidth, py = (1 - p.y) / 2 * innerHeight;
+      if (!visible && document.elementFromPoint(px, py) === view.renderer.domElement) visible = { x: px, y: py };
       if (px > rect.x + 10 && px < rect.x + rect.width - 10 && py > rect.y + 10 && py < rect.y + rect.height - 10 && document.elementFromPoint(px, py) === view.renderer.domElement) return { x: px, y: py };
     }
-    throw new Error('The drawer must free a genuinely buildable position');
+    // The smaller drawer can sit entirely below the playable area. Still exercise real placement.
+    if (visible) return visible;
+    throw new Error('There must be a clear buildable position after choosing a defense');
   }, drawer!);
   await page.mouse.move(point.x, point.y); await expect(page.locator('#placement-hint')).toContainText('Ubicación válida');
   await page.mouse.click(point.x, point.y); await expect(page.locator('#gold')).toHaveText('200');

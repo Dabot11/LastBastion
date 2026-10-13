@@ -7,6 +7,7 @@ import { box, circle, enemyModel, orb, projectileModel, towerModel } from './mod
 import { DamageLabels } from './damage-labels';
 interface EnemyVisual { group: THREE.Group; health: THREE.Mesh; hit: THREE.Mesh; }
 import { Effects } from './effects';
+import { battlefieldFraming, CAMERA_OFFSET } from './framing';
 export class GameView {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -19,6 +20,7 @@ export class GameView {
   private readonly effects: Effects;
   private readonly damageLabels: DamageLabels;
   private door: THREE.Group; private gateRecoil = 0;
+  private castleFraming: THREE.Vector3[] = [];
   private flames: THREE.Sprite[] = [];
   surfaces: THREE.Object3D[] = [];
   private readonly terrainRoot = new THREE.Group();
@@ -48,45 +50,33 @@ export class GameView {
     sun.shadow.camera.top = 25; sun.shadow.camera.bottom = -25; sun.shadow.camera.far = 80; sun.shadow.normalBias = .06; sun.shadow.bias = .00025; this.scene.add(sun); this.renderer.shadowMap.autoUpdate = false; this.renderer.shadowMap.needsUpdate = true;
     this.effects = new Effects(this.scene);
     this.map = map; this.scene.add(this.terrainRoot);
-    const terrain = createTerrain(this.terrainRoot, map); this.surfaces = terrain.surfaces; this.door = terrain.door; this.collectFlames();
+    const terrain = createTerrain(this.terrainRoot, map); this.surfaces = terrain.surfaces; this.door = terrain.door; this.castleFraming = terrain.castleFraming; this.collectFlames();
     this.damageLabels = new DamageLabels(container);
     const rangeMat = new THREE.MeshBasicMaterial({ color: 0xbdeaaa, transparent: true, opacity: .13, depthWrite: false, side: THREE.DoubleSide });
     this.range = new THREE.Mesh(new THREE.CircleGeometry(1, 80), rangeMat); this.range.rotation.x = -Math.PI / 2; this.range.visible = false;
     const ring = new THREE.Mesh(new THREE.RingGeometry(.982, 1, 80), new THREE.MeshBasicMaterial({ color: 0xe1fbd3, transparent: true, opacity: .85, side: THREE.DoubleSide, depthWrite: false }));
     this.range.add(ring); this.scene.add(this.range);
-    this.observer = new ResizeObserver(() => this.resize()); this.observer.observe(container); this.resize();
+    this.observer = new ResizeObserver(() => this.resize()); this.observer.observe(container);
+    for (const selector of ['.topbar', '.command-strip']) { const element = container.parentElement?.querySelector(selector); if (element) this.observer.observe(element); }
+    this.resize();
   }
   resize(): void {
     const w = this.container.clientWidth, h = this.container.clientHeight; if (!w || !h) return;
     this.renderer.setSize(w, h); const aspect = w / h;
-    let height = Math.max(w < 700 ? 32 : 28, 40 / aspect);
     const board = this.container.getBoundingClientRect();
-    const hud = this.container.parentElement?.querySelector('.topbar')?.getBoundingClientRect();
-    const dock = this.container.parentElement?.querySelector('.command-strip')?.getBoundingClientRect();
-    const safeTop = (hud?.bottom ?? board.top + 110) - board.top + 16;
-    const safeBottom = (dock?.top ?? board.bottom - 140) - board.top - 24;
-    const safeHeight = Math.max(100, safeBottom - safeTop);
-    const base = this.camera.clone(); base.zoom = 1; base.position.set(-9, 29.7, 24); base.lookAt(0, 0, 0); base.updateMatrixWorld();
-    const frame = () => {
-      base.left = -height * aspect / 2; base.right = height * aspect / 2; base.top = height / 2; base.bottom = -height / 2; base.updateProjectionMatrix();
-      const keep = gatePoint(0, -5.7, this.map);
-      const points = [...this.map.path.map(p => new THREE.Vector3(p.x, roadHeight(p, this.map) + .2, p.z)), new THREE.Vector3(keep.x, WORLD.elevation + 8.9, keep.z)];
-      for (const x of [-5.9, 5.9]) for (const z of [.7, -10.3]) { const p = gatePoint(x, z, this.map); points.push(new THREE.Vector3(p.x, WORLD.elevation + (z > 0 ? 6.6 : 2), p.z)); }
-      points.push(new THREE.Vector3(this.map.path[0].x, 4.6, this.map.path[0].z));
-      const projected = points.map(p => p.project(base));
-      const ys = projected.map(p => (1 - p.y) / 2 * h), xs = projected.map(p => (p.x + 1) / 2 * w);
-      return { min: Math.min(...ys), max: Math.max(...ys), left: Math.min(...xs), right: Math.max(...xs) };
-    };
-    let bounds = frame();
-    const scale = Math.max((bounds.max - bounds.min) / safeHeight, (bounds.right - bounds.left) / (w - 60), 1);
-    height *= scale; bounds = frame();
-    this.camera.left = base.left; this.camera.right = base.right; this.camera.top = base.top; this.camera.bottom = base.bottom;
-    const shift = (bounds.min + bounds.max - safeTop - safeBottom) / 2;
-    const up = new THREE.Vector3().setFromMatrixColumn(base.matrixWorld, 1), right = new THREE.Vector3().setFromMatrixColumn(base.matrixWorld, 0);
-    this.framing.copy(up).multiplyScalar(-shift * height / h).addScaledVector(right, (bounds.left + bounds.right - w) * height / (2 * h)); this.updateCamera();
+    const shell = this.container.parentElement;
+    const hud = shell?.querySelector('.topbar')?.getBoundingClientRect();
+    const dock = shell?.querySelector('.command-strip')?.getBoundingClientRect();
+    const hudBottom = (hud?.bottom ?? board.top + 80) - board.top;
+    shell?.style.setProperty('--hud-bottom', `${hudBottom}px`);
+    const fit = battlefieldFraming(this.map, { width: w, height: h, top: hudBottom + 12, bottom: (dock?.top ?? board.bottom - 75) - board.top - 14, left: 24, right: w - 24 }, this.castleFraming);
+    this.camera.left = -fit.height * aspect / 2; this.camera.right = fit.height * aspect / 2;
+    this.camera.top = fit.height / 2; this.camera.bottom = -fit.height / 2;
+    this.framing.copy(fit.focus); this.updateCamera();
   }
+
   private updateCamera(): void {
-    this.camera.position.set(-9, 29.7, 24).add(this.pan).add(this.framing); this.camera.lookAt(this.pan.clone().add(this.framing)); this.camera.updateProjectionMatrix(); this.camera.updateMatrixWorld();
+    this.camera.position.set(...CAMERA_OFFSET).add(this.pan).add(this.framing); this.camera.lookAt(this.pan.clone().add(this.framing)); this.camera.updateProjectionMatrix(); this.camera.updateMatrixWorld();
   }
   zoom(delta: number): void { this.camera.zoom = THREE.MathUtils.clamp(this.camera.zoom * Math.exp(-delta * .001), .8, 1.8); this.camera.updateProjectionMatrix(); }
   panBy(dx: number, dy: number): void {
@@ -254,7 +244,7 @@ export class GameView {
     const geometries = new Set<THREE.BufferGeometry>();
     this.terrainRoot.traverse(o => { if (o instanceof THREE.Mesh) { if (!o.geometry.userData.shared) geometries.add(o.geometry); const materials = Array.isArray(o.material) ? o.material : [o.material]; materials.filter(m => m.userData.owned).forEach(m => m.dispose()); if (o instanceof THREE.InstancedMesh) o.dispose(); } });
     geometries.forEach(g => g.dispose()); this.terrainRoot.clear();
-    this.map = map; const terrain = createTerrain(this.terrainRoot, map); this.surfaces = terrain.surfaces; this.door = terrain.door; this.collectFlames();
+    this.map = map; const terrain = createTerrain(this.terrainRoot, map); this.surfaces = terrain.surfaces; this.door = terrain.door; this.castleFraming = terrain.castleFraming; this.collectFlames();
     this.range.visible = false; this.renderer.shadowMap.needsUpdate = true; this.resetCamera();
   }
   dispose(): void { this.observer.disconnect(); this.effects.dispose(); this.damageLabels.dispose(); this.hitMaterial.dispose(); this.healthMaterial.dispose(); this.healthBackground.dispose(); this.enemyShade.dispose(); this.renderer.dispose(); }

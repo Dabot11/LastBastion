@@ -68,7 +68,7 @@ canvas.addEventListener('pointerup', event => {
   if (ui.selectedKind) {
     const error = view.placementMessage(sim); if (error || !view.hover) { ui.toast(error ?? 'Elige una plataforma'); return; }
     const tower = sim.build(ui.selectedKind, view.hover); if (typeof tower === 'string') ui.toast(tower); else ui.toast('Defensa construida');
-  } else { const id = view.pickTower(event); ui.selectedId = id; view.selectedId = id; }
+  } else { const id = view.pickTower(event); ui.selectedId = id; view.selectedId = id; if (id !== null) ui.setDefensesOpen(false); }
 });
 canvas.addEventListener('pointercancel', () => { drag = null; });
 canvas.addEventListener('pointerleave', () => { if (!drag) view.hover = null; });

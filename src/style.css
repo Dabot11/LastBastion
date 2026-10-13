@@ -20,47 +20,22 @@ button, a { touch-action: manipulation; }
 .board canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 .board::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 52% 43%, transparent 38%, #102c3a29 100%); }
 .tiny-label { font-size: 10px; font-weight: 750; letter-spacing: 1.7px; color: var(--gold); }
-.topbar { position: absolute; inset: 0 0 auto; z-index: 3; display: flex; align-items: flex-start; gap: 14px; padding: 20px 24px; pointer-events: none; }
-.topbar > * { pointer-events: auto; }
-.brand { display: flex; gap: 10px; align-items: center; text-decoration: none; color: #fcf4d8; padding: 2px 0; text-shadow: 0 2px 8px #18392b; }
-.crest { display: grid; place-items: center; width: 48px; height: 65px; background: linear-gradient(145deg, #294762, #142f44); color: var(--gold); border-top: 3px solid var(--gold); clip-path: polygon(0 0,100% 0,100% 74%,50% 100%,0 74%); }
-.crest svg { width: 30px; height: 30px; }
-.brand-kicker { display: block; font-size: 9px; letter-spacing: 3px; margin-bottom: 4px; }
-.brand strong { font-family: Georgia, serif; font-size: 19px; letter-spacing: 1px; }
 .brand-dot { color: var(--gold); }
 .wave-panel, .resource, .icon-button, .wave-action, .tower-card, .campaign-access, .map-tools { border: 1px solid var(--line); background: var(--glass); box-shadow: 0 6px 18px #10273229, inset 0 1px #ffffff06; backdrop-filter: blur(12px); }
-.wave-panel { width: 310px; padding: 13px 17px; border-radius: 13px; }
-.wave-heading { display: flex; align-items: center; gap: 7px; justify-content: space-between; }
-.wave-heading .tiny-label { font-size: 9px; color: #bdcfd2; letter-spacing: 1.35px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.challenge { color: #ffc38d; background: #9d562d33; border: 1px solid #cd92654d; font-size: 8px; letter-spacing: .6px; padding: 4px 6px; border-radius: 4px; white-space: nowrap; }
-.wave-line { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 7px 0 6px; }
-.wave-line strong { font-size: 24px; letter-spacing: -.8px; }
-.phase-label { font-size: 8px; letter-spacing: 1px; color: #d2b87f; }
-#wave-status { display: block; color: #c0d1d5; font-size: 11px; line-height: 1.55; min-height: 18px; }
 .wave-track, .health-track, .preparation-track, .campaign-track { display: block; height: 4px; overflow: hidden; border-radius: 10px; background: #ffffff12; }
-.wave-track { margin-top: 11px; }
 .wave-track i, .campaign-track i { display: block; height: 100%; background: linear-gradient(90deg, #a98543, #efd08c); border-radius: inherit; transition: width .25s; }
-.resources { margin-left: auto; display: flex; gap: 10px; }
-.resource { min-height: 77px; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 13px; }
-.resource > svg { width: 30px; height: 30px; }
-.resource small { display: block; font-size: 8px; font-weight: 700; letter-spacing: 1.5px; color: #bfd0d4; margin-bottom: 4px; white-space: nowrap; }
-.resource strong { font-size: 28px; line-height: 1.1; font-weight: 750; font-variant-numeric: tabular-nums; }
 .gold > svg { color: var(--gold); fill: #bd8b3b33; }
 .gold strong { color: #ffdc94; }
 .castle > svg { color: #8fd1c5; }
 .castle .muted { color: #a7bdc5; font-size: 12px; font-weight: 500; }
-.health-track { width: 156px; height: 5px; margin-top: 8px; }
 .health-track i { display: block; height: 100%; background: linear-gradient(90deg, #4ea99a, #9adbb3); border-radius: inherit; transition: width .22s; }
 .castle.critical { border-color: #da8b7366; }
 .castle.critical .health-track i { background: #ed927f; }
 .castle.damaged { animation: castle-hit .45s ease-out; }
-.toolbar { display: flex; gap: 6px; }
-.icon-button { display: grid; place-items: center; width: 40px; height: 44px; border-radius: 10px; color: #e1ece9; }
 .icon-button svg { width: 20px; height: 20px; }
 .icon-button:hover, .text-button:hover { color: var(--gold); border-color: #d8b97799; }
 .icon-button[aria-pressed="true"] { color: var(--gold); border-color: #d8b97788; }
 .speed-button { font-size: 14px; font-weight: 750; }
-.map-caption { position: absolute; top: 151px; left: 24px; display: flex; gap: 8px; align-items: center; color: #f1f5df; font-size: 10px; text-shadow: 0 1px 5px #0f3725; pointer-events: none; }
 #map-name { font-weight: 750; font-size: 9px; letter-spacing: 1.25px; }
 .status-dot { width: 5px; height: 5px; border-radius: 50%; background: #ecd28a; }
 .caption-separator { opacity: .5; }
@@ -71,13 +46,8 @@ button, a { touch-action: manipulation; }
 .campaign-access { position: absolute; z-index: 3; left: 24px; bottom: 18px; border-radius: 10px; padding: 12px 15px; }
 .campaign-access .text-button { color: #f1d59a; font-size: 12px; font-weight: 650; }
 #record { font-size: 11px; border-left: 1px solid #d3b4713d; margin-left: 3px; padding-left: 10px; }
-.bottom-bar { position: absolute; z-index: 3; bottom: 70px; left: 50%; transform: translateX(-50%); width: min(980px, calc(100% - 48px)); pointer-events: none; }
-.bottom-bar button { pointer-events: auto; }
-.build-heading { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 10px; color: #f7f5df; text-shadow: 0 2px 6px #163c2f; }
-.build-heading .tiny-label { font-size: 9px; }
 #build-tip { font-size: 11px; }
 #cancel { color: #f9d190; }
-.defense-row { display: flex; align-items: stretch; gap: 12px; }
 .tower-cards { display: flex; flex: 1; gap: 9px; }
 .tower-card { flex: 1; min-width: 0; min-height: 166px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; color: #f6f1dc; border-radius: 14px; padding: 8px 8px 12px; overflow: hidden; }
 .tower-card::before { content: ""; position: absolute; width: 130px; height: 100px; top: 2px; background: radial-gradient(ellipse, #9cbbca20, transparent 70%); pointer-events: none; }
@@ -100,12 +70,6 @@ button, a { touch-action: manipulation; }
 .tower-card.locked .card-cost { color: #a6b8bb; }
 .tower-card.unaffordable img { opacity: .75; }
 .tower-card.unaffordable .card-copy > span { color: #e4b998; font-size: 9px; }
-.wave-action { width: 194px; flex-shrink: 0; border-radius: 14px; padding: 17px 13px 13px; display: flex; flex-direction: column; justify-content: center; gap: 10px; }
-.wave-action .tiny-label { font-size: 8px; text-align: center; letter-spacing: 1.5px; }
-#next-label { color: #c5d6d8; font-size: 11px; line-height: 1.45; text-align: center; }
-#next-countdown { color: #b8cbd0; font-size: 10px; text-align: center; font-variant-numeric: tabular-nums; }
-.preparation-track { height: 3px; }
-.preparation-track i { display: block; height: 100%; border-radius: inherit; background: #a5c4bd; transition: width .1s linear; }
 .primary, .secondary { min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; border-radius: 9px; padding: 12px 16px; font-size: 13px; font-weight: 750; }
 .primary { background: linear-gradient(180deg, #f0d49b, #d4ae66); border: 1px solid #f5d8a0; color: #243543; box-shadow: 0 4px 12px #040f1c25, inset 0 1px #fff9e440; }
 .primary:hover:not(:disabled) { background: linear-gradient(180deg, #fae1af, #e7c17b); box-shadow: 0 4px 20px #dbb46f22; }
@@ -113,8 +77,6 @@ button, a { touch-action: manipulation; }
 .primary svg { width: 17px; height: 17px; }
 .secondary { background: #b5cddb08; border: 1px solid #6f8a9942; color: #bfced3; font-size: 12px; font-weight: 550; }
 .secondary:hover { border-color: #bfcfce80; background: #b5cddb14; color: #f0ddaa; }
-.wave-action .primary { padding: 11px 8px; font-size: 12px; }
-.tower-panel { position: absolute; top: 171px; left: 24px; width: 286px; z-index: 4; border-radius: 14px; border: 1px solid #92aebc66; background: linear-gradient(160deg, #1c3b50f7, #122b3ff7); box-shadow: 0 15px 40px #0b253e55; backdrop-filter: blur(14px); padding: 18px; display: flex; flex-direction: column; max-height: calc(100dvh - 410px); }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; }
 .panel-heading .tiny-label { color: #bed1d6; font-size: 9px; letter-spacing: 1.3px; }
 .panel-heading button { padding: 3px; }
@@ -139,15 +101,6 @@ button, a { touch-action: manipulation; }
 .sell-button:hover { color: #ffdd9c; }
 .investment, .upgrade-shortfall { display: block; text-align: center; line-height: 1.55; color: #9fb9c3; font-size: 9px; }
 .upgrade-shortfall { color: #edbe91; margin: 7px 0 2px; }
-.placement-hint, .toast, .pause-tag { position: absolute; z-index: 5; left: 50%; transform: translateX(-50%); border: 1px solid #97bca26b; background: #142e42ef; color: #e0f1df; border-radius: 10px; padding: 12px 18px; font-size: 12px; box-shadow: 0 5px 20px #102b4133; backdrop-filter: blur(10px); pointer-events: none; }
-.placement-hint { bottom: 275px; max-width: 90%; text-align: center; }
-.placement-hint.invalid { color: #ffd3bf; border-color: #e394746b; background: #4d2b31ed; }
-.toast { top: 148px; width: max-content; max-width: min(590px, 86%); text-align: center; font-size: 11px; }
-.pause-tag { top: 160px; display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-color: #bbcad13d; }
-.pause-tag svg { color: var(--gold); width: 17px; height: 17px; }
-.game-shell.has-toast .pause-tag { visibility: hidden; }
-.pause-tag b { display: block; font-size: 10px; letter-spacing: 1.5px; color: var(--gold); }
-.pause-tag small { display: block; font-size: 10px; color: #bfd0d3; margin-top: 4px; }
 
 /* One visual language for the campaign, help and battle results. */
 .overlay { position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 24px; background: #081c2db3; backdrop-filter: blur(7px); }
@@ -258,40 +211,20 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
 @keyframes castle-hit { 0%,70% { background: #5b333ded; border-color: #f3a590; } }
 
 @media (min-width: 1600px) {
-  .topbar { padding: 24px 30px; gap: 18px; }
-  .bottom-bar { width: 1060px; bottom: 76px; }
   .tower-card { min-height: 183px; }
   .tower-card img { width: 136px; height: 107px; }
-  .wave-action { width: 215px; }
   .card-copy strong { font-size: 17px; }
-  .map-caption { left: 30px; top: 158px; }
   .campaign-access { left: 30px; bottom: 23px; }
   .map-tools { right: 30px; bottom: 23px; }
-  .placement-hint { bottom: 300px; }
 }
 @media (max-width: 1100px) {
-  .brand { display: none; }
-  .topbar { padding: 16px; gap: 10px; }
-  .wave-panel { width: 273px; padding: 12px 14px; }
-  .resources { gap: 8px; }
-  .resource { padding: 11px 13px; gap: 9px; }
-  .resource strong { font-size: 25px; }
-  .health-track { width: 135px; }
-  .icon-button { width: 36px; height: 40px; }
-  .toolbar { gap: 5px; }
-  .bottom-bar { width: min(800px, calc(100% - 32px)); bottom: 66px; }
   .tower-card { min-height: 152px; padding: 6px 5px 10px; }
   .tower-card img { width: 103px; height: 82px; }
   .card-copy strong { font-size: 14px; }
   .card-copy > span { font-size: 9px; }
   .card-cost { font-size: 16px; }
-  .wave-action { width: 170px; padding: 12px 10px; gap: 8px; }
-  .wave-action .primary { font-size: 11px; }
-  .map-caption { left: 16px; top: 145px; }
   .campaign-access { left: 16px; bottom: 14px; }
   .map-tools { right: 16px; bottom: 14px; }
-  .tower-panel { top: 162px; left: 16px; width: 263px; padding: 16px; max-height: calc(100dvh - 372px); }
-  .placement-hint { bottom: 260px; }
   .campaign-hero { padding: 25px; }
   .campaign-chapters { padding: 25px; }
   .campaign-wordmark { margin-bottom: 18px; }
@@ -304,31 +237,14 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
   .star-rules { font-size: 9px; }
 }
 @media (max-width: 850px) {
-  .topbar { padding: 12px; gap: 8px; }
-  .wave-panel { width: 242px; padding: 11px 12px; }
-  .wave-line strong { font-size: 22px; }
-  .resource { padding: 10px; min-height: 70px; gap: 7px; }
-  .resource > svg { width: 25px; height: 25px; }
-  .resource strong { font-size: 22px; }
-  .health-track { width: 110px; }
-  .resource small { font-size: 7px; letter-spacing: 1px; }
-  .icon-button { width: 32px; height: 38px; }
-  .toolbar { gap: 4px; }
-  .bottom-bar { width: calc(100% - 24px); }
   .tower-card { min-height: 141px; }
   .tower-card img { width: 88px; height: 75px; }
   .card-copy strong { font-size: 13px; }
   .card-copy > span { font-size: 8px; }
   .tower-card.locked .card-copy > span, .tower-card.unaffordable .card-copy > span { font-size: 8px; }
-  .wave-action { width: 148px; }
-  #next-label { font-size: 10px; }
   #build-tip { font-size: 10px; }
-  .build-heading .tiny-label { display: none; }
-  .map-caption { left: 12px; }
-  .map-caption > span:last-child, .caption-separator { display: none; }
   .campaign-access { left: 12px; }
   .map-tools { right: 12px; }
-  .tower-panel { left: 12px; width: 246px; }
   .campaign-dialog { grid-template-columns: .7fr 1fr; }
   .campaign-hero { padding: 24px 20px; }
   .campaign-hero h1 { font-size: 43px; }
@@ -340,22 +256,6 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
   .mission-action { display: none; }
 }
 @media (max-width: 760px) {
-  .topbar { display: grid; grid-template-columns: 1fr auto; padding: 10px; gap: 7px; }
-  .resources { grid-column: 1 / 3; grid-row: 1; width: 100%; margin: 0; justify-content: flex-end; }
-  .resource { min-height: 52px; padding: 8px 11px; }
-  .resource strong { font-size: 21px; }
-  .resource small { font-size: 7px; }
-  .health-track { width: 121px; height: 4px; margin-top: 5px; }
-  .wave-panel { width: auto; grid-row: 2; padding: 10px 12px; }
-  .wave-line strong { font-size: 21px; }
-  .phase-label { font-size: 7px; }
-  #wave-status { font-size: 10px; min-height: 16px; }
-  .wave-track { margin-top: 7px; height: 3px; }
-  .toolbar { grid-row: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-  .icon-button { width: 34px; height: 37px; }
-  .map-caption { display: none; }
-  .bottom-bar { bottom: 61px; width: calc(100% - 16px); }
-  .defense-row { flex-wrap: wrap; gap: 8px; }
   .tower-cards { flex: 0 0 100%; gap: 5px; }
   .tower-card { min-height: 117px; padding: 4px 3px 8px; border-radius: 10px; }
   .tower-card img { width: 74px; height: 62px; }
@@ -365,26 +265,12 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
   .shortcut { top: 7px; left: 7px; font-size: 8px; padding: 0 3px; }
   .card-lock { top: 7px; right: 7px; }
   .card-lock svg { width: 11px; height: 11px; }
-  .wave-action { width: 100%; display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 9px 11px; gap: 3px 8px; border-radius: 10px; }
-  .wave-action > .tiny-label { display: none; }
-  #next-label { text-align: left; font-size: 10px; grid-row: 1; }
-  #next-countdown { text-align: left; font-size: 9px; grid-row: 2; }
-  #next-wave { grid-column: 2; grid-row: 1 / 3; padding: 9px 12px; min-height: 38px; }
-  .preparation-track { grid-column: 1 / 3; margin-top: 3px; height: 2px; }
-  .build-heading { margin-bottom: 7px; gap: 8px; }
   #build-tip { font-size: 9px; }
   .campaign-access { bottom: 12px; left: 9px; padding: 10px; }
   .campaign-access .text-button { font-size: 10px; gap: 5px; }
   #record { font-size: 9px; padding-left: 6px; }
   .map-tools { bottom: 12px; right: 9px; gap: 8px; padding: 9px 10px; }
   #camera-reset { font-size: 9px; }
-  .placement-hint { bottom: 285px; font-size: 10px; padding: 9px 12px; }
-  .pause-tag { top: 191px; padding: 9px 11px; width: max-content; max-width: 92%; }
-  .pause-tag small { font-size: 9px; }
-  .toast { top: 202px; font-size: 10px; padding: 9px 12px; }
-  .game-shell.inspecting .pause-tag { display: none; }
-  .game-shell.inspecting .toast { left: auto; right: 9px; transform: none; width: 111px; max-width: calc(100% - 277px); padding: 9px; text-align: left; line-height: 1.5; }
-  .tower-panel { top: 188px; left: 9px; width: 250px; padding: 13px; max-height: calc(100dvh - 460px); }
   .tower-profile img { width: 58px; height: 52px; }
   .tower-profile h2 { font-size: 18px; }
   .tower-profile small { font-size: 9px; }
@@ -457,26 +343,13 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
   .mission-preview { height: 70px; }
   .mission-footer { margin-top: 7px; }
   .star-rules { margin-top: 14px; }
-  .tower-panel { top: 158px; max-height: calc(100dvh - 367px); }
 }
 @media (max-height: 620px) and (min-width: 761px) {
-  .topbar { padding: 10px 14px; }
-  .wave-panel { padding: 9px 12px; }
-  .wave-line strong { font-size: 20px; }
-  .wave-track { margin-top: 7px; }
-  .resource { min-height: 63px; padding: 9px 12px; }
-  .map-caption { display: none; }
-  .bottom-bar { bottom: 59px; max-width: 790px; }
   .tower-card { min-height: 119px; }
   .tower-card img { width: 85px; height: 60px; }
   .card-copy > span { display: none; }
   .card-copy strong { font-size: 13px; }
   .card-cost { margin-top: 6px; font-size: 15px; }
-  .wave-action { width: 170px; padding: 10px; gap: 7px; }
-  .wave-action > .tiny-label { display: none; }
-  .tower-panel { top: 134px; max-height: calc(100dvh - 320px); }
-  .pause-tag { top: 132px; }
-  .toast { top: 130px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
@@ -495,62 +368,15 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
 .gate-label.under-siege em { background:#ef7861; }
 @media(max-width:600px) { .damage-number { font-size:19px; } .damage-number.gate { font-size:23px; } .gate-label { min-width:89px; padding:5px 7px; } .gate-label small { font-size:7px; } }
 
-/* A stable command strip keeps the camera still when the construction drawer opens. */
-.command-strip { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(320px, 1.3fr); gap: 16px; padding: 11px 15px; border: 1px solid #a5b8b95c; border-radius: 14px; background: linear-gradient(130deg, #172f43f7, #142e3def); box-shadow: 0 9px 28px #09192540; pointer-events: auto; }
-.build-command { min-width: 0; align-self: center; }
-.defenses-toggle { display: flex; align-items: center; gap: 9px; min-height: 42px; width: 100%; padding: 8px 12px; background: #607f8030; border-color: #beccbd5c; border-radius: 8px; color: #f5e6bf; font-weight: 700; font-size: 13px; }
-.defenses-toggle > svg { width: 20px; height: 20px; }
-.drawer-arrow { display: flex; margin-left: auto; transition: transform .2s; }
-.drawer-arrow svg { width: 17px; height: 17px; }
 .defenses-toggle[aria-expanded="true"] .drawer-arrow { transform: rotate(180deg); }
-.build-status { display: flex; align-items: center; gap: 10px; margin-top: 6px; min-height: 17px; }
-.build-status #build-tip { color: #c4d6d5; font-size: 10px; }
-.build-status #cancel { margin-left: auto; flex-shrink: 0; font-size: 10px; padding: 0; }
-.command-strip .wave-action { width: auto; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 12px; padding: 0; border: 0; background: transparent; box-shadow: none; }
-.command-strip .wave-action > .tiny-label { display: none; }
-.command-strip #next-label { text-align: left; grid-column: 1; grid-row: 1; font-size: 11px; }
-.command-strip #next-countdown { text-align: left; grid-column: 1; grid-row: 2; }
-.command-strip #next-wave { grid-column: 2; grid-row: 1 / 3; min-height: 42px; padding: 10px 14px; font-size: 12px; }
-.command-strip .preparation-track { grid-column: 1 / 3; grid-row: 3; margin-top: 4px; }
-.defenses-menu { margin-bottom: 10px; padding: 12px; border: 1px solid #8fa9a655; border-radius: 16px; background: #132e40ee; pointer-events: auto; box-shadow: 0 8px 28px #09192535; }
-.defenses-menu .build-heading { justify-content: space-between; margin-bottom: 9px; text-shadow: none; }
-.defenses-menu .build-heading > span:last-child { font-size: 10px; color: #b3cbcc; }
-.defenses-menu .tower-cards { gap: 8px; }
-.defenses-menu .tower-card { min-height: 162px; }
-.defenses-menu .tower-card img { width: 124px; height: 98px; }
-.placement-hint { bottom: 180px; }
-.defenses-open .placement-hint { bottom: 380px; }
-.tower-panel { max-height: calc(100dvh - 320px); }
-.defenses-open .tower-panel { max-height: calc(100dvh - 520px); }
 .campaign-dialog { height: min(750px, 88dvh); overflow: hidden; }
 .campaign-chapters { display: flex; flex-direction: column; min-height: 0; }
 .campaign-chapters > :not(.mission-list) { flex-shrink: 0; }
 .mission-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 2px 6px 2px 2px; scrollbar-width: thin; scrollbar-color: #788f89 #172e3e; }
 .mission-card { flex-shrink: 0; }
 .mission-copy > .mission-challenge { color: #d8c49b; font-size: 10px; }
-@media (max-width: 1100px) {
-  .command-strip { grid-template-columns: minmax(210px, 1fr) minmax(270px, 1.2fr); gap: 12px; }
-}
+
 @media (max-width: 760px) {
-  .command-strip { grid-template-columns: 1fr; padding: 9px 10px; gap: 8px; border-radius: 10px; }
-  .build-command { display: flex; align-items: center; gap: 8px; }
-  .defenses-toggle { min-height: 36px; width: auto; flex-shrink: 0; padding: 7px 9px; font-size: 11px; gap: 6px; }
-  .defenses-toggle > svg { width: 16px; height: 16px; }
-  .build-status { flex: 1; flex-wrap: wrap; gap: 3px; margin-top: 0; }
-  .build-status #build-tip { font-size: 9px; }
-  .build-status #cancel { margin-left: 0; }
-  .command-strip #next-wave { min-height: 36px; padding: 8px 10px; font-size: 11px; }
-  .command-strip #next-label { font-size: 10px; }
-  .defenses-menu { padding: 9px; border-radius: 12px; margin-bottom: 7px; }
-  .defenses-menu .build-heading { gap: 5px; }
-  .defenses-menu .build-heading > span:last-child { font-size: 9px; }
-  .defenses-menu .tower-cards { gap: 5px; }
-  .defenses-menu .tower-card { min-height: 119px; }
-  .defenses-menu .tower-card img { width: 78px; height: 69px; }
-  .placement-hint { bottom: 195px; }
-  .defenses-open .placement-hint { bottom: 355px; }
-  .tower-panel { max-height: calc(100dvh - 365px); }
-  .defenses-open .tower-panel { max-height: calc(100dvh - 530px); }
   .campaign-dialog { display: flex; flex-direction: column; height: calc(100dvh - 24px); }
   .campaign-hero { flex-shrink: 0; padding: 17px 20px 12px; }
   .campaign-hero > p { margin-bottom: 8px; }
@@ -562,7 +388,133 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
   .save-note { margin-top: 6px; }
 }
 @media (max-height: 620px) and (min-width: 761px) {
-  .defenses-menu .tower-card { min-height: 115px; }
-  .defenses-menu .tower-card img { width: 85px; height: 64px; }
   .campaign-dialog { height: 92dvh; max-height: 92dvh; }
+}
+
+
+/* Compact battlefield controls. The camera measures the HUD and the persistent construction dock. */
+.game-shell { --hud-bottom: 96px; }
+.topbar { position: absolute; inset: 0 0 auto; z-index: 6; display: flex; align-items: center; gap: 10px; padding: 10px 16px; pointer-events: none; }
+.topbar > * { pointer-events: auto; }
+.brand { display: flex; flex-shrink: 0; align-items: center; gap: 7px; padding: 0; text-decoration: none; color: #fcf4d8; text-shadow: 0 2px 8px #18392b; }
+.crest { display: grid; place-items: center; width: 33px; height: 43px; background: linear-gradient(145deg, #294762, #142f44); color: var(--gold); border-top: 2px solid var(--gold); clip-path: polygon(0 0,100% 0,100% 74%,50% 100%,0 74%); }
+.crest svg { width: 22px; height: 22px; }
+.brand-kicker { display: block; font-size: 7px; letter-spacing: 2px; margin-bottom: 2px; }
+.brand strong { font-family: Georgia, serif; font-size: 16px; letter-spacing: .6px; }
+.wave-panel { position: relative; display: grid; grid-template-columns: minmax(160px, 1fr) 188px; align-items: center; column-gap: 12px; flex: 1; min-width: 380px; max-width: 610px; height: 76px; padding: 8px 12px 12px; border-radius: 10px; }
+.wave-overview { min-width: 0; }
+.wave-heading { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+.wave-heading .tiny-label { font-size: 8px; color: #bdcfd2; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.challenge { color: #ffc38d; background: #9d562d33; border: 1px solid #cd92654d; font-size: 7px; padding: 2px 4px; border-radius: 4px; white-space: nowrap; }
+.wave-line { display: flex; align-items: baseline; justify-content: space-between; gap: 7px; margin: 3px 0; }
+.wave-line strong { font-size: 21px; letter-spacing: -.6px; line-height: 1.15; white-space: nowrap; }
+.phase-label { font-size: 7px; letter-spacing: .5px; color: #d2b87f; white-space: nowrap; }
+#wave-status { display: block; color: #c0d1d5; font-size: 10px; line-height: 1.4; min-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wave-panel .wave-action { display: grid; align-content: center; gap: 1px; width: auto; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--line); background: transparent; box-shadow: none; backdrop-filter: none; }
+.wave-panel #next-wave { min-height: 28px; padding: 5px 8px; font-size: 11px; border-radius: 6px; }
+.wave-panel #next-wave svg { width: 15px; height: 15px; }
+.wave-panel #next-wave:disabled { color: #bcd0d2; background: #83a5ac14; box-shadow: none; border-color: #97b7ba30; }
+#next-countdown { font-size: 9px; line-height: 1.2; text-align: center; color: #c4d6d8; font-variant-numeric: tabular-nums; }
+#next-label { font-size: 9px; line-height: 1.2; text-align: center; color: #ddc99e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wave-track { position: absolute; bottom: 5px; left: 12px; right: 12px; height: 2px; margin: 0; }
+#preparation-progress { display: block; height: 100%; background: #9ccabd; border-radius: inherit; transition: width .1s linear; }
+.resources { margin-left: auto; display: flex; flex-shrink: 0; gap: 7px; }
+.resource { height: 60px; min-height: 0; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; }
+.resource > svg { width: 23px; height: 23px; }
+.resource small { display: block; font-size: 7px; font-weight: 700; letter-spacing: 1px; color: #bfd0d4; margin-bottom: 3px; white-space: nowrap; }
+.resource strong { font-size: 24px; line-height: 1.05; font-weight: 750; font-variant-numeric: tabular-nums; }
+.gold { min-width: 92px; }
+.health-track { width: 125px; height: 3px; margin-top: 5px; }
+.toolbar { display: flex; flex-shrink: 0; gap: 4px; }
+.icon-button { display: grid; place-items: center; width: 35px; height: 36px; border-radius: 8px; color: #e1ece9; }
+.speed-button { font-size: 12px; }
+.map-caption { position: absolute; top: calc(var(--hud-bottom) + 9px); left: 18px; display: flex; align-items: center; gap: 7px; color: #f1f5df; font-size: 9px; text-shadow: 0 1px 5px #0f3725; pointer-events: none; }
+.bottom-bar { position: absolute; z-index: 3; bottom: 18px; left: 50%; transform: translateX(-50%); width: min(370px, calc(100% - 24px)); pointer-events: none; }
+.command-strip { padding: 6px; border: 1px solid #a5b8b95c; border-radius: 10px; background: linear-gradient(130deg, #172f43f2, #142e3def); box-shadow: 0 5px 15px #09192530; pointer-events: auto; }
+.build-command { display: flex; align-items: center; gap: 8px; }
+.defenses-toggle { display: flex; align-items: center; flex: 1; gap: 7px; min-height: 34px; min-width: 0; padding: 6px 9px; background: #607f8020; border-color: #beccbd40; border-radius: 6px; color: #f5e6bf; font-weight: 700; font-size: 11px; }
+.defenses-toggle > svg { width: 17px; height: 17px; }
+.drawer-arrow { display: flex; margin-left: auto; transition: transform .2s; }
+.drawer-arrow svg { width: 15px; height: 15px; }
+.defenses-toggle[aria-expanded="true"] .drawer-arrow { transform: rotate(180deg); }
+.build-status { display: flex; align-items: center; gap: 6px; }
+#build-tip { color: #c4d6d5; font-size: 9px; max-width: 105px; line-height: 1.35; }
+#cancel { flex-shrink: 0; color: #f9d190; width: 28px; height: 32px; justify-content: center; }
+.defenses-menu { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); width: min(630px, calc(100vw - 24px)); padding: 9px; border: 1px solid #8fa9a655; border-radius: 12px; background: #132e40ee; pointer-events: auto; box-shadow: 0 8px 28px #09192535; }
+.build-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.build-heading .tiny-label { font-size: 8px; }
+.build-heading > span:last-child { font-size: 9px; color: #b3cbcc; }
+.defenses-menu .tower-cards { gap: 6px; }
+.defenses-menu .tower-card { min-height: 133px; padding: 5px 5px 9px; border-radius: 9px; }
+.defenses-menu .tower-card img { width: 95px; height: 73px; }
+.defenses-menu .card-copy strong { font-size: 14px; }
+.defenses-menu .card-copy > span { font-size: 9px; }
+.defenses-menu .card-cost { margin-top: 5px; font-size: 15px; }
+.notification-lane { position: absolute; z-index: 5; top: calc(var(--hud-bottom) + 8px); left: 50%; transform: translateX(-50%); width: min(490px, calc(100% - 24px)); height: 38px; pointer-events: none; }
+.notification-lane > div { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid #97bca26b; background: #142e42ef; color: #e0f1df; border-radius: 8px; padding: 5px 12px; font-size: 11px; line-height: 1.3; text-align: center; box-shadow: 0 4px 14px #102b4133; backdrop-filter: blur(10px); pointer-events: none; }
+.notification-lane .placement-hint.invalid { color: #ffd3bf; border-color: #e394746b; background: #4d2b31ed; }
+.pause-tag svg { color: var(--gold); width: 16px; height: 16px; }
+.pause-tag b { font-size: 9px; letter-spacing: 1px; color: var(--gold); }
+.pause-tag small { display: inline; margin-left: 8px; font-size: 10px; color: #bfd0d3; }
+.game-shell.has-toast .pause-tag, .game-shell.is-placing .pause-tag, .game-shell.placing-invalid .toast, .game-shell.has-toast .placement-hint:not(.invalid) { visibility: hidden; }
+.tower-panel { position: absolute; z-index: 4; top: calc(var(--hud-bottom) + 8px); right: 16px; left: auto; width: 252px; max-height: calc(100dvh - var(--hud-bottom) - 84px); padding: 13px; border-radius: 12px; border: 1px solid #92aebc66; background: linear-gradient(160deg, #1c3b50f7, #122b3ff7); box-shadow: 0 12px 32px #0b253e45; backdrop-filter: blur(14px); display: flex; flex-direction: column; }
+.tower-profile { margin: 7px 0 3px; gap: 6px; }
+.tower-profile img { width: 58px; height: 52px; }
+.tower-profile h2 { font-size: 18px; }
+.tower-profile small { font-size: 9px; margin-top: 4px; }
+.panel-body > p { margin: 5px 0 10px; font-size: 10px; }
+.tower-stats { gap: 10px; margin: 10px 0; }
+.tower-stats b { font-size: 15px; margin-top: 4px; }
+.panel-actions { padding-top: 9px; }
+.panel-actions .primary { min-height: 36px; padding: 8px; }
+.sell-button { min-height: 29px; margin-top: 3px; }
+@media (max-width: 1100px) {
+  .topbar { padding: 8px 12px; gap: 8px; }
+  .brand { display: none; }
+  .wave-panel { max-width: none; min-width: 360px; grid-template-columns: minmax(150px, 1fr) 172px; column-gap: 8px; padding: 8px 10px 12px; }
+  .resource { gap: 6px; padding: 8px; }
+  .resource > svg { width: 20px; height: 20px; }
+  .resource strong { font-size: 22px; }
+  .health-track { width: 113px; }
+  .gold { min-width: 82px; }
+  .icon-button { width: 32px; height: 36px; }
+  .toolbar { gap: 3px; }
+  .tower-panel { right: 12px; width: 236px; }
+}
+@media (max-width: 760px) {
+  .topbar { display: grid; grid-template-columns: 1fr auto; padding: 8px; gap: 7px; }
+  .resources { grid-row: 1; grid-column: 1; margin: 0; gap: 5px; }
+  .resource { height: 46px; padding: 6px 7px; }
+  .resource small { font-size: 6px; letter-spacing: .5px; margin-bottom: 2px; }
+  .resource strong { font-size: 19px; }
+  .resource > svg { width: 17px; height: 17px; }
+  .gold { min-width: 66px; }
+  .health-track { width: 95px; height: 3px; margin-top: 4px; }
+  .castle .muted { font-size: 10px; }
+  .toolbar { grid-row: 1; grid-column: 2; display: flex; gap: 3px; }
+  .icon-button { width: 30px; height: 34px; }
+  .icon-button svg { width: 17px; height: 17px; }
+  .wave-panel { grid-row: 2; grid-column: 1 / 3; min-width: 0; width: 100%; grid-template-columns: minmax(0, 1fr) 166px; column-gap: 7px; height: 72px; }
+  .wave-line strong { font-size: 18px; }
+  .phase-label { font-size: 6px; letter-spacing: 0; }
+  .wave-heading .tiny-label { font-size: 7px; letter-spacing: .7px; }
+  .challenge { font-size: 6px; padding: 1px 3px; }
+  #wave-status { font-size: 9px; }
+  .wave-panel .wave-action { padding-left: 8px; }
+  .wave-panel #next-wave { font-size: 10px; }
+  #next-label { font-size: 8px; }
+  .map-caption { display: none; }
+  .bottom-bar { bottom: 64px; width: min(360px, calc(100% - 18px)); }
+  .defenses-menu { padding: 7px; }
+  .build-heading .tiny-label { display: none; }
+  .build-heading > span:last-child { font-size: 8px; }
+  .defenses-menu .tower-card { min-height: 110px; padding: 4px 3px 7px; }
+  .defenses-menu .tower-card img { width: 72px; height: 62px; }
+  .defenses-menu .card-copy strong { font-size: 12px; }
+  .defenses-menu .card-copy > span { display: none; }
+  .defenses-menu .card-cost { font-size: 14px; }
+  .notification-lane { height: 38px; }
+  .notification-lane > div { font-size: 10px; padding: 5px 9px; }
+  .pause-tag small { display: none; }
+  .tower-panel { top: calc(var(--hud-bottom) + 54px); right: 9px; width: 236px; max-height: calc(100dvh - var(--hud-bottom) - 178px); }
 }

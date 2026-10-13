@@ -8,7 +8,8 @@ import { fortressModel, caveModel } from './fortress';
 import { landscape } from './landscape';
 import { surroundingWorld } from './scenery';
 import { contactShadowMaterial, groundMaterial } from './surfaces';
-export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): { surfaces: THREE.Object3D[]; castle: THREE.Group; door: THREE.Group } {
+import { modelFramingPoints } from './framing';
+export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): { surfaces: THREE.Object3D[]; castle: THREE.Group; door: THREE.Group; castleFraming: THREE.Vector3[] } {
   const group = new THREE.Group(); scene.add(group);
   const land = landscape(map); scene.add(land.group);
   surroundingWorld(group, map);
@@ -104,6 +105,8 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
   }
   // Merge static props into one draw call per material. Tiny flora does not cast shadows.
   group.updateMatrixWorld(true);
+  // Preserve camera landmarks before the static castle meshes join the scenery batches.
+  const castleFraming = modelFramingPoints(castle);
   const batches = new Map<string, { mat: THREE.Material; geometries: THREE.BufferGeometry[]; shadow: boolean }>();
   const baked: THREE.Mesh[] = [];
   group.traverse(object => {
@@ -121,5 +124,5 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
   }
   shadeGeometry.dispose();
   // Keep a clear route and a single authoritative construction surface per elevation.
-  return { surfaces: land.surfaces, castle, door };
+  return { surfaces: land.surfaces, castle, door, castleFraming };
 }

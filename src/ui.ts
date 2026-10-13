@@ -33,7 +33,7 @@ export class UI {
       <main class="game-shell">
         <header class="topbar">
           <a class="brand" href="#" aria-label="The Last Bastion"><span class="crest">${icon('shield')}</span><span><span class="brand-kicker">THE LAST</span><strong>BASTION<span class="brand-dot">.</span></strong></span></a>
-          <div class="wave-panel"><div class="wave-heading"><span id="mission-title" class="tiny-label">CAMPAÑA DEL REINO</span><span id="challenge" class="challenge" hidden>GUARDIÁN</span></div><div class="wave-line"><strong id="wave">Oleada 1 / 5</strong><span id="phase-label" class="phase-label">PREPARACIÓN</span></div><span id="wave-status">Preparando defensas</span><div class="wave-track"><i id="wave-progress"></i></div></div>
+          <div class="wave-panel"><div class="wave-overview"><div class="wave-heading"><span id="mission-title" class="tiny-label">CAMPAÑA DEL REINO</span><span id="challenge" class="challenge" hidden>GUARDIÁN</span></div><div class="wave-line"><strong id="wave">Oleada 1 / 5</strong><span id="phase-label" class="phase-label">PREPARACIÓN</span></div><span id="wave-status">Preparando defensas</span></div><div class="wave-action"><button id="next-wave" class="primary">Iniciar oleada ${icon('arrow')}</button><small id="next-countdown">Preparación: 20 s</small><span id="next-label">Prepara tus defensas</span></div><div id="wave-track" class="wave-track" role="progressbar" aria-label="Preparación de la oleada" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><i id="wave-progress" hidden></i><i id="preparation-progress"></i></div></div>
           <div class="resources"><div class="gold resource">${icon('coin')}<span><small>ORO DISPONIBLE</small><strong id="gold">${WORLD.initialGold}</strong></span></div><div id="castle-resource" class="castle resource">${icon('castle')}<span><small>SALUD DE LA PUERTA</small><strong><span id="hp">${WORLD.castleHp}</span><span class="muted"> / <span id="hp-max">${MISSIONS[0].gateHp}</span></span></strong><span class="health-track"><i id="hp-progress"></i></span></span></div></div>
           <div class="toolbar"><button id="speed" class="icon-button speed-button" aria-label="Cambiar velocidad a 2x" title="Velocidad de juego">1×</button><button id="pause" class="icon-button" aria-label="Pausar" title="Pausa táctica (Espacio)">${icon('pause')}</button><button id="sound" class="icon-button" aria-label="Activar sonido" title="Sonido (M)">${icon('mute')}</button><button id="help" class="icon-button" aria-label="Cómo jugar" title="Cómo jugar">${icon('help')}</button></div>
         </header>
@@ -41,13 +41,14 @@ export class UI {
         <div class="map-caption"><span class="status-dot"></span><span id="map-name">LA FRONTERA</span><span class="caption-separator">/</span><span>Defiende el castillo</span></div>
         <div class="map-tools"><button id="zoom-out" class="text-button" aria-label="Alejar vista" title="Alejar">${icon('minus')}</button><button id="zoom-in" class="text-button" aria-label="Acercar vista" title="Acercar">${icon('plus')}</button><button id="camera-reset" class="text-button">Restablecer vista</button></div>
         <aside id="tower-panel" class="tower-panel" aria-label="Detalles de la torre" hidden></aside>
-        <div id="placement-hint" class="placement-hint" hidden></div>
+        <div class="notification-lane">
+        <div id="placement-hint" class="placement-hint" role="status" hidden></div>
         <div id="pause-tag" class="pause-tag" hidden>${icon('pause')}<span><b>PAUSA TÁCTICA</b><small>Construye y mejora sin prisa · Espacio para seguir</small></span></div>
         <div id="toast" class="toast" role="status" hidden></div>
+        </div>
         <footer class="bottom-bar">
           <div id="defenses-menu" class="defenses-menu" hidden><div class="build-heading"><span class="tiny-label">ELIGE TU DEFENSA</span><span>El menú se cierra al elegir · Atajos 1–4</span></div><div class="tower-cards">${(Object.keys(TOWERS) as TowerKind[]).map((kind, i) => `<button class="tower-card ${kind}" data-tower="${kind}" aria-label="Construir torre ${TOWERS[kind].name}, ${TOWERS[kind].cost} oro"><span class="shortcut">${i + 1}</span><span class="card-lock" aria-hidden="true">${icon('lock')}</span><img id="icon-${kind}" alt=""/><span class="card-copy"><strong>${TOWERS[kind].name}</strong><span>${TOWERS[kind].description.split(' · ')[0]}</span></span><span class="card-cost">${icon('coin')}${TOWERS[kind].cost}</span></button>`).join('')}</div></div>
-          <div class="command-strip"><div class="build-command"><button id="defenses-toggle" class="defenses-toggle" aria-expanded="false" aria-controls="defenses-menu" title="Abrir o cerrar defensas (B)">${icon('castle')}<span id="defenses-toggle-label">Construir defensas</span><span class="drawer-arrow">${icon('chevron')}</span></button><div class="build-status"><span id="build-tip">Elige una defensa · Atajos 1–4</span><button id="cancel" class="text-button" hidden>Cancelar ${icon('close')}</button></div></div>
-          <div class="wave-action"><span id="wave-action-title" class="tiny-label">PRÓXIMA OLEADA</span><span id="next-label">Prepara tus defensas</span><button id="next-wave" class="primary">Iniciar oleada ${icon('arrow')}</button><small id="next-countdown">Preparación: 20 s</small><span class="preparation-track"><i id="preparation-progress"></i></span></div></div>
+          <div class="command-strip"><div class="build-command"><button id="defenses-toggle" class="defenses-toggle" aria-expanded="false" aria-controls="defenses-menu" title="Abrir o cerrar defensas (B)">${icon('castle')}<span id="defenses-toggle-label">Construir defensas</span><span class="drawer-arrow">${icon('chevron')}</span></button><div id="build-status" class="build-status"><span id="build-tip" hidden></span><button id="cancel" class="text-button" aria-label="Cancelar construcción o selección" title="Cancelar (Esc)" hidden>${icon('close')}</button></div></div></div>
         </footer>
         <div class="campaign-access"><button id="campaign" class="text-button" aria-label="Abrir campaña">${icon('shield')} Campaña <span id="record">0 / ${MISSIONS.length * 3} ★</span></button></div>
         <section id="overlay" class="overlay" aria-modal="true" role="dialog" aria-labelledby="dialog-title"><div id="dialog" class="dialog" tabindex="-1"></div></section>
@@ -156,10 +157,13 @@ export class UI {
     const waveButton = this.el('next-wave') as HTMLButtonElement; waveButton.disabled = !prep;
     const waveAction = `${sim.phase}:${sim.wave}`;
     if (this.lastWaveAction !== waveAction) { this.lastWaveAction = waveAction; waveButton.innerHTML = prep ? `Iniciar oleada ${sim.wave + 1} ${icon('arrow')}` : `${icon('shield')} ${sim.finished ? sim.phase === 'victory' ? 'Misión superada' : 'Bastión caído' : 'Defendiendo'}`; }
-    this.el('wave-action-title').textContent = prep ? 'PRÓXIMA OLEADA' : sim.finished ? 'BATALLA TERMINADA' : 'EN COMBATE';
     this.el('next-label').textContent = prep ? waveAdvice(next, sim.mission.towers) : sim.finished ? 'La batalla ha terminado' : attacking ? '¡Protege la puerta! Refuerza sus flancos' : 'Tus defensas están en acción';
-    this.el('next-countdown').textContent = prep ? `${paused ? 'En pausa' : 'Preparación'}: ${Math.ceil(sim.preparation)} s` : `Oleada ${sim.wave} · ${sim.kills} derrotados`;
-    this.el('preparation-progress').style.width = prep ? `${sim.preparation / WORLD.preparation * 100}%` : '0%';
+    this.el('next-countdown').textContent = prep ? `${paused ? 'En pausa' : 'Preparación'}: ${Math.ceil(sim.preparation)} s` : `${sim.kills} derrotados`;
+    this.el('preparation-progress').style.width = `${sim.preparation / WORLD.preparation * 100}%`;
+    this.el('preparation-progress').hidden = !prep; this.el('wave-progress').hidden = prep;
+    this.el('wave-track').setAttribute('aria-label', prep ? 'Preparación de la oleada' : 'Progreso de la misión');
+    this.el('wave-track').setAttribute('aria-valuenow', String(Math.round(Number.parseFloat(this.el(prep ? 'preparation-progress' : 'wave-progress').style.width))));
+    this.el('next-label').hidden = !prep && !attacking;
     this.el('record').textContent = `${progress.totalStars} / ${MISSIONS.length * 3} ★`;
     document.querySelectorAll<HTMLButtonElement>('[data-tower]').forEach(b => {
       const kind = b.dataset.tower as TowerKind, locked = !sim.mission.towers.includes(kind), shortfall = sim.gold < TOWERS[kind].cost;
@@ -169,8 +173,12 @@ export class UI {
       b.classList.toggle('selected', kind === this.selectedKind); b.setAttribute('aria-pressed', String(kind === this.selectedKind));
     });
     this.el('cancel').hidden = !this.selectedKind && this.selectedId === null;
+    this.el('build-status').hidden = !this.selectedKind && this.selectedId === null;
     this.el('placement-hint').hidden = !this.selectedKind; this.el('placement-hint').textContent = placement ?? 'Ubicación válida · Clic para construir'; this.el('placement-hint').classList.toggle('invalid', !!placement);
-    this.el('build-tip').textContent = this.selectedKind ? `${TOWERS[this.selectedKind].name} · Clic para construir · Esc para cancelar` : 'Elige una defensa · Atajos 1–4';
+    this.el('build-tip').hidden = !this.selectedKind;
+    this.el('build-tip').textContent = this.selectedKind ? `${TOWERS[this.selectedKind].name} · ${TOWERS[this.selectedKind].cost} oro` : '';
+    this.board.parentElement!.classList.toggle('is-placing', !!this.selectedKind);
+    this.board.parentElement!.classList.toggle('placing-invalid', !!this.selectedKind && !!placement);
     const t = sim.towers.find(t => t.id === this.selectedId), panel = this.el('tower-panel'); panel.hidden = !t; this.board.parentElement!.classList.toggle('inspecting', !!t);
     if (t) {
       const stats = towerStats(t.kind, t.level), cost = upgradeCost(t.kind, t.level), maxed = t.level >= MAX_TOWER_LEVEL;

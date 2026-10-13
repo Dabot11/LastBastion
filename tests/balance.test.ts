@@ -7,12 +7,12 @@ import { Simulation } from '../src/game/simulation';
 import { runScenario, strategiesForMission, type Strategy } from '../scripts/balance-scenarios';
 
 for (const [index, mission] of MISSIONS.entries()) test(`legal strategies can win without pixel-perfect placement: ${mission.name}`, () => {
-  const strategies: Strategy[] = index === 0 ? ['mixed', 'mixed-expand'] : index === 1 || index === 3 ? ['mixed', 'mixed-expand'] : ['mixed', 'arcane'];
+  const strategies: Strategy[] = index === 0 ? ['mixed', 'mixed-expand'] : index === 1 || index >= 3 ? ['mixed', 'mixed-expand'] : ['mixed', 'arcane'];
   let perfect = false;
   for (const strategy of strategies) for (const offset of [0, .25, .5]) {
     const result = runScenario(mission, strategy, offset);
     assert.equal(result.phase, 'victory', `${strategy}, offset ${offset}`);
-    assert.ok(result.hp >= 600, `${strategy} must allow a reasonable castle-health margin`);
+    assert.ok(result.hp >= mission.gateHp * .6, `${strategy} must allow a reasonable castle-health margin`);
     assert.ok(result.combatSeconds >= 60 && result.combatSeconds <= mission.waves.length * 65, 'The extended route and gate combat should average at most 65 seconds per wave');
     assert.ok(result.waves.every((wave, i) => wave.seconds - (result.waves[i - 1]?.seconds ?? 0) <= 90), 'No successful wave should stall at the gate for a prolonged cleanup');
     assert.ok(result.spent > 300 && result.gold >= 0, 'Only legal earned-gold investments are allowed');

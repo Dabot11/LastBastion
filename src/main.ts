@@ -20,7 +20,7 @@ function select(kind: TowerKind): void {
   if (overlay || sim.finished) return;
   if (!sim.mission.towers.includes(kind)) { ui.toast('Completa misiones para desbloquear esta defensa'); return; }
   if (sim.gold < TOWERS[kind].cost) { ui.toast('No tienes suficiente oro'); return; }
-  ui.selectedId = null; view.selectedId = null; ui.selectedKind = kind; view.setGhost(kind);
+  ui.selectedId = null; view.selectedId = null; ui.selectedKind = kind; view.setGhost(kind); ui.setDefensesOpen(false);
 }
 function startMission(index: number): void {
   if (!progress.isUnlocked(index)) { ui.toast('Primero defiende el castillo anterior'); return; }
@@ -82,9 +82,10 @@ window.addEventListener('keydown', event => {
   }
   if (event.target instanceof Element && event.target.closest('button,a') && (event.code === 'Space' || event.key === 'Enter')) return;
   const kinds: TowerKind[] = ['archer', 'crossbow', 'mage', 'cannon'];
-  if (event.key === 'Escape') cancel();
+  if (event.key === 'Escape') { cancel(); ui.setDefensesOpen(false); }
   if (event.key >= '1' && event.key <= '4') select(kinds[Number(event.key) - 1]);
   if (event.code === 'Space') { event.preventDefault(); if (!overlay && !sim.finished) paused = !paused; }
+  if (event.key.toLowerCase() === 'b') ui.el('defenses-toggle').click();
   if (event.key.toLowerCase() === 'm') ui.el('sound').click();
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden && !overlay && !sim.finished) paused = true; });

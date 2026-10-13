@@ -1,6 +1,6 @@
 # The Last Bastion
 
-Juego Tower Defense 3D de fantasía medieval, con construcción libre y una campaña de cuatro misiones. Three.js genera todo el escenario y los personajes mediante modelos procedurales con materiales, mampostería y animaciones de combate. No requiere recursos externos, cuentas ni claves API.
+Juego Tower Defense 3D de fantasía medieval, con construcción libre y una campaña de diez misiones. Three.js genera todo el escenario y los personajes mediante modelos procedurales con materiales, mampostería y animaciones de combate. No requiere recursos externos, cuentas ni claves API.
 
 ## Ejecutar
 
@@ -43,13 +43,13 @@ Si no ves **Settings**, entra con una cuenta administradora del repositorio. Si 
 
 ## Cómo jugar
 
-Defiende la **puerta de madera del castillo, con 1000 puntos de salud**, usando tus **300 monedas iniciales**. Los enemigos salen de una cueva en el extremo inferior derecho y recorren un camino único hasta el castillo superior izquierdo. El tramo final sube suavemente hasta el umbral: la fortaleza descansa sobre el terreno elevado, con una planta aproximadamente tres veces más ancha y profunda que antes. No hay bifurcaciones ni agua.
+Defiende la **puerta de madera del castillo, con 1000–3000 puntos de salud según la misión**, usando tus **300 monedas iniciales**. Los enemigos salen de una cueva en el extremo inferior derecho y recorren un camino único hasta el castillo superior izquierdo. El tramo final sube suavemente hasta el umbral: la fortaleza descansa sobre el terreno elevado, con una planta aproximadamente tres veces más ancha y profunda que antes. No hay bifurcaciones ni agua.
 
 Al llegar, los enemigos permanecen vivos y atacan la puerta. Dos pueden golpear a la vez; los demás esperan sobre el camino y avanzan cuando se libera una posición. Las torres siguen disparándoles. Hay terreno despejado para construir en ambos flancos de la entrada; puedes construir, mejorar o vender también durante el combate. El daño por golpe y el intervalo son **8 / 1,2 s** para esbirros, **6 / 0,85 s** para corredores, **30 / 1,9 s** para bestias y **55 / 2,2 s** para guardianes. El primer golpe tiene una preparación de 0,45 s. Llegar a la puerta no concede oro ni cuenta como baja; la oleada termina al eliminar a todos los atacantes.
 
 Los golpes generan números de daño, retroceso, destellos y astillas de madera. Los números de enemigos muestran la salud realmente perdida después de resistencias, limitada a la salud restante y redondeada para leerla. Los de la puerta aparecen en rojo. La madera muestra grietas al bajar del 65% y 30% de salud, y cae al llegar a cero.
 
-Selecciona una torre y mueve el cursor sobre el césped. La vista previa verde permite construir; la roja indica un obstáculo, el camino, falta de espacio o falta de oro. No hay casillas ni espacios de construcción predeterminados. El círculo muestra el alcance real.
+Abre **Construir defensas** con su flecha o **B**. Las ilustraciones muestran el arma de cerca. Al elegir, el menú se oculta para liberar terreno; la selección permanece activa y puedes colocar varias torres. La cámara no se mueve al desplegarlo. El botón de oleada, su aviso y temporizador siguen disponibles con el menú cerrado. Selecciona una torre y mueve el cursor sobre el césped. La vista previa verde permite construir; la roja indica un obstáculo, el camino, falta de espacio o falta de oro. No hay casillas ni espacios de construcción predeterminados. El círculo muestra el alcance real.
 
 | Defensa | Oro | Ventaja |
 | --- | ---: | --- |
@@ -73,25 +73,33 @@ Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardia
 
 Las defensas tienen prioridades diferentes: arqueros contra la primera línea, ballestas contra amenazas acorazadas, cañones contra grupos y magos contra armadura vulnerable a magia. Combinar posiciones y mejoras conserva más salud que abandonar las torres iniciales. Los ajustes de economía, enemigos y resultados están documentados en [BALANCE.md](BALANCE.md). Para repetir las simulaciones sin abrir WebGL, ejecuta `npm run balance`.
 
-Cuando la puerta pierde toda su salud aparece **El castillo ha caído**. Resiste la última oleada y elimina todos los enemigos para ganar: verás estrellas, puntuación y el siguiente destino desbloqueado. Cada misión comienza de nuevo con 300 de oro, 1000 de salud y ninguna torre; el progreso de campaña permanece.
+Cuando la puerta pierde toda su salud aparece **El castillo ha caído**. Resiste la última oleada y elimina todos los enemigos para ganar: verás estrellas, puntuación y el siguiente destino desbloqueado. Cada misión comienza de nuevo con 300 de oro, la salud máxima de su puerta y ninguna torre; el progreso de campaña permanece.
 
 ### Campaña y recompensas
 
-| Misión | Oleadas | Escenario y defensas |
-| --- | ---: | --- |
-| Aldea de los pinos | 5 | Bosque; solo arqueros, contra esbirros y corredores |
-| Villa del mercado | 6 | Camino entre viviendas; añade ballestas contra las primeras armaduras |
-| Ciudadela real | 7 | Edificios de piedra y otra ruta; añade magos y varios guardianes |
-| El último bastión | 8 | Una cuarta ruta fortificada; añade cañones contra grandes grupos |
+| Misión | Oleadas | Salud de puerta | Escenario y reto |
+| --- | ---: | ---: | --- |
+| Aldea de los pinos | 5 | 1000 | Bosque; aprende a construir y mejorar arqueros |
+| Villa del mercado | 6 | 1200 | Pueblo; desbloquea ballestas contra armaduras |
+| Ciudadela real | 7 | 1400 | Ciudad; desbloquea magos contra bestias |
+| El último bastión | 8 | 1600 | Fortaleza; desbloquea cañones contra grupos |
+| Bosque de los ecos | 8 | 1800 | Bosque; muchos corredores |
+| Villa de las caravanas | 8 | 2000 | Pueblo; armaduras y escoltas |
+| Fortaleza de la colina | 9 | 2200 | Fortaleza; cobertura de curvas |
+| Aldea del viejo molino | 9 | 2400 | Pueblo; hordas numerosas |
+| Paso de los guardianes | 10 | 2700 | Bosque; guardianes y sus escoltas |
+| Castillo de la corona | 10 | 3000 | Fortaleza; combina las cuatro defensas |
+
 
 Ganar una misión desbloquea la siguiente. Las estrellas premian la salud de la puerta: **una** por ganar, **dos** conservando al menos 60% de salud y **tres** conservando al menos 90%. Puedes repetir cualquier misión desbloqueada para mejorar el resultado. El menú de campaña conserva la mejor puntuación y cantidad de estrellas de cada misión; una repetición peor no reduce tus marcas ni suma estrellas duplicadas.
 
-El progreso se guarda en `localStorage` bajo `last-bastion-campaign-v1`. Sin almacenamiento disponible se conserva en memoria durante la sesión. No se sincroniza entre dispositivos. Los guardados de las tres misiones anteriores conservan sus estrellas y puntuaciones; si completaste la ciudadela, la cuarta misión ya está desbloqueada.
+El progreso se guarda en `localStorage` bajo `last-bastion-campaign-v1`. Sin almacenamiento disponible se conserva en memoria durante la sesión. No se sincroniza entre dispositivos. Los guardados de la campaña anterior conservan estrellas y puntuaciones. Si completaste las cuatro misiones, continúas desde Bosque de los ecos; las otras nuevas se abren al ganar la anterior. El total de la campaña es de 30 estrellas. La salud, las grietas y las estrellas usan siempre el máximo propio de la misión.
 
 El oro solo sirve para construir y mejorar durante cada misión. XP, niveles de comandante y monedas persistentes se reservan para futuras iteraciones. El alcance y criterio de esas iteraciones están en [DESIGN.md](DESIGN.md).
 
 ### Controles
 
+- **B / flecha Construir defensas:** abrir u ocultar el menú, sin mover la cámara.
 - **1–4:** arqueros, ballesta, mago, cañón; **clic izquierdo:** construir o seleccionar torre.
 - **Escape / clic derecho:** cancelar la construcción o cerrar la selección.
 - **Rueda:** zoom; **arrastrar:** desplazar la cámara cuando no estás construyendo.
@@ -112,7 +120,7 @@ src/
     config.ts       Balance centralizado: costos, enemigos, daño y niveles
     path.ts         Ruta ordenada, distancias, obstáculos y construcción
     simulation.ts   Enemigos, oleadas, torres, proyectiles, victoria y economía
-    missions.ts     Las cuatro misiones, mapas, armas y composición de oleadas
+    missions.ts     Las diez misiones, mapas, armas y composición de oleadas
     progress.ts     Estrellas, desbloqueos y guardado de campaña
   scene/
     models.ts       Geometría y materiales reutilizables
@@ -152,9 +160,9 @@ El campo de batalla forma parte de un valle que continúa más allá de la zona 
 
 El escenario ocupa toda la pantalla. Los recursos, controles y tarjetas de defensas aparecen en paneles flotantes. La cámara calcula el espacio libre entre el HUD y las tarjetas, incluyendo la altura del castillo, para conservar visible el recorrido en distintos tamaños de pantalla. Se puede acercar o alejar con los botones **+ / −** o la rueda, arrastrar para explorar y **Restablecer vista** para recuperar el encuadre inicial.
 
-El castillo y las torres tienen mampostería, banderas, almenas y armas reconocibles. Las torres reaccionan a los disparos y sus mejoras añaden bandas, estandartes, remates y armas más grandes. Los iconos de construcción se renderizan a mayor resolución. El suelo, camino y piedra usan texturas procedurales distintas con relieve de material; huellas de carros, pequeñas piedras y helechos añaden detalle sin cambiar colisiones ni posiciones legales. Las flechas y virotes tienen puntas y plumas; los magos disparan orbes con estela; los cañones tienen destellos y ondas de explosión correspondientes al radio real de daño. Los enemigos tienen rostro, correas, botas, armadura y armas diferenciadas; piernas y brazos se animan al caminar, preparar golpes, atacar y recibir impactos. El cañón tiene ruedas con radios, carro de madera, abrazaderas y boca metálica. La entrada enemiga es una boca oscura rodeada de roca erosionada y bosque. Los efectos y números respetan la pausa, velocidad y cambios de misión; se limita la cantidad de etiquetas simultáneas y se reutilizan sus elementos.
+El castillo y las torres tienen mampostería, banderas, almenas y armas reconocibles. Las torres reaccionan a los disparos y sus mejoras añaden bandas, estandartes, remates y armas más grandes. Los iconos se renderizan como primeros planos del arma y su parapeto para reconocerla mejor. El suelo, camino y piedra usan texturas procedurales distintas con relieve de material; huellas de carros, pequeñas piedras y helechos añaden detalle sin cambiar colisiones ni posiciones legales. Las flechas y virotes tienen puntas y plumas; los magos disparan orbes con estela; los cañones tienen destellos y ondas de explosión correspondientes al radio real de daño. Los enemigos tienen rostro, correas, botas, armadura y armas diferenciadas; piernas y brazos se animan al caminar, preparar golpes, atacar y recibir impactos. El cañón tiene ruedas con radios, carro de madera, abrazaderas y boca metálica. La entrada enemiga es una boca oscura rodeada de roca erosionada y bosque. Los efectos y números respetan la pausa, velocidad y cambios de misión; se limita la cantidad de etiquetas simultáneas y se reutilizan sus elementos.
 
-Las pruebas geométricas usan raycasting sobre la superficie renderizada para comprobar que la altura renderizada de toda la ruta coincide con el movimiento de enemigos, incluida la rampa hasta la puerta, que la base completa de una torre legal descansa sobre terreno elevado y que el valle continúa por los cuatro lados sin convertir el paisaje de fondo en zona de construcción. Las pruebas de navegador comprueban además que ningún punto de las cuatro rutas quede detrás de un control en resoluciones de 900×700, 1280×720, 1440×960 y 1920×1080, y que el zoom y el restablecimiento funcionen. También se revisan los menús, resultados y acciones de torre a 390×844, la navegación con teclado, el retorno desde la ayuda y el inicio desde la pausa.
+Las pruebas geométricas usan raycasting sobre la superficie renderizada para comprobar que la altura renderizada de toda la ruta coincide con el movimiento de enemigos, incluida la rampa hasta la puerta, que la base completa de una torre legal descansa sobre terreno elevado y que el valle continúa por los cuatro lados sin convertir el paisaje de fondo en zona de construcción. Las pruebas de navegador comprueban además que ningún punto de las diez rutas quede detrás de un control a 900×700 y 1440×960, con verificaciones adicionales de las primeras cuatro a 1280×720 y 1920×1080, y que el zoom y el restablecimiento funcionen. También se revisan los menús, resultados y acciones de torre a 390×844, la navegación con teclado, el retorno desde la ayuda y el inicio desde la pausa. Las pruebas del menú plegable colocan una torre en terreno que el menú abierto cubría, tanto en escritorio como en teléfono, comprueban que la cámara permanece estable y que funcionan los atajos y el foco de teclado.
 
 ## Validación y alcance
 
@@ -162,6 +170,6 @@ Las pruebas comprueban continuidad y ausencia de cruces de la ruta, movimiento a
 
 Las pruebas de navegador comprueban WebGL real, colocación con cursor, selección, mejoras, venta, falta de oro, pausa, velocidad, guía, combate con recompensa, adaptación a una ventana de escritorio pequeña, derrota real, victoria, guardado de las estrellas, desbloqueo de todas las misiones y defensas, cambio de mapa y reinicio completo.
 
-Los gráficos son una interpretación procedural de la referencia; los personajes y animaciones son deliberadamente sencillos. El equilibrio de las cuatro misiones necesita sesiones reales de juego. No hay multijugador ni sincronización de progreso entre dispositivos. La experiencia está diseñada para escritorio, aunque la interfaz se adapta a ventanas pequeñas. El rendimiento depende de la GPU y WebGL disponibles.
+Los gráficos son una interpretación procedural de la referencia; los personajes y animaciones son deliberadamente sencillos. El equilibrio de las diez misiones necesita sesiones reales de juego. No hay multijugador ni sincronización de progreso entre dispositivos. La experiencia está diseñada para escritorio, aunque la interfaz se adapta a ventanas pequeñas. El rendimiento depende de la GPU y WebGL disponibles.
 
 Posibles mejoras: nuevos mapas con un único camino, efectos de estados, variedad de guardianes, opciones de calidad gráfica, accesibilidad adicional y un balance afinado con partidas reales.

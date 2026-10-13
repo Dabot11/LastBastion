@@ -79,9 +79,35 @@ test('invalid and unavailable storage cannot corrupt progress or stop playing', 
 });
 test('weapon availability belongs to the mission and retries reset gold, castle and upgrades', () => {
   const first = new Simulation(); assert.equal(typeof first.build('cannon', { x: 0, z: 0 }), 'string'); assert.equal(typeof first.build('mage', { x: 0, z: 0 }), 'string'); assert.equal(first.gold, 300);
-  assert.deepEqual(MISSIONS.map(m => m.towers), [['archer'], ['archer', 'crossbow'], ['archer', 'crossbow', 'mage'], ['archer', 'crossbow', 'mage', 'cannon']]);
+  assert.deepEqual(MISSIONS.slice(0, 4).map(m => m.towers), [['archer'], ['archer', 'crossbow'], ['archer', 'crossbow', 'mage'], ['archer', 'crossbow', 'mage', 'cannon']]);
   assert.deepEqual(['archer', 'crossbow', 'mage', 'cannon'].map(kind => towerUnlockMission(kind as 'archer' | 'crossbow' | 'mage' | 'cannon')), [1, 2, 3, 4]);
   assert.equal(typeof first.build('crossbow', { x: 0, z: 0 }), 'string');
   first.castleHp = 200; first.gold = 2; const retry = new Simulation(first.mission);
   assert.equal(retry.castleHp, 1000); assert.equal(retry.gold, 300); assert.equal(retry.wave, 0); assert.equal(retry.towers.length, 0);
+});
+
+test('ten missions keep the original saves and unlock the new campaign sequentially', () => {
+  assert.equal(MISSIONS.length, 10);
+  const oldRecords = Object.fromEntries(MISSIONS.slice(0, 4).map((m, i) => [m.id, { stars: i % 3 + 1, score: 1000 + i }]));
+  const adapter = storage(JSON.stringify(oldRecords)), progress = new CampaignProgress(adapter);
+  assert.deepEqual(progress.records, oldRecords); assert.equal(progress.completed, 4);
+  assert.ok(progress.isUnlocked(4)); assert.equal(progress.isUnlocked(5), false);
+  for (let i = 4; i < MISSIONS.length; i++) {
+    assert.equal(progress.complete(i, 3, 5000), true);
+    if (i < 9) assert.ok(new CampaignProgress(adapter).isUnlocked(i + 1));
+  }
+  assert.equal(new CampaignProgress(adapter).completed, 10);
+  for (const mission of MISSIONS.slice(4)) assert.deepEqual(mission.towers, ['archer', 'crossbow', 'mage', 'cannon']);
+});
+test('gate health scales per mission; stars use its percentage and retries restore its maximum', () => {
+  let previous = 0;
+  for (const mission of MISSIONS) {
+    const sim = new Simulation(mission); assert.ok(sim.maxGateHp > previous); previous = sim.maxGateHp;
+    assert.equal(sim.castleHp, mission.gateHp); sim.phase = 'victory';
+    for (const [ratio, count] of [[1, 3], [.9, 3], [.899, 2], [.6, 2], [.599, 1], [0, 0]]) {
+      sim.castleHp = Math.round(sim.maxGateHp * ratio); assert.equal(sim.stars, count, `${mission.id}: ${ratio}`);
+    }
+    sim.gold = 0; const retry = new Simulation(mission);
+    assert.equal(retry.castleHp, mission.gateHp); assert.equal(retry.gold, 300); assert.equal(retry.stars, 0);
+  }
 });

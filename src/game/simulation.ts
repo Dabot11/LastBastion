@@ -6,13 +6,14 @@ export interface Tower extends Point { id: number; kind: TowerKind; level: numbe
 export interface Projectile extends Point { id: number; kind: TowerKind; targetId: number; target: Point; damage: number; damageKind: DamageKind; splash: number; speed: number; origin: Point; travelled: number; }
 export type GameEvent = { type: 'shot' | 'impact' | 'damage' | 'gateHit' | 'kill' | 'build' | 'upgrade' | 'wave' | 'gameover' | 'victory'; x: number; z: number; kind?: TowerKind; radius?: number; damage?: number; enemyId?: number; damageKind?: DamageKind };
 export class Simulation {
-  gold = WORLD.initialGold; castleHp = WORLD.castleHp; wave = 0; kills = 0; score = 0;
+  gold = WORLD.initialGold; castleHp: number; wave = 0; kills = 0; score = 0;
   phase: 'preparation' | 'wave' | 'gameover' | 'victory' = 'preparation'; preparation = WORLD.preparation;
   enemies: Enemy[] = []; towers: Tower[] = []; projectiles: Projectile[] = []; events: GameEvent[] = [];
   spawnQueue: EnemyKind[] = []; spawned = 0; waveTotal = 0; spawnTimer = 0; nextId = 1;
-  constructor(readonly mission: Mission = MISSIONS[0]) {}
+  constructor(readonly mission: Mission = MISSIONS[0]) { this.castleHp = mission.gateHp; }
+  get maxGateHp(): number { return this.mission.gateHp; }
   get map() { return this.mission.map; }
-  get stars(): number { return this.phase === 'victory' ? earnedStars(this.castleHp, WORLD.castleHp) : 0; }
+  get stars(): number { return this.phase === 'victory' ? earnedStars(this.castleHp, this.maxGateHp) : 0; }
   get finished(): boolean { return this.phase === 'victory' || this.phase === 'gameover'; }
   get alive(): number { return this.enemies.length; }
   build(kind: TowerKind, p: Point): string | Tower {

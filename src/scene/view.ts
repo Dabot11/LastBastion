@@ -62,7 +62,7 @@ export class GameView {
     let height = Math.max(w < 700 ? 32 : 28, 40 / aspect);
     const board = this.container.getBoundingClientRect();
     const hud = this.container.parentElement?.querySelector('.topbar')?.getBoundingClientRect();
-    const dock = this.container.parentElement?.querySelector('.tower-cards')?.getBoundingClientRect();
+    const dock = this.container.parentElement?.querySelector('.command-strip')?.getBoundingClientRect();
     const safeTop = (hud?.bottom ?? board.top + 110) - board.top + 16;
     const safeBottom = (dock?.top ?? board.bottom - 140) - board.top - 24;
     const safeHeight = Math.max(100, safeBottom - safeTop);
@@ -207,10 +207,10 @@ export class GameView {
     this.door.position.z = Math.sin(this.gateRecoil * 65) * this.gateRecoil * .16;
     this.door.rotation.z = Math.sin(this.gateRecoil * 50) * this.gateRecoil * .014;
     this.door.rotation.x = sim.castleHp ? 0 : -1.4;
-    this.door.getObjectByName('gate-damage-1')!.visible = sim.castleHp < WORLD.castleHp * .65;
-    this.door.getObjectByName('gate-damage-2')!.visible = sim.castleHp < WORLD.castleHp * .3;
+    this.door.getObjectByName('gate-damage-1')!.visible = sim.castleHp < sim.maxGateHp * .65;
+    this.door.getObjectByName('gate-damage-2')!.visible = sim.castleHp < sim.maxGateHp * .3;
     const gateLabel = gatePoint(0, .6, this.map);
-    this.damageLabels.update(visualDt, this.camera, this.container.clientWidth, this.container.clientHeight, new THREE.Vector3(gateLabel.x, WORLD.elevation + 4.8, gateLabel.z), sim.castleHp, WORLD.castleHp);
+    this.damageLabels.update(visualDt, this.camera, this.container.clientWidth, this.container.clientHeight, new THREE.Vector3(gateLabel.x, WORLD.elevation + 4.8, gateLabel.z), sim.castleHp, sim.maxGateHp);
     this.effects.update(visualDt);
     this.flames.forEach((flame, i) => flame.scale.setScalar(Number(flame.userData.baseSize) * (1 + .09 * Math.sin(time * 5 + i * 2.3))));
     let rangeCenter: Point | null = null, radius = 0;
@@ -233,9 +233,14 @@ export class GameView {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); renderer.setSize(320, 288); renderer.setPixelRatio(1);
     renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
     const scene = new THREE.Scene(); scene.add(new THREE.HemisphereLight(0xffffff, 0x657b88, 3)); const light = new THREE.DirectionalLight(0xffeac5, 4); light.position.set(-3, 5, 4); scene.add(light);
-    const camera = new THREE.OrthographicCamera(-1.8, 1.8, 1.7, -1.55, .1, 30); camera.position.set(3, 3.7, 5); camera.lookAt(0, 1.45, 0);
+    const camera = new THREE.OrthographicCamera(-1.05, 1.05, .945, -.945, .1, 30);
     const icons = {} as Record<TowerKind, string>;
-    for (const kind of Object.keys(TOWERS) as TowerKind[]) { const g = towerModel(kind); scene.add(g); renderer.render(scene, camera); icons[kind] = renderer.domElement.toDataURL(); scene.remove(g); }
+    // Frame the weapon and its parapet, rather than shrinking an entire tower into a card.
+    const centers: Record<TowerKind, number> = { archer: 2.35, crossbow: 2.2, mage: 2.45, cannon: 1.65 };
+    for (const kind of Object.keys(TOWERS) as TowerKind[]) {
+      camera.position.set(3, centers[kind] + 2.1, 5); camera.lookAt(0, centers[kind], 0);
+      const g = towerModel(kind); scene.add(g); renderer.render(scene, camera); icons[kind] = renderer.domElement.toDataURL(); scene.remove(g);
+    }
     renderer.dispose(); return icons;
   }
   loadMap(map: GameMap): void {

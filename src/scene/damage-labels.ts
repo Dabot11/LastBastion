@@ -9,6 +9,7 @@ export class DamageLabels {
   private spare: HTMLSpanElement[] = [];
   private serial = 0;
   private lastHp = -1;
+  private lastMaxHp = -1;
   constructor(container: HTMLElement) {
     this.layer.className = 'damage-layer'; this.layer.setAttribute('aria-hidden', 'true');
     this.gate.className = 'gate-label'; this.layer.append(this.gate); container.append(this.layer);
@@ -21,7 +22,7 @@ export class DamageLabels {
   }
   update(dt: number, camera: THREE.Camera, width: number, height: number, gatePosition: THREE.Vector3, hp: number, maxHp: number): void {
     const projected = gatePosition.clone().project(camera), ratio = hp / maxHp;
-    if (this.lastHp !== hp) { this.lastHp = hp; this.gate.innerHTML = `<small>PUERTA DEL CASTILLO</small><b>${hp} / ${maxHp}</b><i><em style="width:${ratio * 100}%"></em></i>`; }
+    if (this.lastHp !== hp || this.lastMaxHp !== maxHp) { this.lastHp = hp; this.lastMaxHp = maxHp; this.gate.innerHTML = `<small>PUERTA DEL CASTILLO</small><b>${hp} / ${maxHp}</b><i><em style="width:${ratio * 100}%"></em></i>`; }
     this.gate.classList.toggle('under-siege', ratio < .3);
     this.gate.style.transform = `translate(${(projected.x + 1) / 2 * width}px,${(1 - projected.y) / 2 * height}px) translate(-50%,-100%)`;
     this.gate.hidden = projected.z < -1 || projected.z > 1 || Math.abs(projected.x) > 1.1 || Math.abs(projected.y) > 1.1;

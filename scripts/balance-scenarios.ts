@@ -57,7 +57,7 @@ function improve(sim: Simulation, candidates: Site[]): boolean {
 }
 export interface WaveResult { wave: number; hp: number; gold: number; seconds: number; }
 export interface BalanceResult {
-  mission: string; strategy: Strategy; offset: number; phase: Simulation['phase']; hp: number; stars: number;
+  mission: string; strategy: Strategy; offset: number; phase: Simulation['phase']; hp: number; maxHp: number; stars: number;
   wave: number; kills: number; gold: number; spent: number; combatSeconds: number; minutesWithPreparation: number;
   towers: { kind: TowerKind; level: number; x: number; z: number }[]; waves: WaveResult[];
 }
@@ -99,7 +99,7 @@ export function runScenario(mission: Mission, strategy: Strategy, offset = 0): B
     sim.events.length = 0;
   }
   return {
-    mission: mission.id, strategy, offset, phase: sim.phase, hp: sim.castleHp, stars: sim.stars, wave: sim.wave,
+    mission: mission.id, strategy, offset, phase: sim.phase, hp: sim.castleHp, maxHp: sim.maxGateHp, stars: sim.stars, wave: sim.wave,
     kills: sim.kills, gold: sim.gold, spent: sim.towers.reduce((sum, t) => sum + t.invested, 0), combatSeconds: Math.round(combatSeconds),
     minutesWithPreparation: Math.round((combatSeconds + WORLD.preparation * sim.wave) / 60 * 10) / 10,
     towers: sim.towers.map(({ kind, level, x, z }) => ({ kind, level, x, z })), waves,

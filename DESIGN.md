@@ -1,17 +1,17 @@
 # The Last Bastion: MVP de campaña
 
-El objetivo es defender el castillo. El mundo pasa de una aldea a una villa, una ciudadela y el último bastión. Una misión termina con victoria o derrota, y cada victoria abre una decisión concreta: avanzar para conocer una nueva defensa o repetir para mejorar el resultado.
+El objetivo es defender el castillo. El mundo recorre diez aldeas, villas y fortalezas, hasta el castillo de la corona. Una misión termina con victoria o derrota, y cada victoria abre una decisión concreta: avanzar para conocer una nueva defensa o repetir para mejorar el resultado.
 
 ## Ciclo principal
 
 Elegir una misión → preparar posiciones → defender sus oleadas → recibir estrellas y puntuación → desbloquear un destino → avanzar o repetir.
 
-El MVP tiene cuatro misiones. Cada una combina un mapa diferente, entre cinco y ocho oleadas y un conjunto de defensas. La ruta sigue siendo única, los enemigos permanecen en ella y las torres se colocan libremente. La puerta de madera del castillo tiene 1000 puntos de salud. Los enemigos que alcanzan la entrada se detienen y la golpean repetidamente; su destrucción termina la misión. Solo dos atacan simultáneamente, con una fila de espera en la aproximación. Mantener una defensa que cubra los dos flancos permite rematar supervivientes y ganar tiempo para reinvertir durante el combate. El camino sube al umbral de una fortaleza grande asentada sobre terreno elevado.
+El MVP tiene diez misiones. Cada una combina un mapa diferente, entre cinco y diez oleadas y un conjunto de defensas. Las primeras cuatro introducen un arma cada una; las otras seis varían corredores, armaduras, grupos y guardianes usando las cuatro defensas. Una puerta más fuerte da margen ante ejércitos mayores; los umbrales de estrellas siguen siendo porcentajes, no cantidades fijas. El menú de construcción se oculta al seleccionar un arma, liberando terreno sin cambiar la cámara. La ruta sigue siendo única, los enemigos permanecen en ella y las torres se colocan libremente. La puerta de madera del castillo tiene entre 1000 y 3000 puntos de salud según la misión. Los enemigos que alcanzan la entrada se detienen y la golpean repetidamente; su destrucción termina la misión. Solo dos atacan simultáneamente, con una fila de espera en la aproximación. Mantener una defensa que cubra los dos flancos permite rematar supervivientes y ganar tiempo para reinvertir durante el combate. El camino sube al umbral de una fortaleza grande asentada sobre terreno elevado.
 
 ## Recompensas que sí están en el MVP
 
 - **Oro de misión:** se gana al derrotar enemigos y superar oleadas; se gasta en torres y mejoras. Cada misión empieza con 300. No se acumula fuera de la partida.
-- **Estrellas:** una por ganar, dos con al menos 60% de salud y tres con al menos 90%. Se conserva el mejor resultado de cada misión; el objetivo de perfección son doce estrellas.
+- **Estrellas:** una por ganar, dos con al menos 60% de salud y tres con al menos 90%. Se conserva el mejor resultado de cada misión; el objetivo de perfección son treinta estrellas.
 - **Nuevos destinos y armas:** basta ganar para avanzar. No se exigen tres estrellas. La aldea empieza solo con arqueros; la villa añade ballestas, la ciudadela magos y el último bastión cañones.
 - **Puntuación personal:** se conserva la mejor de cada misión como objetivo secundario, sin sumar otra moneda.
 
@@ -29,7 +29,7 @@ Revisar primero que una estrategia razonable permita ganar la aldea, que varias 
 
 ## Iteraciones siguientes
 
-1. **Balance y acabado:** ajustar cantidades, salud, recompensas y posiciones a partir de partidas; mejorar información de la próxima oleada, animaciones y lectura visual. Mantener el MVP pequeño hasta que las cuatro misiones funcionen bien.
+1. **Balance y acabado:** ajustar cantidades, salud, recompensas y posiciones a partir de partidas; mejorar información de la próxima oleada, animaciones y lectura visual. Mantener el MVP pequeño hasta que las diez misiones funcionen bien.
 2. **Variedad útil:** añadir una región de dos o tres misiones con cambios de estrategia, enemigos especiales y selección de defensas antes de jugar. Reutilizar los sistemas existentes.
 3. **Un nivel de comandante, si aporta valor:** introducir XP por completar misiones y objetivos claros. El nivel debería desbloquear opciones, personalización o variantes; no exigir repetir la misma misión para poder avanzar.
 4. **Pocos logros comprensibles:** por ejemplo, defender sin vender torres, conseguir tres estrellas o derrotar al primer guardián. Añadirlos cuando el jugador ya entiende la campaña.

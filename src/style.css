@@ -494,3 +494,75 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
 .gate-label.under-siege { border-color:#ff8a74; }
 .gate-label.under-siege em { background:#ef7861; }
 @media(max-width:600px) { .damage-number { font-size:19px; } .damage-number.gate { font-size:23px; } .gate-label { min-width:89px; padding:5px 7px; } .gate-label small { font-size:7px; } }
+
+/* A stable command strip keeps the camera still when the construction drawer opens. */
+.command-strip { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(320px, 1.3fr); gap: 16px; padding: 11px 15px; border: 1px solid #a5b8b95c; border-radius: 14px; background: linear-gradient(130deg, #172f43f7, #142e3def); box-shadow: 0 9px 28px #09192540; pointer-events: auto; }
+.build-command { min-width: 0; align-self: center; }
+.defenses-toggle { display: flex; align-items: center; gap: 9px; min-height: 42px; width: 100%; padding: 8px 12px; background: #607f8030; border-color: #beccbd5c; border-radius: 8px; color: #f5e6bf; font-weight: 700; font-size: 13px; }
+.defenses-toggle > svg { width: 20px; height: 20px; }
+.drawer-arrow { display: flex; margin-left: auto; transition: transform .2s; }
+.drawer-arrow svg { width: 17px; height: 17px; }
+.defenses-toggle[aria-expanded="true"] .drawer-arrow { transform: rotate(180deg); }
+.build-status { display: flex; align-items: center; gap: 10px; margin-top: 6px; min-height: 17px; }
+.build-status #build-tip { color: #c4d6d5; font-size: 10px; }
+.build-status #cancel { margin-left: auto; flex-shrink: 0; font-size: 10px; padding: 0; }
+.command-strip .wave-action { width: auto; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 12px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.command-strip .wave-action > .tiny-label { display: none; }
+.command-strip #next-label { text-align: left; grid-column: 1; grid-row: 1; font-size: 11px; }
+.command-strip #next-countdown { text-align: left; grid-column: 1; grid-row: 2; }
+.command-strip #next-wave { grid-column: 2; grid-row: 1 / 3; min-height: 42px; padding: 10px 14px; font-size: 12px; }
+.command-strip .preparation-track { grid-column: 1 / 3; grid-row: 3; margin-top: 4px; }
+.defenses-menu { margin-bottom: 10px; padding: 12px; border: 1px solid #8fa9a655; border-radius: 16px; background: #132e40ee; pointer-events: auto; box-shadow: 0 8px 28px #09192535; }
+.defenses-menu .build-heading { justify-content: space-between; margin-bottom: 9px; text-shadow: none; }
+.defenses-menu .build-heading > span:last-child { font-size: 10px; color: #b3cbcc; }
+.defenses-menu .tower-cards { gap: 8px; }
+.defenses-menu .tower-card { min-height: 162px; }
+.defenses-menu .tower-card img { width: 124px; height: 98px; }
+.placement-hint { bottom: 180px; }
+.defenses-open .placement-hint { bottom: 380px; }
+.tower-panel { max-height: calc(100dvh - 320px); }
+.defenses-open .tower-panel { max-height: calc(100dvh - 520px); }
+.campaign-dialog { height: min(750px, 88dvh); overflow: hidden; }
+.campaign-chapters { display: flex; flex-direction: column; min-height: 0; }
+.campaign-chapters > :not(.mission-list) { flex-shrink: 0; }
+.mission-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 2px 6px 2px 2px; scrollbar-width: thin; scrollbar-color: #788f89 #172e3e; }
+.mission-card { flex-shrink: 0; }
+.mission-copy > .mission-challenge { color: #d8c49b; font-size: 10px; }
+@media (max-width: 1100px) {
+  .command-strip { grid-template-columns: minmax(210px, 1fr) minmax(270px, 1.2fr); gap: 12px; }
+}
+@media (max-width: 760px) {
+  .command-strip { grid-template-columns: 1fr; padding: 9px 10px; gap: 8px; border-radius: 10px; }
+  .build-command { display: flex; align-items: center; gap: 8px; }
+  .defenses-toggle { min-height: 36px; width: auto; flex-shrink: 0; padding: 7px 9px; font-size: 11px; gap: 6px; }
+  .defenses-toggle > svg { width: 16px; height: 16px; }
+  .build-status { flex: 1; flex-wrap: wrap; gap: 3px; margin-top: 0; }
+  .build-status #build-tip { font-size: 9px; }
+  .build-status #cancel { margin-left: 0; }
+  .command-strip #next-wave { min-height: 36px; padding: 8px 10px; font-size: 11px; }
+  .command-strip #next-label { font-size: 10px; }
+  .defenses-menu { padding: 9px; border-radius: 12px; margin-bottom: 7px; }
+  .defenses-menu .build-heading { gap: 5px; }
+  .defenses-menu .build-heading > span:last-child { font-size: 9px; }
+  .defenses-menu .tower-cards { gap: 5px; }
+  .defenses-menu .tower-card { min-height: 119px; }
+  .defenses-menu .tower-card img { width: 78px; height: 69px; }
+  .placement-hint { bottom: 195px; }
+  .defenses-open .placement-hint { bottom: 355px; }
+  .tower-panel { max-height: calc(100dvh - 365px); }
+  .defenses-open .tower-panel { max-height: calc(100dvh - 530px); }
+  .campaign-dialog { display: flex; flex-direction: column; height: calc(100dvh - 24px); }
+  .campaign-hero { flex-shrink: 0; padding: 17px 20px 12px; }
+  .campaign-hero > p { margin-bottom: 8px; }
+  .campaign-hero .secondary { margin-top: 0; }
+  .campaign-chapters { flex: 1; padding: 15px; }
+  .campaign-summary { margin-top: 12px; }
+  .campaign-track { margin-bottom: 10px; }
+  .star-rules { margin-top: 12px; }
+  .save-note { margin-top: 6px; }
+}
+@media (max-height: 620px) and (min-width: 761px) {
+  .defenses-menu .tower-card { min-height: 115px; }
+  .defenses-menu .tower-card img { width: 85px; height: 64px; }
+  .campaign-dialog { height: 92dvh; max-height: 92dvh; }
+}

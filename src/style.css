@@ -459,6 +459,7 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
 .audio-settings input { accent-color: var(--gold); }
 .audio-settings input[type=range] { width: 100px; }
 .audio-settings output { min-width: 30px; font-size: 11px; }
+.audio-credits { color: var(--gold); font-size: 11px; text-underline-offset: 3px; }
 .pause-tag svg { color: var(--gold); width: 16px; height: 16px; }
 .pause-tag b { font-size: 9px; letter-spacing: 1px; color: var(--gold); }
 .pause-tag small { display: inline; margin-left: 8px; font-size: 10px; color: #bfd0d3; }

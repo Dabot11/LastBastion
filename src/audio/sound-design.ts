@@ -1,9 +1,9 @@
-// Original procedural sound design; all sounds work offline without recordings.
+// Original synthesis for music, other effects and unpitched weapon fallbacks.
 export const SOUND_NAMES = ['arrow', 'crossbow', 'cannon', 'magic', 'impact-arrow', 'impact-crossbow', 'impact-cannon', 'impact-magic', 'gate', 'build', 'upgrade', 'wave', 'victory', 'defeat', 'step', 'voice-minion', 'voice-runner', 'voice-beast', 'voice-guardian'] as const;
 export type SoundName = typeof SOUND_NAMES[number];
 export const AUDIO_SAMPLE_RATE = 22050;
 export const MUSIC_SECONDS = 24;
-const durations: Record<SoundName, number> = { arrow: .28, crossbow: .34, cannon: 1.15, magic: .62, 'impact-arrow': .15, 'impact-crossbow': .23, 'impact-cannon': .66, 'impact-magic': .45, gate: .40, build: .38, upgrade: .85, wave: .80, victory: 1.8, defeat: 1.6, step: .16, 'voice-minion': .35, 'voice-runner': .28, 'voice-beast': .58, 'voice-guardian': .70 };
+const durations: Record<SoundName, number> = { arrow: .20, crossbow: .18, cannon: 1.15, magic: .62, 'impact-arrow': .15, 'impact-crossbow': .13, 'impact-cannon': .66, 'impact-magic': .45, gate: .40, build: .38, upgrade: .85, wave: .80, victory: 1.8, defeat: 1.6, step: .16, 'voice-minion': .35, 'voice-runner': .28, 'voice-beast': .58, 'voice-guardian': .70 };
 function random(seed: number): () => number { let value = seed >>> 0; return () => { value = (value * 1664525 + 1013904223) >>> 0; return value / 4294967296 * 2 - 1; }; }
 function envelope(t: number, duration: number, decay = 6): number { return Math.min(1, t / .003) * Math.exp(-decay * t / duration) * Math.min(1, (duration - t) / .015); }
 function noise(data: Float32Array, rate: number, start: number, duration: number, amplitude: number, low: number, high: number, rng: () => number, decay = 6): void {
@@ -29,14 +29,14 @@ export function renderSound(name: SoundName, rate = AUDIO_SAMPLE_RATE, seed = 71
   const data = new Float32Array(Math.ceil(durations[name] * rate)), rng = random(seed);
   const n = (start: number, duration: number, amp: number, lo: number, hi: number, decay = 6) => noise(data, rate, start, duration, amp, lo, hi, rng, decay);
   const t = (start: number, duration: number, amp: number, from: number, to = from, decay = 6) => tone(data, rate, start, duration, amp, from, to, decay);
-  if (name === 'arrow') { pluck(data, rate, 0, .16, .8, 188, rng); n(0, .026, .65, 1400, 8000); n(.022, .23, .46, 600, 6800, 4); }
-  else if (name === 'crossbow') { pluck(data, rate, 0, .12, .9, 102, rng); n(0, .05, .9, 420, 7000); t(.008, .12, .12, 690, 510); n(.035, .24, .60, 1000, 8200, 4); }
+  if (name === 'arrow') { n(0, .018, .50, 1400, 8500); n(.005, .145, .90, 850, 7600, 4); }
+  else if (name === 'crossbow') { n(0, .022, 1.2, 600, 7400, 8); n(.002, .048, .80, 120, 2300, 7); n(.014, .11, .60, 1200, 7800, 5); }
   else if (name === 'cannon' || name === 'impact-cannon') { const shot = name === 'cannon'; n(0, .22, shot ? 1.9 : 1.35, 90, 6300); t(0, .45, shot ? .85 : .45, shot ? 105 : 138, 33, 5); n(.016, durations[name] - .016, 1.4, 28, 310, 4); for (const start of [.06, .13, .22]) n(start, .20, .35, 180, 2800); }
   else if (name === 'magic' || name === 'impact-magic') { n(0, .30, .52, 1300, 7800, 3); t(.015, .32, .22, 440, name === 'magic' ? 880 : 330, 3); for (const [i, frequency] of [1174, 1760, 2349].entries()) t(.07 + i * .028, .35, .11, frequency, frequency * .98, 4); }
   else if (name.startsWith('voice-')) { const pitch: Record<string, number> = { 'voice-minion': 106, 'voice-runner': 158, 'voice-beast': 62, 'voice-guardian': 43 }; voice(data, rate, pitch[name], rng); }
   else if (name === 'gate') { n(0, .15, 1.3, 80, 3200); t(0, .22, .28, 148, 63); n(.08, .25, .40, 900, 5900); }
   else if (name === 'impact-arrow') { n(0, .06, .85, 450, 5100); t(0, .10, .22, 215, 115); }
-  else if (name === 'impact-crossbow') { n(0, .065, .82, 1100, 7500); t(.004, .18, .20, 780, 620); t(.004, .15, .15, 1310, 1280); }
+  else if (name === 'impact-crossbow') { n(0, .045, .92, 200, 4400, 8); n(.006, .10, .55, 45, 540, 7); n(.008, .065, .24, 1500, 7200, 8); }
   else if (name === 'step') { n(0, .08, .65, 100, 1400); n(.02, .11, .28, 1900, 5900); }
   else if (name === 'build') { for (const start of [0, .09, .21]) { n(start, .10, .8, 160, 3900); t(start, .09, .18, 280, 150); } }
   else if (name === 'upgrade') { for (const [i, frequency] of [587, 698, 880, 1174].entries()) { t(i * .11, .4, .30, frequency, frequency, 4); pluck(data, rate, i * .11, .23, .30, frequency / 2, rng); } n(0, .14, .35, 1600, 5900); }

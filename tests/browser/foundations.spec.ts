@@ -56,11 +56,32 @@ for (const viewport of [{ width: 1536, height: 844 }, { width: 1920, height: 108
   expect(errors).toEqual([]);
 });
 
-test('original audio unlocks on a gesture, has distinct weapon buffers, and exposes persistent music and volume controls', async ({ page }) => {
+test('audio unlocks on a gesture, plays recorded bow and crossbow shots, and preserves music and volume controls', async ({ page }) => {
   test.setTimeout(150000); const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  const recordings: string[] = []; page.on('response', response => { if (/\/samples\/(arrow|crossbow)\.wav/.test(response.url()) && response.ok()) recordings.push(response.url()); });
   await page.goto('/'); await page.getByRole('button', { name: 'Cómo jugar', exact: true }).click();
   await page.locator('#audio-toggle').click();
   await expect.poll(async () => page.evaluate(async () => { const { gameAudio: audio } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); return audio.state; })).toBe('running');
+  // Decode the bundled recordings at the context rate, rather than accepting the synth fallback.
+  await expect.poll(async () => page.evaluate(async () => {
+    const { gameAudio: audio } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
+    const { buffers, context } = audio as any;
+    return buffers.get('arrow')?.sampleRate === context.sampleRate && buffers.get('crossbow')?.sampleRate === context.sampleRate;
+  })).toBe(true);
+  expect(recordings).toHaveLength(2);
+  const emitted = await page.evaluate(async () => {
+    const { gameAudio: audio } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
+    const { buffers } = audio as any, played: string[] = [];
+    const start = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function (...args: Parameters<typeof start>) {
+      for (const name of ['arrow', 'crossbow']) if (this.buffer === buffers.get(name)) played.push(name);
+      return start.apply(this, args);
+    };
+    try { audio.play({ type: 'shot', kind: 'archer', x: 0, z: 0 }); audio.play({ type: 'shot', kind: 'crossbow', x: 0, z: 0 }); }
+    finally { AudioBufferSourceNode.prototype.start = start; }
+    return played;
+  });
+  expect(emitted).toEqual(['arrow', 'crossbow']);
   const get = () => page.evaluate(async () => { const { gameAudio: audio } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); return { music: audio.playingMusic, muted: audio.muted, volume: audio.volume, enabled: audio.musicEnabled }; });
   expect((await get()).music).toBe(true); await page.locator('#music-enabled').uncheck(); expect((await get()).music).toBe(false);
   const waveforms = await page.evaluate(async () => {
@@ -70,6 +91,10 @@ test('original audio unlocks on a gesture, has distinct weapon buffers, and expo
     return [...audio.buffers.entries()].map(([name, buffer]: any) => { const pcm = buffer.getChannelData(0); return { name, seconds: buffer.duration, energy: pcm.reduce((a: number, b: number) => a + b * b, 0) }; });
   });
   for (const name of ['arrow', 'crossbow', 'magic', 'cannon', 'gate', 'voice-beast']) expect(waveforms.find(p => p.name === name)?.energy).toBeGreaterThan(.1);
+  expect(waveforms.find(p => p.name === 'arrow')!.seconds).toBeGreaterThan(.17);
+  expect(waveforms.find(p => p.name === 'arrow')!.seconds).toBeLessThan(.20);
+  expect(waveforms.find(p => p.name === 'crossbow')!.seconds).toBeGreaterThan(.12);
+  expect(waveforms.find(p => p.name === 'crossbow')!.seconds).toBeLessThan(.16);
   await page.locator('#audio-volume').focus(); await page.keyboard.press('Home'); for (let i = 0; i < 7; i++) await page.keyboard.press('ArrowRight');
   await expect(page.locator('#volume-value')).toHaveText('35%'); expect((await get()).volume).toBe(.35);
   await page.locator('#music-enabled').check(); expect((await get()).music).toBe(true);
@@ -79,4 +104,22 @@ test('original audio unlocks on a gesture, has distinct weapon buffers, and expo
   await page.reload(); await page.getByRole('button', { name: 'Cómo jugar', exact: true }).click();
   await expect(page.locator('#music-enabled')).toBeChecked(); await expect(page.locator('#audio-volume')).toHaveValue('35'); expect((await get()).muted).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test('unavailable weapon recordings use distinct short fallbacks without breaking audio', async ({ page }) => {
+  test.setTimeout(150000); const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  let failed = 0;
+  await page.route('**/samples/*.wav', async route => { failed++; await route.fulfill({ status: 503, body: 'Unavailable' }); });
+  await page.goto('/'); await page.getByRole('button', { name: 'Cómo jugar', exact: true }).click(); await page.locator('#audio-toggle').click();
+  await expect.poll(() => failed).toBe(2);
+  await expect.poll(async () => page.evaluate(async () => { const { gameAudio: audio } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); return audio.state; })).toBe('running');
+  const result = await page.evaluate(async () => {
+    const { gameAudio: audio } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
+    audio.play({ type: 'shot', kind: 'archer', x: 0, z: 0 }); audio.play({ type: 'shot', kind: 'crossbow', x: 0, z: 0 });
+    const buffers = (audio as any).buffers;
+    return ['arrow', 'crossbow'].map(name => { const buffer = buffers.get(name); return { seconds: buffer.duration, energy: buffer.getChannelData(0).reduce((sum: number, value: number) => sum + value * value, 0) }; });
+  });
+  expect(result[0].seconds).toBeCloseTo(.20, 3); expect(result[1].seconds).toBeCloseTo(.18, 3);
+  for (const buffer of result) expect(buffer.energy).toBeGreaterThan(.1);
+  await page.locator('#audio-toggle').click(); expect(errors).toEqual([]);
 });

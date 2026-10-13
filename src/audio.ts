@@ -1,6 +1,12 @@
 import type { GameEvent, Simulation } from './game/simulation';
 import { AUDIO_SAMPLE_RATE, renderMusic, renderSound, type SoundName } from './audio/sound-design';
 
+// Vite bundles and fingerprints these recordings, including under /LastBastion/.
+const weaponSamples = [
+  ['arrow', new URL('./audio/samples/arrow.wav', import.meta.url).href],
+  ['crossbow', new URL('./audio/samples/crossbow.wav', import.meta.url).href],
+] as const;
+
 export class AudioEffects {
   muted = true; musicEnabled = true; volume = .65;
   private context: AudioContext | null = null;
@@ -21,6 +27,14 @@ export class AudioEffects {
     this.context = new AudioContext(); this.master = this.context.createGain(); this.musicGain = this.context.createGain();
     const limiter = this.context.createDynamicsCompressor(); limiter.threshold.value = -9; limiter.knee.value = 12; limiter.ratio.value = 8; limiter.attack.value = .004; limiter.release.value = .18;
     this.master.gain.value = 0; this.master.connect(limiter); limiter.connect(this.context.destination); this.musicGain.connect(this.master);
+    for (const [name, url] of weaponSamples) void this.loadWeaponSample(name, url, this.context);
+  }
+  private async loadWeaponSample(name: 'arrow' | 'crossbow', url: string, context: AudioContext): Promise<void> {
+    try {
+      const response = await fetch(url); if (!response.ok) return;
+      const buffer = await context.decodeAudioData(await response.arrayBuffer());
+      this.buffers.set(name, buffer);
+    } catch { /* The short, unpitched fallback still works if a recording cannot load. */ }
   }
   toggle(): boolean {
     this.initialize(); this.muted = !this.muted; void this.context!.resume();
@@ -57,7 +71,7 @@ export class AudioEffects {
   }
   play(event: GameEvent): void {
     const weapon = event.kind === 'archer' ? 'arrow' : event.kind === 'mage' ? 'magic' : event.kind;
-    if (event.type === 'shot' && weapon) this.emit(weapon, event.x, event.z, event.kind === 'cannon' ? .55 : .40);
+    if (event.type === 'shot' && weapon) this.emit(weapon, event.x, event.z, event.kind === 'cannon' ? .55 : event.kind === 'crossbow' ? .48 : .40);
     else if (event.type === 'impact' && weapon) this.emit(`impact-${weapon}`, event.x, event.z, .28, .10);
     else if (event.type === 'spawn' || event.type === 'kill' || event.type === 'damage') {
       if (event.enemyKind && (event.type !== 'spawn' || event.enemyKind === 'guardian' || event.enemyKind === 'beast' || (event.enemyId ?? 0) % 5 === 0)) this.emit(`voice-${event.enemyKind}`, event.x, event.z, event.type === 'spawn' ? .22 : .13, .85);

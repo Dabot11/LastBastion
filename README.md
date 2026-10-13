@@ -24,22 +24,15 @@ npm run test:browser # Interacción real en Chromium con Playwright
 
 Las pruebas de navegador usan Chromium del sistema si existe en `/usr/bin/chromium`. En otros equipos ejecuta `npx playwright install chromium` o indica su ejecutable con `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`. Playwright inicia Vite automáticamente para las pruebas. Las capturas se guardan en `test-results/`.
 
-## Publicar en GitHub Pages, paso a paso
+## Publicación automática en GitHub Pages
 
-El código incluye dos automatizaciones: **Comprobar el juego** comprueba cada cambio en `main`; **Publicar The Last Bastion** compila y publica solo cuando tú la ejecutas. No necesitas Node.js en tu computadora para publicar desde GitHub.
+Cada cambio que se sube a `main` activa **Publicar The Last Bastion**: instala las dependencias, ejecuta las pruebas, compila el juego y publica el resultado en GitHub Pages. Si las pruebas o la compilación fallan, conserva la versión publicada. **Comprobar el juego** también valida los cambios y las propuestas de cambios antes de integrarlas. No necesitas ejecutar **Run workflow** para publicar actualizaciones.
 
-1. Abre tu repositorio: https://github.com/Dabot11/LastBastion
-2. En la barra superior del repositorio, pulsa **Settings** (Configuración).
-3. En el menú lateral izquierdo, pulsa **Pages**.
-4. En **Build and deployment → Source**, selecciona **GitHub Actions**. No elijas una carpeta ni una rama para servir los archivos originales.
-5. Vuelve a la barra superior del repositorio y pulsa **Actions**.
-6. En la lista de la izquierda, selecciona **Publicar The Last Bastion**.
-7. Pulsa **Run workflow**, selecciona la rama **main** y confirma con el botón verde **Run workflow**.
-8. Espera a que la ejecución termine con una marca verde. Abre esa ejecución para ver el enlace de la publicación, o vuelve a **Settings → Pages** y pulsa **Visit site**.
+La configuración inicial, que solo se hace una vez, está en **Settings → Pages → Build and deployment → Source → GitHub Actions**. El repositorio LastBastion ya utiliza esta configuración.
 
-La dirección prevista, después de una publicación exitosa, es **https://dabot11.github.io/LastBastion/**. Este enlace no funciona hasta completar la primera publicación.
+El juego se publica en **https://dabot11.github.io/LastBastion/**. Para revisar una actualización, abre **Actions → Publicar The Last Bastion** y comprueba que la ejecución del cambio termine con una marca verde. Cada ejecución incluye el enlace al sitio publicado.
 
-Para publicar actualizaciones, guarda el código actualizado en `main` y repite los pasos 5–8. La publicación es manual para que tú decidas cuándo cambiar la versión pública. Los archivos de `dist/` se generan automáticamente y no se suben al repositorio. Vite usa rutas de recursos relativas para que el juego cargue dentro de `/LastBastion/`.
+También puedes volver a publicar la versión actual desde **Actions → Publicar The Last Bastion → Run workflow → main** si necesitas repetir una ejecución. Este control es opcional. Los archivos de `dist/` se generan automáticamente y no se suben al repositorio. Vite usa rutas de recursos relativas para que el juego cargue dentro de `/LastBastion/`.
 
 Si no ves **Settings**, entra con una cuenta administradora del repositorio. Si GitHub indica que tu plan no admite Pages para un repositorio privado, necesitas un plan compatible o un repositorio público; revisa esa decisión antes de cambiar su visibilidad. Si no aparece la automatización en Actions, comprueba que los archivos `.github/workflows/` estén en la rama `main` y que Actions esté habilitado para el repositorio.
 

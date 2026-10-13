@@ -1,7 +1,9 @@
 name: Publicar The Last Bastion
 
-# Publication is deliberate: run this from Actions after selecting GitHub Actions in Pages settings.
+# Publish verified changes automatically when they reach main.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:

@@ -3,10 +3,10 @@ import { test, expect } from '@playwright/test';
 test('three crossbow models, target controls, split volleys and visible poison work in the real battlefield', async ({ page }) => {
   test.setTimeout(240000); await page.setViewportSize({ width: 1536, height: 844 });
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
-  await page.addInitScript(() => localStorage.setItem('last-bastion-campaign-v1', JSON.stringify({ pines: { stars: 3, score: 1000 }, market: { stars: 3, score: 1000 } })));
+  await page.addInitScript(() => localStorage.setItem('last-bastion-campaign-v1', JSON.stringify(Object.fromEntries(['pines', 'market', 'citadel', 'siege', 'woodland'].map(id => [id, { stars: 3, score: 1000 }])))));
   await page.goto('/');
   for (const [kind, price, expectedShots] of [['precision', 150, 1], ['triple', 200, 2], ['poison', 250, 1]] as const) {
-    await page.getByRole('button', { name: 'Jugar: Ciudadela real', exact: true }).click(); await page.getByRole('button', { name: 'Pausar', exact: true }).click();
+    await page.getByRole('button', { name: 'Jugar: Villa de las caravanas', exact: true }).click(); await page.getByRole('button', { name: 'Pausar', exact: true }).click();
     await page.locator('#defenses-toggle').click();
     expect(await page.locator('[data-tower]').evaluateAll(cards => cards.map(card => (card as HTMLElement).dataset.tower))).toEqual(['precision', 'triple', 'poison']);
     await expect(page.locator(`[data-tower="${kind}"]`)).toContainText(String(price));

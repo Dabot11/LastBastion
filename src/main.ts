@@ -112,6 +112,7 @@ function frame(now: number): void {
   uiAccumulator += dt;
   if (uiAccumulator >= .08) { ui.update(sim, paused, speed, view.placementMessage(sim), progress); uiAccumulator = 0; }
   // Reflect combat and purchases before a newly introduced model compiles its graphics shaders.
+  view.guidanceEnabled = ui.guidanceEnabled;
   view.update(sim, paused || overlay ? 0 : dt * speed, now / 1000); sim.events.length = 0;
 }
 ui.update(sim, paused, speed, view.placementMessage(sim), progress); requestAnimationFrame(frame);

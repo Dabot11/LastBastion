@@ -21,7 +21,7 @@ for (const viewport of [{ width: 1536, height: 844 }, { width: 1920, height: 108
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/'); await page.getByRole('button', { name: 'Iniciar campaña', exact: true }).click(); await page.getByRole('button', { name: 'Pausar', exact: true }).click();
   const count = await page.evaluate(async () => { const { simulation: sim, battlefield: view } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); return { pads: sim.map.pads.length, stones: view.constructionPads.foundations.count, overlay: !!view.scene.getObjectByName('buildable-terrain') }; });
-  expect(count.pads).toBe(14); expect(count.stones).toBe(14); expect(count.overlay).toBe(false);
+  expect(count.pads).toBe(4); expect(count.stones).toBe(4); expect(count.overlay).toBe(false);
   await page.screenshot({ path: `test-results/hexagonal-bases-${viewport.width}.png`, animations: 'disabled' });
   const pad = await padPoint(page); await page.mouse.click(pad.px, pad.py); await expect(page.locator('#defenses-menu')).toBeVisible();
   await page.locator('[data-tower="precision"]').click(); await expect(page.locator('#defenses-menu')).toBeHidden();

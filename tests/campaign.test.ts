@@ -27,7 +27,7 @@ test('all mission maps are distinct, continuous and have no crossing, with free 
       const a = map.segments[i], b = map.segments[j];
       assert.equal(orient(a.start, a.end, b.start) * orient(a.start, a.end, b.end) < 0 && orient(b.start, b.end, a.start) * orient(b.start, b.end, a.end) < 0, false, mission.name);
     }
-    assert.ok(map.pads.length >= 12 && map.pads.length <= 16, `${mission.name}: enough strategic bases without overcrowding`);
+    assert.ok(map.pads.length >= 4 && map.pads.length <= 14, `${mission.name}: enough strategic bases without overcrowding`);
     for (const pad of map.pads) assert.equal(placementError(pad, [], 1000, 500, map), null);
     for (const obstacle of map.obstacles) assert.ok(placementError(obstacle, [], 1000, 100, map));
   }
@@ -78,8 +78,8 @@ test('invalid and unavailable storage cannot corrupt progress or stop playing', 
 });
 test('weapon availability belongs to the mission and retries reset gold, castle and upgrades', () => {
   const first = new Simulation(); assert.equal(typeof first.build('triple', { x: 0, z: 0 }), 'string'); assert.equal(typeof first.build('poison', { x: 0, z: 0 }), 'string'); assert.equal(first.gold, 300);
-  assert.deepEqual(MISSIONS.slice(0, 3).map(m => m.towers), [['precision'], ['precision', 'triple'], ['precision', 'triple', 'poison']]);
-  assert.deepEqual(['precision', 'triple', 'poison'].map(kind => towerUnlockMission(kind as 'precision' | 'triple' | 'poison')), [1, 2, 3]);
+  assert.deepEqual(MISSIONS.slice(0, 3).map(m => m.towers), [['precision'], ['precision'], ['precision']]);
+  assert.deepEqual(['precision', 'triple', 'poison'].map(kind => towerUnlockMission(kind as 'precision' | 'triple' | 'poison')), [1, 4, 6]);
   assert.equal(typeof first.build('triple', { x: 0, z: 0 }), 'string');
   first.castleHp = 200; first.gold = 2; const retry = new Simulation(first.mission);
   assert.equal(retry.castleHp, 1000); assert.equal(retry.gold, 300); assert.equal(retry.wave, 0); assert.equal(retry.towers.length, 0);
@@ -96,7 +96,7 @@ test('ten missions keep the original saves and unlock the new campaign sequentia
     if (i < 9) assert.ok(new CampaignProgress(adapter).isUnlocked(i + 1));
   }
   assert.equal(new CampaignProgress(adapter).completed, 10);
-  for (const mission of MISSIONS.slice(4)) assert.deepEqual(mission.towers, ['precision', 'triple', 'poison']);
+  for (const mission of MISSIONS.slice(5)) assert.deepEqual(mission.towers, ['precision', 'triple', 'poison']);
 });
 test('gate health scales per mission; stars use its percentage and retries restore its maximum', () => {
   let previous = 0;

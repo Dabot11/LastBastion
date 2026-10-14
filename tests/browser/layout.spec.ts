@@ -70,7 +70,7 @@ for (const viewport of [{ width: 1536, height: 844 }, { width: 1920, height: 108
   await page.keyboard.press('Escape');
   await page.keyboard.press('1'); const build = await point(page); await page.mouse.move(build.px, build.py);
   await expect(page.locator('#placement-hint')).toContainText('Ubicación válida'); await page.mouse.click(build.px, build.py); await expect(page.locator('#gold')).toHaveText('150');
-  await page.keyboard.press('Escape'); await page.keyboard.press('3'); await expect(page.locator('#toast')).toHaveText('No tienes suficiente oro');
+  await page.keyboard.press('Escape'); await page.keyboard.press('2'); await expect(page.locator('#toast')).toHaveText('No tienes suficiente oro');
   const notice = await page.locator('#toast').boundingBox(); expect(notice).toEqual(warning);
   const placed = await page.evaluate(async () => { const { simulation: sim } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src); return { x: sim.towers[0].x, z: sim.towers[0].z }; });
   expect(placed.x).toBeCloseTo(build.x, 2); expect(placed.z).toBeCloseTo(build.z, 2);

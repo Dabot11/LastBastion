@@ -7,7 +7,7 @@ import { PAD_RADIUS, distance, padAt, placementError, placementIssue, terrainPla
 
 for (const mission of MISSIONS) test(`hexagonal foundations are clear, spaced and useful along the route: ${mission.name}`, () => {
   const map = mission.map;
-  assert.ok(map.pads.length >= 12 && map.pads.length <= 16);
+  assert.ok(map.pads.length >= 4 && map.pads.length <= 14);
   assert.equal(new Set(map.pads.map(p => p.id)).size, map.pads.length);
   for (const [i, pad] of map.pads.entries()) {
     assert.equal(placementError(pad, [], 10000, 500, map), null);
@@ -39,7 +39,7 @@ test('clear grass is not a hidden construction slot; road and solid obstacles re
   assert.equal(sim.build('poison', map.pads[0]), 'Esta defensa se desbloquea en otra misión');
 });
 test('all defense levels share a single foundation and keep their own cost and upgrade animation events', () => {
-  const sim = new Simulation(MISSIONS[3]); sim.gold = 6000;
+  const sim = new Simulation(MISSIONS[5]); sim.gold = 6000;
   for (const [i, kind] of sim.mission.towers.entries()) {
     const pad = sim.map.pads[i], tower = sim.build(kind, pad); assert.notEqual(typeof tower, 'string'); if (typeof tower === 'string') continue;
     const before = sim.towers.length; assert.equal(sim.upgrade(tower.id), null); assert.equal(sim.upgrade(tower.id), null);

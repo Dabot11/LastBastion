@@ -1,6 +1,6 @@
 # MVP de ballestas: balance y verificación
 
-La defensa utiliza únicamente Precisión, Triple y Veneno. Las primeras tres misiones introducen cada especialización. Los diez mapas y sus guardados se conservan; las otras siete misiones adaptan sus oleadas al nuevo arsenal. La incendiaria y los niveles 4–5 quedan para una iteración posterior.
+La defensa utiliza únicamente Precisión, Triple y Veneno. La campaña introduce las especializaciones gradualmente: Precisión en la misión 1, Triple en la 4 y Veneno en la 6. Se rediseñan las rutas y las bases manteniendo los diez identificadores de misión y sus guardados. La incendiaria y los niveles 4–5 quedan para una iteración posterior.
 
 ## Economía y cadencia
 
@@ -24,7 +24,24 @@ Las bestias tienen 70% de armadura y los guardianes 55%. Un virote físico de 10
 
 ## Campaña y asedio
 
-Precisión se desbloquea en la aldea; Triple en la villa y Veneno en la ciudadela. Las primeras dos misiones enseñan cobertura y grupos. La tercera añade armaduras y el guardián con escoltas. Las demás conservan sus rutas, bases, cantidades de oleadas y salud de puerta, ajustando la presencia de unidades pesadas y su salud al tiempo real de exposición en cada mapa. Los especialistas sustituyen funciones de armas anteriores; no se conserva la presión pensada para magia y explosiones.
+La campaña sigue el ciclo de enseñar, practicar y combinar. Las primeras dos misiones solo tienen esbirros; los corredores aparecen en la tercera, Triple en la cuarta, Veneno y bestias en la sexta, y el primer guardián con escoltas en la sexta oleada de la octava misión. La misión 1 tiene 18 esbirros en tres oleadas de 4, 6 y 8, sin exigir reinversión durante el combate.
+
+| Misión | Oleadas | Bases | Longitud de ruta | Salud enemiga inicial |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 3 | 4 | 45,8 | ×0,90 |
+| 2 | 4 | 5 | 50,5 | ×0,98 |
+| 3 | 4 | 6 | 55,8 | ×1,02 |
+| 4 | 5 | 7 | 62,5 | ×1,04 |
+| 5 | 5 | 8 | 70,5 | ×1,08 |
+| 6 | 6 | 9 | 76,8 | ×1,09 |
+| 7 | 6 | 10 | 83,1 | ×1,10 |
+| 8 | 7 | 11 | 89,5 | ×1,11 |
+| 9 | 8 | 12 | 92,5 | ×1,12 |
+| 10 | 8 | 14 | 93,7 | ×1,13 |
+
+Las primeras tres misiones tienen preparación manual sin límite, también entre oleadas. Desde la cuarta conservan los 20 segundos de preparación automática y la pausa táctica. Una base opcional iluminada junto a la puerta enseña a conservar salud para obtener estrellas. Las otras bases siguen disponibles y la recomendación desaparece al cubrir ambos flancos con el alcance real de una defensa. La ayuda puede omitirse; al repetir una misión completada no vuelve a mostrarse.
+
+Más longitud no equivale por sí sola a más dificultad: aumenta la exposición a las defensas. Las oleadas, su densidad, las armaduras y el presupuesto se calibran junto con la geometría. Se mantienen las recompensas por baja y los precios para que el jugador aprenda una economía consistente.
 
 La salud enemiga crece un 7% por oleada. Se conservan recompensas por baja de 10 / 11 / 26 / 60 y bono de oleada `25 + 5 × oleada`. El oro solo llega por bajas y oleadas reales. Las estrellas conservan sus umbrales: ganar / 60% / 90% de salud restante de la puerta.
 
@@ -35,31 +52,31 @@ La salud enemiga crece un 7% por oleada. Se conservan recompensas por baja de 10
 | Bestia | 20 | 1,90 s |
 | Guardián | 40 | 2,20 s |
 
-La puerta tiene 1000–3000 de salud según la misión. Dos enemigos atacan a la vez, los demás esperan y todos siguen siendo objetivos. La cadencia más lenta exige adaptar el daño de asedio además de las oleadas. Los 14–16 hexágonos mantienen decisiones entre entrada, curvas y puerta; el mapa y su geometría no cambian.
+La puerta tiene 1000–3000 de salud según la misión. Dos enemigos atacan a la vez, los demás esperan y todos siguen siendo objetivos. La cadencia más lenta exige adaptar el daño de asedio además de las oleadas. Los 4–14 hexágonos añaden gradualmente decisiones entre entrada, curvas y puerta; siempre se conservan dos bases legales en los flancos del castillo.
 
 ## Evidencia reproducible
 
 `npm test` verifica impactos, resistencia, compras, prioridades independientes, separación de objetivos, una descarga por recarga, Veneno sin acumulación, expiración y daño independiente de la frecuencia de actualización. Incluye economía y estrategias de campaña con posiciones legales y solo oro ganado.
 
-`npm run balance` compara inversiones fijas, una sola munición, expansión, mejoras y combinaciones. Las compras usan la API del juego y las posiciones realmente permitidas. Las estrategias activas reaccionan cada dos segundos, también durante combate como permite la interfaz; las aperturas fijas no reinvierten. La simulación usa pasos de 20 ms y no modifica oro, salud, daño ni bajas para fabricar victorias. Las comparaciones son referencias, no sustituyen pruebas con jugadores.
+`npm run balance` compara inversiones fijas, una sola munición, expansión, mejoras y combinaciones. Las compras usan la API del juego y las posiciones realmente permitidas. Las estrategias activas reaccionan cada dos segundos, también durante combate como permite la interfaz; las aperturas fijas no reinvierten. `runScenario(mission, strategy, offset, true)` limita las compras a la preparación para comprobar la experiencia sin decisiones durante combate. La simulación usa pasos de 20 ms y no modifica oro, salud, daño ni bajas para fabricar victorias. Las comparaciones son referencias, no sustituyen pruebas con jugadores.
 
 Las pruebas de navegador comprueban compras y mejoras nativas, selector de objetivos, modelos distintos, virotes separados, números y estado de Veneno, sonido grabado, preferencias, campaña y encuadre. Una escena de combate controlada sirve para observar efectos; los resultados de balance provienen de oleadas completas sin esas escenas de prueba.
 
 ## Resultados de referencia
 
-Se completaron 114 escenarios: 53 victorias y 61 derrotas. Las aperturas sin reinversión pierden; cada mapa tiene una combinación legal con tres estrellas.
+Se completaron 104 escenarios: 61 victorias y 43 derrotas. Las aperturas fijas permiten superar la introducción, pero pierden desde la misión 4. Cada mapa tiene una estrategia legal que obtiene tres estrellas. Las primeras tres también alcanzan tres estrellas comprando solo entre oleadas.
 
-| Misión | Combinación | Salud final | Estrellas | Combate |
+| Misión | Estrategia de referencia | Salud final | Estrellas | Combate |
 | --- | --- | ---: | ---: | ---: |
-| pines | mixed | 1000 / 1000 | 3 | 188 s |
-| market | mixed | 1200 / 1200 | 3 | 282 s |
-| citadel | mixed-expand | 1320 / 1400 | 3 | 435 s |
-| siege | poison-front | 1480 / 1600 | 3 | 449 s |
-| woodland | mixed-expand | 1800 / 1800 | 3 | 437 s |
-| crossroads | poison-front | 1840 / 2000 | 3 | 408 s |
-| watch | poison-front | 2120 / 2200 | 3 | 516 s |
-| river | poison-front | 2400 / 2400 | 3 | 563 s |
-| highlands | poison-front | 2480 / 2700 | 3 | 530 s |
-| crown | mixed-expand | 2968 / 3000 | 3 | 549 s |
+| pines | opening-precision | 1000 / 1000 | 3 | 44 s |
+| market | precision | 1200 / 1200 | 3 | 127 s |
+| citadel | precision | 1400 / 1400 | 3 | 142 s |
+| siege | precision | 1600 / 1600 | 3 | 218 s |
+| woodland | precision | 1800 / 1800 | 3 | 250 s |
+| crossroads | poison-front | 1992 / 2000 | 3 | 323 s |
+| watch | poison-front | 2200 / 2200 | 3 | 356 s |
+| river | poison-front | 2400 / 2400 | 3 | 438 s |
+| highlands | poison-front | 2700 / 2700 | 3 | 540 s |
+| crown | poison-front | 2984 / 3000 | 3 | 538 s |
 
-Los tiempos de combate excluyen preparación y pausas humanas. Las pruebas permiten construir y mejorar durante una oleada, como el juego. Una sola munición puede ganar algunos mapas, pero la combinación preserva mejor la puerta ante armaduras; estas referencias no son una garantía de dificultad percibida.
+Los tiempos de combate excluyen preparación y pausas humanas. El informe no añade una duración fija a la preparación manual de las primeras tres misiones. La referencia pasa de 44 segundos de combate en la introducción a varios minutos en el cierre del capítulo. Las pruebas exigen oleadas de hasta 120 segundos para estrategias de dos o tres estrellas; los intentos de una estrella admiten hasta 150 segundos de limpieza de enemigos. Las estrategias son referencias deterministas, no tasas de victoria ni garantías de dificultad percibida. El siguiente ajuste debe apoyarse en partidas reales, especialmente errores de colocación, comprensión del siguiente paso y tiempo entre decisiones.

@@ -533,3 +533,14 @@ kbd { padding: 3px 6px; background: #7094a016; border: 1px solid #8aadb54a; bord
 .priority-description { display: block; color: #bfd0d3; font-size: 10px; line-height: 1.4; }
 .damage-number.poison { color: #baf082; text-shadow: 0 2px 3px #1b331d, 0 0 4px #183522; }
 @media (max-width: 600px) { .defenses-menu .tower-card img { width: 78px; } .defenses-menu .card-copy > span { font-size: 8px; } }
+
+/* One optional next step; the build controls and all bases remain available. */
+.mission-guide { display: flex; align-items: center; gap: 9px; padding: 2px 5px 8px; margin-bottom: 6px; border-bottom: 1px solid #97baa547; color: #def4df; font-size: 11px; line-height: 1.45; }
+.mission-guide > svg, .mission-guide > span:first-child { flex-shrink: 0; width: 20px; color: #9fe2bd; }
+#guide-text { flex: 1; }
+#skip-guide { flex-shrink: 0; min-width: 36px; min-height: 36px; justify-content: center; }
+.guide-target { outline: 2px solid #a2f1cd; outline-offset: 3px; animation: guide-pulse 1.8s ease-in-out infinite; }
+.defense-details summary { cursor: pointer; color: #d3e3dd; font-size: 11px; padding: 9px 0; }
+@keyframes guide-pulse { 50% { outline-color: #a2f1cd66; } }
+@media (prefers-reduced-motion: reduce) { .guide-target { animation: none; } }
+@media (max-width: 760px) { .mission-guide { font-size: 10px; } #skip-guide { min-width: 44px; min-height: 44px; } }

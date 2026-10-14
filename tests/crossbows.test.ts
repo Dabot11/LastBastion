@@ -6,7 +6,7 @@ import { distance, gateDefenceSites, gatePoint, samplePath } from '../src/game/p
 import { Simulation, type Enemy, type Tower } from '../src/game/simulation';
 function advance(sim: Simulation, seconds: number, dt = .02): void { for (let time = 0; time < seconds - 1e-9; time += dt) sim.update(Math.min(dt, seconds - time)); }
 function fixture(kind: TowerKind, units: EnemyKind[] = ['guardian', 'beast', 'minion']): { sim: Simulation; tower: Tower; enemies: Enemy[] } {
-  const sim = new Simulation(MISSIONS[2]); sim.phase = 'wave'; sim.wave = 1;
+  const sim = new Simulation(MISSIONS[7]); sim.phase = 'wave'; sim.wave = 1;
   const pad = sim.map.pads.find(p => distance(p, samplePath(p.progress, sim.map)) < TOWERS[kind].range - 1)!;
   const tower = sim.build(kind, pad); assert.notEqual(typeof tower, 'string');
   const enemies = units.map((kind, index) => { const enemy = sim.spawn(kind); enemy.progress = pad.progress + 1 - index * .35; Object.assign(enemy, samplePath(enemy.progress, sim.map)); return enemy; });
@@ -44,7 +44,7 @@ test('target priorities select the front or strongest enemy and can change per t
   assert.equal(sim.setPriority(tower.id, 'unknown' as 'first'), false); assert.equal(sim.setPriority(-1, 'gate'), false);
 });
 test('gate priority protects active attackers over a larger nearby marching unit', () => {
-  const sim = new Simulation(MISSIONS[2]); sim.phase = 'wave'; sim.wave = 1;
+  const sim = new Simulation(MISSIONS[7]); sim.phase = 'wave'; sim.wave = 1;
   const tower = sim.build('precision', gateDefenceSites(sim.map)[0]); assert.notEqual(typeof tower, 'string');
   const weak = sim.spawn('minion'); weak.progress = sim.map.length - .85; weak.siegeSlot = 0; weak.state = 'attacking'; Object.assign(weak, gatePoint(-.8, .85, sim.map));
   const strong = sim.spawn('guardian'); strong.progress = sim.map.length - 3; Object.assign(strong, samplePath(strong.progress, sim.map));

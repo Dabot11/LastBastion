@@ -12,7 +12,7 @@ function advance(sim: Simulation, seconds: number, dt = .02): void { for (let t 
 
 test('single continuous ordered route joins southeastern spawn to northwestern castle', () => {
   assert.ok(PATH[0].x > 0 && PATH[0].z > 0); assert.ok(PATH.at(-1)!.x < 0 && PATH.at(-1)!.z < 0);
-  assert.ok(PATH_LENGTH > 75); assert.ok(SEGMENTS.every(s => s.length > 0));
+  assert.ok(PATH_LENGTH > 40); assert.ok(SEGMENTS.every(s => s.length > 0));
   for (let i = 0; i < SEGMENTS.length - 1; i++) assert.deepEqual(SEGMENTS[i].end, SEGMENTS[i + 1].start);
   for (let progress = 0; progress <= PATH_LENGTH; progress += .1) assert.ok(roadDistance(samplePath(progress)) < 1e-8);
   assert.deepEqual({ x: samplePath(PATH_LENGTH + 10).x, z: samplePath(PATH_LENGTH + 10).z }, PATH.at(-1));
@@ -54,7 +54,7 @@ test('poison partially bypasses armor while physical bolts remain weak against i
 test('each placed tower pays its own prices and upgrades without changing its neighbors', () => {
   const prices = { precision: [150, 110, 200], triple: [200, 150, 250], poison: [250, 170, 280] };
   for (const kind of Object.keys(TOWERS) as (keyof typeof TOWERS)[]) {
-    const sim = new Simulation(MISSIONS[3]); sim.gold = 5000;
+    const sim = new Simulation(MISSIONS[5]); sim.gold = 5000;
     const first = sim.build(kind, validPoint([], sim.map)); assert.notEqual(typeof first, 'string'); if (typeof first === 'string') continue;
     const second = sim.build(kind, validPoint(sim.towers, sim.map)); assert.notEqual(typeof second, 'string'); if (typeof second === 'string') continue;
     assert.equal(first.invested, prices[kind][0]);
@@ -73,7 +73,7 @@ test('each placed tower pays its own prices and upgrades without changing its ne
 });
 test('selling level-two towers returns exactly 70% without losing gold to floating-point rounding', () => {
   for (const [kind, expected] of [['precision', 182], ['triple', 245], ['poison', 294]] as const) {
-    const sim = new Simulation(MISSIONS[3]); sim.gold = 2000;
+    const sim = new Simulation(MISSIONS[5]); sim.gold = 2000;
     const t = sim.build(kind, validPoint([], sim.map)); assert.notEqual(typeof t, 'string'); if (typeof t === 'string') continue;
     assert.equal(sim.upgrade(t.id), null); const before = sim.gold;
     assert.equal(sim.sell(t.id), expected); assert.equal(sim.gold, before + expected);
@@ -85,7 +85,7 @@ test('enemy rewards are awarded exactly once', () => {
 });
 test('all three crossbows fire and apply projectile damage', () => {
   for (const kind of Object.keys(TOWERS) as (keyof typeof TOWERS)[]) {
-    const sim = new Simulation(MISSIONS[3]); sim.wave = 1; sim.phase = 'wave'; sim.gold = 1000;
+    const sim = new Simulation(MISSIONS[5]); sim.wave = 1; sim.phase = 'wave'; sim.gold = 1000;
     let p: Point | null = null;
     p = sim.map.pads.find(candidate => !placementError(candidate, [], 1000, TOWERS[kind].cost, sim.map) && distance(candidate, samplePath(9, sim.map)) < 3.9) ?? null;
     assert.ok(p); const t = sim.build(kind, p); assert.equal(typeof t, 'object');
@@ -111,7 +111,7 @@ test('repeated gate attacks cause defeat without gold or kills, then a new missi
   const reset = new Simulation(); assert.equal(reset.gold, 300); assert.equal(reset.castleHp, 1000); assert.equal(reset.wave, 0); assert.equal(reset.towers.length, 0);
 });
 test('missions have finite waves, introduce challenges and stop at their final wave', () => {
-  const sim = new Simulation(MISSIONS[2]); sim.startWave(); const initial = sim.waveTotal;
+  const sim = new Simulation(MISSIONS[7]); sim.startWave(); const initial = sim.waveTotal;
   sim.phase = 'preparation'; sim.wave = sim.mission.waves.length - 1; sim.startWave();
   assert.ok(sim.spawnQueue.includes('guardian')); assert.ok(sim.spawnQueue.includes('beast')); assert.ok(sim.spawnQueue.includes('runner')); assert.ok(sim.waveTotal > initial);
   sim.phase = 'preparation'; sim.startWave(); assert.equal(sim.wave, sim.mission.waves.length);

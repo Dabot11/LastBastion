@@ -106,7 +106,7 @@ export function scenarioPlanner(mission: Mission, strategy: Strategy, offset = 0
     }
   };
 }
-export function runScenario(mission: Mission, strategy: Strategy, offset = 0): BalanceResult {
+export function runScenario(mission: Mission, strategy: Strategy, offset = 0, betweenWavesOnly = false): BalanceResult {
   const sim = new Simulation(mission), plan = scenarioPlanner(mission, strategy, offset), waves: WaveResult[] = [];
   let combatSeconds = 0, nextDecision = 0;
   while (!sim.finished && combatSeconds < 1200) {
@@ -114,7 +114,7 @@ export function runScenario(mission: Mission, strategy: Strategy, offset = 0): B
       plan(sim); nextDecision = combatSeconds + 2;
       sim.startWave();
     }
-    if (combatSeconds >= nextDecision) { plan(sim); nextDecision = combatSeconds + 2; }
+    if (!betweenWavesOnly && combatSeconds >= nextDecision) { plan(sim); nextDecision = combatSeconds + 2; }
     const before = sim.phase; sim.update(.02); combatSeconds += .02;
     if (before === 'wave' && sim.phase !== 'wave') waves.push({ wave: sim.wave, hp: sim.castleHp, gold: sim.gold, seconds: Math.round(combatSeconds) });
     sim.events.length = 0;
@@ -122,7 +122,7 @@ export function runScenario(mission: Mission, strategy: Strategy, offset = 0): B
   return {
     mission: mission.id, strategy, offset, phase: sim.phase, hp: sim.castleHp, maxHp: sim.maxGateHp, stars: sim.stars, wave: sim.wave,
     kills: sim.kills, gold: sim.gold, spent: sim.towers.reduce((sum, t) => sum + t.invested, 0), combatSeconds: Math.round(combatSeconds),
-    minutesWithPreparation: Math.round((combatSeconds + WORLD.preparation * sim.wave) / 60 * 10) / 10,
+    minutesWithPreparation: Math.round((combatSeconds + (mission.manualPreparation ? 0 : WORLD.preparation) * sim.wave) / 60 * 10) / 10,
     towers: sim.towers.map(({ kind, level, x, z }) => ({ kind, level, x, z })), waves,
   };
 }

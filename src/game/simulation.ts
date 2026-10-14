@@ -69,7 +69,7 @@ export class Simulation {
   }
   update(dt: number): void {
     if (this.finished || dt <= 0) return;
-    if (this.phase === 'preparation') { this.preparation = Math.max(0, this.preparation - dt); if (!this.preparation) this.startWave(); }
+    if (this.phase === 'preparation' && !this.mission.manualPreparation) { this.preparation = Math.max(0, this.preparation - dt); if (!this.preparation) this.startWave(); }
     if (this.phase === 'wave') {
       this.spawnTimer -= dt;
       while (this.spawnTimer <= 0 && this.spawnQueue.length) { this.spawn(this.spawnQueue.shift()!); this.spawned++; this.spawnTimer += spawnInterval(this.mission, this.wave); }

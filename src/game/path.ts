@@ -6,10 +6,7 @@ export interface BuildPad extends Point { id: string; progress: number; }
 export function distance(a: Point, b: Point): number { return Math.hypot(a.x - b.x, a.z - b.z); }
 // One ordered route, from the southeastern cave to the northwestern castle gate.
 const corners: Point[] = [
-  { x: 12.5, z: 10.5 }, { x: 7.5, z: 8.5 }, { x: -9, z: 8.5 },
-  { x: -12, z: 5 }, { x: -9, z: 1.5 }, { x: 9, z: 1.5 },
-  { x: 12, z: -2 }, { x: 9, z: -5.5 }, { x: -8, z: -5.5 },
-  { x: -11.5, z: -8.8 },
+  { x: 12.5, z: 10.5 }, { x: -7, z: -3 }, { x: -11.5, z: -8.8 },
 ];
 // Round turns into explicit, closely spaced waypoints. The simulation traverses every segment.
 function roundedPath(corners: Point[]): Point[] {
@@ -68,14 +65,14 @@ export function roadHeight(p: Point, map: GameMap): number {
   return .13 + (WORLD.elevation + .05 - .13) * t * t * (3 - 2 * t);
 }
 export interface Obstacle extends Point { radius: number; type: 'tree' | 'rock' | 'house'; }
-export function createMap(points: Point[], initialSeed: number, theme: GameMap['theme'] = 'forest'): GameMap {
+export function createMap(points: Point[], initialSeed: number, theme: GameMap['theme'] = 'forest', padCount = theme === 'forest' ? 14 : 16): GameMap {
   const destination = points.at(-1)!;
   const gate = { x: destination.x, z: destination.z - 3.2 };
   const path = roundedPath([{ x: 22, z: 14.8 }, { x: 19.3, z: 15.4 }, ...points.slice(0, -1), { x: gate.x, z: gate.z + 5.5 }, gate]), segments = path.slice(1).map((end, i) => ({ start: path[i], end, length: distance(path[i], end) }));
   const last = segments.at(-1)!;
   const gateAngle = Math.atan2(last.start.x - last.end.x, last.start.z - last.end.z);
   const map: GameMap = { path, segments, length: segments.reduce((s, p) => s + p.length, 0), obstacles: [], torches: [], fences: [], pads: [], grass: theme === 'village' ? 0xb1b274 : theme === 'citadel' ? 0x86a69a : 0x8fa965, sand: theme === 'citadel' ? 0xc0b39a : 0xcba876, theme, gateAngle };
-  map.pads = chooseBuildPads(map);
+  map.pads = chooseBuildPads(map, padCount);
   let seed = initialSeed;
   const random = (): number => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   for (let i = 0; i < 170; i++) {
@@ -88,7 +85,7 @@ export function createMap(points: Point[], initialSeed: number, theme: GameMap['
   map.fences = [{ x: -3, z: -7.4 }, { x: 1, z: 3.5 }, { x: -3, z: 6.5 }, { x: 4, z: -3.5 }].filter(p => roadDistance(p, map) > 2 && !map.pads.some(site => segmentDistance(site, { x: p.x - .8, z: p.z }, { x: p.x + .8, z: p.z }) < PAD_RADIUS + .25) && !map.obstacles.some(o => distance(p, o) < o.radius + .9));
   return map;
 }
-export const DEFAULT_MAP = createMap(corners, 421);
+export const DEFAULT_MAP = createMap(corners, 421, 'forest', 4);
 export const PATH = DEFAULT_MAP.path, SEGMENTS = DEFAULT_MAP.segments, PATH_LENGTH = DEFAULT_MAP.length;
 export const OBSTACLES = DEFAULT_MAP.obstacles, TORCHES = DEFAULT_MAP.torches, FENCES = DEFAULT_MAP.fences;
 export type PlacementCode = 'terrain' | 'road' | 'castle' | 'entrance' | 'obstacle' | 'torch' | 'fence' | 'tower' | 'gold' | 'invalid' | 'pad' | 'occupied';
@@ -163,7 +160,7 @@ export function placementIssue(p: Point, towers: Point[], gold: number, cost: nu
   if (towers.some(t => distance(t, pad) < .1)) return PLACEMENT_ISSUES.occupied;
   return terrainPlacementIssue(pad, towers, gold, cost, map);
 }
-function chooseBuildPads(map: GameMap): BuildPad[] {
+function chooseBuildPads(map: GameMap, count: number): BuildPad[] {
   const pads: BuildPad[] = [], candidates: BuildPad[] = [], route: Point[] = [];
   const inset = PAD_RADIUS - WORLD.towerRadius + .055;
   for (let progress = 7; progress < map.length - 4; progress += 1.2) {
@@ -179,7 +176,6 @@ function chooseBuildPads(map: GameMap): BuildPad[] {
   const entry = candidates.find(separated); if (entry) pads.push(entry);
   const coverage = candidates.map(site => route.map(p => Math.max(0, 1 - distance(p, site) / 4.8)));
   const prior = route.map(p => Math.max(...pads.map(pad => Math.max(0, 1 - distance(p, pad) / 4.8))));
-  const count = map.theme === 'forest' ? 14 : 16;
   while (pads.length < count) {
     let best = -1, highest = -Infinity;
     for (const [index, site] of candidates.entries()) {

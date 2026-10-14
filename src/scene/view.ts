@@ -34,6 +34,7 @@ export class GameView {
   readonly footprint = new PlacementFootprint();
   ghost: THREE.Group | null = null; ghostKind: TowerKind | null = null; hover: Point | null = null;
   private hoverHeight = WORLD.elevation + .05;
+  guidanceEnabled = true;
   selectedId: number | null = null; private ghostValid: boolean | null = null;
   private pan = new THREE.Vector3(); private observer: ResizeObserver; private framing = new THREE.Vector3();
   private readonly healthMaterial = new THREE.MeshBasicMaterial({ color: 0xf17770, toneMapped: false });
@@ -143,11 +144,11 @@ export class GameView {
     const poison = new THREE.Group(); poison.name = 'poison-status'; poison.position.set(.53, Number(group.userData.healthHeight ?? 1.35), 0); poison.add(new THREE.Mesh(orb(.085), this.poisonMaterial)); poison.add(new THREE.Mesh(cone(.07, .13, 4), this.poisonMaterial)); poison.children[1].position.y = .10; poison.visible = false; group.add(poison);
     this.scene.add(group); const visual = { group, health, hit, poison }; this.enemies.set(id, visual); return visual;
   }
-  private syncTower(t: Tower): THREE.Group {
+  private syncTower(t: Tower, time: number): THREE.Group {
     let group = this.towers.get(t.id);
     if (!group || group.userData.level !== t.level) {
       const upgrading = !!group; if (group) this.scene.remove(group); group = towerModel(t.kind, t.level); group.position.set(t.x, WORLD.elevation + .07 + PAD_HEIGHT, t.z);
-      group.userData = { ...group.userData, towerId: t.id, level: t.level, upgradePulse: upgrading ? .8 : 0 }; this.towers.set(t.id, group); this.scene.add(group); this.renderer.shadowMap.needsUpdate = true; this.collectFlames();
+      group.userData = { ...group.userData, towerId: t.id, level: t.level, upgradePulse: upgrading ? .8 : 0, upgradeEndsAt: upgrading ? time + .8 : time }; this.towers.set(t.id, group); this.scene.add(group); this.renderer.shadowMap.needsUpdate = true; this.collectFlames();
     }
     const turret = group.getObjectByName('turret'); if (turret) { turret.rotation.y = t.targetAngle; turret.position.y = Number(turret.userData.restY) + Math.sin(Number(group.userData.recoil ?? 0) * 16) * .045; const string = turret.getObjectByName('bow-string'); if (string) string.position.z = .34 - Number(group.userData.recoil ?? 0) * .35; const bolts = turret.getObjectByName('loaded-bolts'); if (bolts) bolts.visible = t.cooldown <= towerStats(t.kind, t.level).interval * .35; } return group;
   }
@@ -179,7 +180,7 @@ export class GameView {
     }
     const towerIds = new Set(sim.towers.map(t => t.id));
     for (const [id, g] of this.towers) if (!towerIds.has(id)) { this.scene.remove(g); this.towers.delete(id); this.renderer.shadowMap.needsUpdate = true; this.collectFlames(); }
-    sim.towers.forEach(t => { const g = this.syncTower(t); g.userData.recoil = Math.max(0, Number(g.userData.recoil ?? 0) - visualDt); g.userData.upgradePulse = Math.max(0, Number(g.userData.upgradePulse) - Math.max(0, Math.min(.1, time - this.lastVisualTime))); const pulse = Math.sin((1 - Number(g.userData.upgradePulse) / .8) * Math.PI) * .08; g.scale.set(1 + pulse * .3, 1 + pulse, 1 + pulse * .3); });
+    sim.towers.forEach(t => { const g = this.syncTower(t, time); g.userData.recoil = Math.max(0, Number(g.userData.recoil ?? 0) - visualDt); g.userData.upgradePulse = Math.max(0, Number(g.userData.upgradeEndsAt) - time); const pulse = Math.sin((1 - Number(g.userData.upgradePulse) / .8) * Math.PI) * .08; g.scale.set(1 + pulse * .3, 1 + pulse, 1 + pulse * .3); });
     const projectileIds = new Set(sim.projectiles.map(p => p.id));
     for (const [id, m] of this.projectiles) if (!projectileIds.has(id)) { this.scene.remove(m); this.projectiles.delete(id); }
     for (const p of sim.projectiles) {
@@ -235,7 +236,7 @@ export class GameView {
     let rangeCenter: Point | null = null, radius = 0;
     const hoveredPad = this.hover ? padAt(this.hover, this.map) : null;
     const previewPoint = hoveredPad ?? this.hover, previewHeight = hoveredPad ? WORLD.elevation + .05 + PAD_HEIGHT : this.hoverHeight;
-    this.constructionPads.update(sim, this.ghostKind, hoveredPad);
+    this.constructionPads.update(sim, this.ghostKind, hoveredPad, this.guidanceEnabled, time);
     if (this.ghost && this.ghostKind) {
       this.ghost.visible = !!this.hover;
       this.footprint.update(previewPoint, previewHeight, !this.placementMessage(sim));

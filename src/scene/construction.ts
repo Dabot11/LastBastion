@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { TOWERS, type TowerKind } from '../game/config';
+import { recommendedGatePad } from '../game/guidance';
 import type { Simulation } from '../game/simulation';
 import { PAD_HEIGHT, PAD_RADIUS, placementIssue, type Point, type GameMap } from '../game/path';
 import { valleyHeight } from './surfaces';
@@ -9,13 +10,15 @@ export class ConstructionPads {
   readonly foundations = new THREE.InstancedMesh(new THREE.CylinderGeometry(PAD_RADIUS * .94, PAD_RADIUS, PAD_HEIGHT, 6, 1, false, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xc6c0a7, roughness: .92 }), 18);
   readonly rims = new THREE.InstancedMesh(new THREE.RingGeometry(PAD_RADIUS * .82, PAD_RADIUS * .92, 6), new THREE.MeshBasicMaterial({ transparent: true, opacity: .72, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }), 18);
   private readonly engravings = new THREE.InstancedMesh(new THREE.BoxGeometry(.32, .008, .058), new THREE.MeshStandardMaterial({ color: 0x8f805e, roughness: .75 }), 36);
+  private readonly recommendation = new THREE.Mesh(new THREE.RingGeometry(PAD_RADIUS * 1.08, PAD_RADIUS * 1.25, 6), new THREE.MeshBasicMaterial({ color: 0x8af6d4, transparent: true, opacity: .9, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }));
   private map: GameMap | null = null;
   private readonly transform = new THREE.Object3D();
   private readonly color = new THREE.Color();
   constructor() {
     this.group.name = 'construction-pads'; this.foundations.name = 'hexagonal-foundations'; this.rims.name = 'foundation-rims';
     this.foundations.castShadow = this.foundations.receiveShadow = true; this.rims.renderOrder = 1;
-    this.group.add(this.foundations, this.rims, this.engravings);
+    this.recommendation.name = 'recommended-gate-base'; this.recommendation.rotation.x = -Math.PI / 2; this.recommendation.visible = false;
+    this.group.add(this.foundations, this.rims, this.engravings, this.recommendation);
   }
   load(map: GameMap): void {
     this.map = map; this.foundations.count = this.rims.count = map.pads.length; this.engravings.count = map.pads.length * 2;
@@ -29,8 +32,16 @@ export class ConstructionPads {
     for (const mesh of [this.foundations, this.rims, this.engravings]) { mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); }
     if (this.rims.instanceColor) this.rims.instanceColor.needsUpdate = true;
   }
-  update(sim: Simulation, kind: TowerKind | null, hover: Point | null): void {
+  update(sim: Simulation, kind: TowerKind | null, hover: Point | null, guidanceEnabled = true, time = 0): void {
     if (this.map !== sim.map) this.load(sim.map);
+    const suggested = guidanceEnabled ? recommendedGatePad(sim) : null;
+    this.recommendation.visible = !!suggested;
+    if (suggested) {
+      this.recommendation.position.set(suggested.x, valleyHeight(suggested.x, suggested.z) + PAD_HEIGHT + .02, suggested.z);
+      const pulse = 1 + Math.sin(time * 3) * .06;
+      this.recommendation.scale.setScalar(pulse);
+      this.recommendation.material.opacity = .7 + Math.sin(time * 3) * .2;
+    }
     sim.map.pads.forEach((pad, i) => {
       const occupied = sim.towers.some(t => t.padId === pad.id);
       const ready = kind && !sim.finished && sim.mission.towers.includes(kind) && !placementIssue(pad, sim.towers, sim.gold, TOWERS[kind].cost, sim.map);
@@ -39,7 +50,7 @@ export class ConstructionPads {
     });
     if (this.rims.instanceColor) this.rims.instanceColor.needsUpdate = true;
   }
-  dispose(): void { for (const mesh of [this.foundations, this.rims, this.engravings]) { mesh.geometry.dispose(); mesh.material.dispose(); mesh.dispose(); } }
+  dispose(): void { this.recommendation.geometry.dispose(); this.recommendation.material.dispose(); for (const mesh of [this.foundations, this.rims, this.engravings]) { mesh.geometry.dispose(); mesh.material.dispose(); mesh.dispose(); } }
 }
 
 function marker(valid: boolean): THREE.Sprite {

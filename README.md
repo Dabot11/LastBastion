@@ -44,7 +44,10 @@ Al llegar, los enemigos permanecen vivos y atacan la puerta. Dos pueden golpear 
 
 Los golpes generan números de daño, retroceso, destellos y astillas de madera. Los números de enemigos muestran la salud realmente perdida después de resistencias, limitada a la salud restante y redondeada para leerla. Los de la puerta aparecen en rojo. La madera muestra grietas al bajar del 65% y 30% de salud, y cae al llegar a cero.
 
-Abre **Construir defensas** con su flecha o **B**, o pulsa una base hexagonal vacía para abrir el selector. Al elegir una defensa, el menú se oculta y puedes construir en las bases disponibles. Cada misión tiene 14–16 bases de piedra repartidas junto a la entrada, las curvas y el castillo, con árboles y rocas entre ellas. La vista previa se ajusta al centro de la base: ✓ permite la compra; X explica ocupación, bloqueo o falta de oro. Vender libera la misma base. El círculo azul discontinuo muestra el alcance real. El HUD y el selector siguen compactos; la oleada y su preparación se controlan desde el panel superior.
+Abre **Construir defensas** con su flecha o **B**, o pulsa una base hexagonal vacía para abrir el selector. Al elegir una defensa, el menú se oculta y puedes construir en las bases disponibles. La campaña aumenta de 4 a 14 bases de piedra por misión, repartidas junto a la entrada, las curvas y el castillo, con árboles y rocas entre ellas. La vista previa se ajusta al centro de la base: ✓ permite la compra; X explica ocupación, bloqueo o falta de oro. Vender libera la misma base. El círculo azul discontinuo muestra el alcance real. El HUD y el selector siguen compactos; la oleada y su preparación se controlan desde el panel superior.
+
+
+La ayuda inicial recomienda una base junto a la puerta, sin bloquear otras ubicaciones, y señala el siguiente paso: construir, elegir Precisión e iniciar la oleada. En la misión 2 enseña a mejorar. Se puede omitir y no aparece al repetir una misión completada. Las primeras tres misiones esperan hasta que pulses **Iniciar oleada**, tanto al comenzar como entre oleadas; a partir de la cuarta, la preparación vuelve a durar 20 segundos. Los detalles de estadísticas y objetivos siguen disponibles bajo **Ver detalles y objetivos** durante la introducción.
 
 | Ballesta | Oro | Función |
 | --- | ---: | --- |
@@ -64,7 +67,7 @@ Los 300 de oro iniciales permiten dos ballestas de Precisión. Elegir una especi
 
 El Veneno dura **4 / 4,5 / 5 s** y hace **20 / 30 / 42 de daño por segundo** antes de resistencia. Los números verdes se agrupan cada medio segundo y muestran salud realmente perdida. Una gota verde junto a la barra identifica el estado. Reaplicar conserva la dosis activa más potente y renueva su duración; no suma dosis ni retrasa el próximo tick. Expira también después de salir del alcance de la ballesta. En objetivo «Más resistente», una dosis activa reduce la prioridad de ese enemigo para repartir el veneno entre otras amenazas resistentes.
 
-Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardianes con armadura resistente. Cada misión tiene una composición propia y un final definido. Durante la preparación ves los enemigos de la próxima oleada y una sugerencia de defensa; los guardianes se anuncian antes de empezar y llegan con escoltas. Tienes 20 segundos de preparación entre oleadas y puedes iniciar la siguiente antes de tiempo. Al completar una oleada recibes una bonificación de oro.
+Hay cuatro enemigos: esbirros, corredores rápidos, bestias acorazadas y guardianes con armadura resistente. Cada misión tiene una composición propia y un final definido. Durante la preparación ves los enemigos de la próxima oleada y una sugerencia de defensa; los guardianes se anuncian antes de empezar y llegan con escoltas. En las primeras tres misiones inicias cada oleada cuando quieras; desde la cuarta tienes 20 segundos de preparación y puedes comenzar antes de tiempo. Al completar una oleada recibes una bonificación de oro.
 
 Las bases permanecen visibles durante la partida y su borde se ilumina al elegir una defensa. La compra usa la misma lógica que el preview y siempre coloca la torre en el centro. Los tres niveles evolucionan de piedra sencilla a refuerzos de acero y después marfil y oro, con una base más robusta, armas más grandes y un escudo numerado. La mejora produce un destello, partículas y un pulso de construcción, también en pausa táctica. El panel muestra una imagen del nivel actual.
 
@@ -76,16 +79,16 @@ Cuando la puerta pierde toda su salud aparece **El castillo ha caído**. Resiste
 
 | Misión | Oleadas | Salud de puerta | Escenario y reto |
 | --- | ---: | ---: | --- |
-| Aldea de los pinos | 5 | 1000 | Bosque; aprende cobertura y mejoras de Precisión |
-| Villa del mercado | 6 | 1200 | Pueblo; desbloquea Triple contra grupos |
-| Ciudadela real | 7 | 1400 | Ciudad; desbloquea Veneno contra armaduras |
-| El último bastión | 8 | 1600 | Fortaleza; combina munición y prioridades |
-| Bosque de los ecos | 8 | 1800 | Bosque; muchos corredores |
-| Villa de las caravanas | 8 | 2000 | Pueblo; armaduras y escoltas |
-| Fortaleza de la colina | 9 | 2200 | Fortaleza; cobertura de curvas |
-| Aldea del viejo molino | 9 | 2400 | Pueblo; hordas numerosas |
-| Paso de los guardianes | 10 | 2700 | Bosque; guardianes y sus escoltas |
-| Castillo de la corona | 10 | 3000 | Fortaleza; combina las tres ballestas |
+| Aldea de los pinos | 3 | 1000 | 4 bases; Ruta casi recta; construir Precisión junto a la puerta |
+| Villa del mercado | 4 | 1200 | 5 bases; Una curva amplia; mejorar con el oro ganado |
+| Ciudadela real | 4 | 1400 | 6 bases; Curvas suaves; primeros corredores |
+| El último bastión | 5 | 1600 | 7 bases; Desbloquea Triple contra grupos |
+| Bosque de los ecos | 5 | 1800 | 8 bases; Practicar cobertura contra grupos rápidos |
+| Villa de las caravanas | 6 | 2000 | 9 bases; Desbloquea Veneno; primeras bestias |
+| Fortaleza de la colina | 6 | 2200 | 10 bases; Cobertura de curvas y mejoras |
+| Aldea del viejo molino | 7 | 2400 | 11 bases; Primer guardián con escoltas |
+| Paso de los guardianes | 8 | 2700 | 12 bases; Combinar grupos, armaduras y guardianes |
+| Castillo de la corona | 8 | 3000 | 14 bases; Desafío del primer capítulo |
 
 
 Ganar una misión desbloquea la siguiente. Las estrellas premian la salud de la puerta: **una** por ganar, **dos** conservando al menos 60% de salud y **tres** conservando al menos 90%. Puedes repetir cualquier misión desbloqueada para mejorar el resultado. El menú de campaña conserva la mejor puntuación y cantidad de estrellas de cada misión; una repetición peor no reduce tus marcas ni suma estrellas duplicadas.

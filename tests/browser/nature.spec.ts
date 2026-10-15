@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) test(`animated adventure keeps painted foliage, construction and map revisits working at ${viewport.width}`, async ({ page }) => {
+for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) test(`animated adventure keeps volumetric trees, construction and map revisits working at ${viewport.width}`, async ({ page }) => {
   test.setTimeout(180000); await page.setViewportSize(viewport);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/'); await page.getByRole('button', { name: 'Iniciar campaña', exact: true }).click();
@@ -8,13 +8,13 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
   const inspect = () => page.evaluate(async () => {
     const { battlefield: view } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);
     const edge = view.scene.getObjectByName('natural-road-edge');
-    let paintedFoliage = 0;
-    view.scene.traverse((o: any) => { if (o.isMesh && o.material.map?.image?.naturalWidth > 0 && String(o.material.map.image.src).includes('adventure-trees')) paintedFoliage++; });
-    return { paintedFoliage, edge: !!edge, stones: !!view.scene.getObjectByName('natural-road-banks'), calls: view.renderer.info.render.calls, triangles: view.renderer.info.render.triangles };
+    let canopies = 0; const species = new Set<string>();
+    view.scene.traverse((o: any) => { if (o.isMesh && o.material.userData.treeCanopy) canopies++; if (o.userData.species) species.add(o.userData.species); });
+    return { canopies, species: [...species], edge: !!edge, stones: !!view.scene.getObjectByName('natural-road-banks'), calls: view.renderer.info.render.calls, triangles: view.renderer.info.render.triangles };
   });
   await expect.poll(async () => (await inspect()).calls).toBeLessThan(125);
-  await expect.poll(async () => (await inspect()).paintedFoliage).toBeGreaterThan(0);
-  const initial = await inspect(); expect(initial.edge).toBe(true); expect(initial.stones).toBe(false); expect(initial.triangles).toBeLessThan(600000);
+  await expect.poll(async () => (await inspect()).canopies).toBeGreaterThan(0);
+  const initial = await inspect(); expect(initial.species.sort()).toEqual(['birch', 'maple', 'oak', 'pine', 'willow']); expect(initial.edge).toBe(true); expect(initial.stones).toBe(false); expect(initial.triangles).toBeLessThan(600000);
   await page.keyboard.press('1');
   const point = await page.evaluate(async () => {
     const { simulation: sim, battlefield: view } = await import(document.querySelector<HTMLScriptElement>('script[src*="/src/main.ts"]')!.src);

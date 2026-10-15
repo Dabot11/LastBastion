@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { ENEMIES, TOWERS, WORLD, towerStats, type TowerKind } from '../game/config';
 import { PAD_HEIGHT, gatePoint, padAt, placementIssue, roadHeight, type GameMap, type Point } from '../game/path';
 import { type Simulation, type Tower } from '../game/simulation';
-import { sceneryTexturesReady } from './nature';
 import { createTerrain } from './terrain';
 import { box, circle, cone, enemyModel, orb, projectileModel, towerModel } from './models';
 import { DamageLabels } from './damage-labels';
@@ -23,7 +22,6 @@ export class GameView {
   private readonly effects: Effects;
   private readonly upgradeEffects: Effects;
   private lastVisualTime = 0;
-  private foliageShadowsReady = false;
   private readonly damageLabels: DamageLabels;
   private door: THREE.Group; private gateRecoil = 0;
   private castleFraming: THREE.Vector3[] = [];
@@ -164,7 +162,6 @@ export class GameView {
     return new THREE.Vector3(x, WORLD.elevation + 2.5, z);
   }
   update(sim: Simulation, visualDt: number, time: number): void {
-    if (!this.foliageShadowsReady && sceneryTexturesReady()) { this.foliageShadowsReady = true; this.renderer.shadowMap.needsUpdate = true; }
     if (sim.map !== this.map) this.loadMap(sim.map);
     const enemyIds = new Set(sim.enemies.filter(e => e.hp > 0).map(e => e.id));
     for (const [id, v] of this.enemies) if (!enemyIds.has(id)) { this.scene.remove(v.group); this.enemies.delete(id); }

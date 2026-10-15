@@ -8,8 +8,8 @@ import { fortressModel, caveModel } from './fortress';
 import { landscape } from './landscape';
 import { surroundingWorld } from './scenery';
 import { contactShadowMaterial, groundMaterial } from './surfaces';
-import { naturalScenery, naturalTree, naturalRock, orientFoliage } from './nature';
-import { CAMERA_OFFSET, modelFramingPoints } from './framing';
+import { naturalScenery, naturalTree, naturalRock } from './nature';
+import { modelFramingPoints } from './framing';
 export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): { surfaces: THREE.Object3D[]; castle: THREE.Group; door: THREE.Group; castleFraming: THREE.Vector3[] } {
   const detailed = naturalScenery(map);
   const group = new THREE.Group(); scene.add(group);
@@ -109,7 +109,6 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
     }
   }
   // Merge static props into one draw call per material. Tiny flora does not cast shadows.
-  orientFoliage(group, CAMERA_OFFSET);
   group.updateMatrixWorld(true);
   // Preserve camera landmarks before the static castle meshes join the scenery batches.
   const castleFraming = modelFramingPoints(castle);

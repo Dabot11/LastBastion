@@ -59,7 +59,12 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
     for (let i = 0; i < rings.length - 1; i++) {
       const [p, q] = rings[i], [r, s] = rings[i + 1];
       color.copy(i === 2 ? baseGrass : rockColor).multiplyScalar(i === 2 ? .8 : .85 + .14 * Math.sin(mid.x * 3.1 + mid.z * 2.3 + i));
-      append([p, r, q, q, r, s], wallPositions, wallColors, color);
+      if (naturalScenery(map)) {
+        for (const point of [p, r, q, q, r, s]) {
+          color.copy(i === 2 ? baseGrass : rockColor).multiplyScalar(.86 + .09 * Math.sin(point.x * .6 + point.z * .4) + .05 * Math.cos(point.y * 4));
+          append([point], wallPositions, wallColors, color);
+        }
+      } else append([p, r, q, q, r, s], wallPositions, wallColors, color);
     }
   }
   // Clip each triangle at the canyon contour. The plateau is one continuous mesh, with no tiled tops.
@@ -94,7 +99,12 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
   const tops = owned(makeGeometry(topPositions, topColors), 0xffffff, true); tops.castShadow = true;
   const walls = owned(makeGeometry(wallPositions, wallColors, naturalScenery(map)), 0xffffff, true, 'stone');
   if (naturalScenery(map)) {
-    (walls.material as THREE.Material).dispose(); walls.material = natureMaterial('stone').clone(); walls.material.userData.owned = true;
+    walls.name = 'natural-road-edge';
+    (walls.material as THREE.Material).dispose();
+    const material = natureMaterial('stone').clone();
+    // Keep the narrow cut-bank faces continuous, without bump or self-shadow bands.
+    material.bumpMap = null; material.bumpScale = 0; material.userData.owned = true;
+    walls.material = material; walls.receiveShadow = false;
   }
   (walls.material as THREE.Material).side = THREE.DoubleSide; walls.castShadow = true;
   group.add(tops, walls);

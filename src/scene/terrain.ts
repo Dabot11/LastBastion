@@ -8,7 +8,7 @@ import { fortressModel, caveModel } from './fortress';
 import { landscape } from './landscape';
 import { surroundingWorld } from './scenery';
 import { contactShadowMaterial, groundMaterial } from './surfaces';
-import { naturalScenery, naturalPine, naturalRock, naturalBanks } from './nature';
+import { naturalScenery, naturalPine, naturalRock } from './nature';
 import { modelFramingPoints } from './framing';
 export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): { surfaces: THREE.Object3D[]; castle: THREE.Group; door: THREE.Group; castleFraming: THREE.Vector3[] } {
   const detailed = naturalScenery(map);
@@ -57,8 +57,7 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
     const x = p.x + Math.cos(p.angle) * 1.3 * side, z = p.z - Math.sin(p.angle) * 1.3 * side;
     const rock = mesh(group, new THREE.DodecahedronGeometry(.13, 0), 0xa5a48f, x, roadHeight({ x, z }, map) + .07, z); rock.scale.set(1.2, .5, .8);
   }
-  if (detailed) naturalBanks(scene, map);
-  else {
+  if (!detailed) {
     const cliffGeometry = new RoundedBoxGeometry(2, 2, 2, 1, .19), vertices = cliffGeometry.getAttribute('position');
     const cliffColors: number[] = [], tint = new THREE.Color();
     for (let i = 0; i < vertices.count; i++) {

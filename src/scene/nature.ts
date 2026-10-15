@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { DEFAULT_MAP, samplePath, roadHeight, roadDistance, distance, PAD_RADIUS, type GameMap } from '../game/path';
-import { WORLD } from '../game/config';
+import { DEFAULT_MAP, type GameMap } from '../game/path';
 
 export const naturalScenery = (map: GameMap): boolean => map === DEFAULT_MAP;
 type Skin = 'bark' | 'needles' | 'stone';
@@ -138,32 +137,4 @@ export function naturalPine(scale = 1, variant = 0, distant = false): THREE.Grou
     trees.set(key, tree);
   }
   const result = trees.get(key)!.clone(true); result.scale.multiplyScalar(scale); return result;
-}
-
-export function naturalBanks(scene: THREE.Group, map: GameMap): void {
-  const stride = 1.24, capacity = Math.ceil(map.length / stride + 2) * 8;
-  const stones = new THREE.InstancedMesh(naturalRockGeometry(2), natureMaterial('stone'), capacity);
-  stones.name = 'natural-road-banks'; stones.castShadow = stones.receiveShadow = true;
-  const transform = new THREE.Object3D(), color = new THREE.Color(), vertex = new THREE.Vector3();
-  const positions = stones.geometry.getAttribute('position'); let count = 0;
-  for (let row = 0; row < 4; row++) for (let d = 2 + row * .31; d < map.length - 3; d += stride) for (const side of [-1, 1]) {
-    const p = samplePath(d, map), floor = roadHeight(p, map), height = WORLD.elevation + .05 - floor;
-    if (height < .18) continue;
-    const layer = height / 4;
-    transform.position.set(p.x + Math.cos(p.angle) * 1.40 * side, floor + layer * (row + .5), p.z - Math.sin(p.angle) * 1.40 * side);
-    transform.rotation.set(.06 * Math.sin(d * 2), p.angle + .08 * Math.sin(d), .08 * Math.cos(d + row));
-    transform.scale.set(.12 + .012 * Math.sin(d * 4), layer * .48, .58 + .06 * Math.sin(d * 3 + row)); transform.updateMatrix();
-    // Rounded turns can pull a long stone toward the road. Keep every visible vertex clear.
-    let clear = true;
-    for (let i = 0; i < positions.count && clear; i++) {
-      vertex.fromBufferAttribute(positions, i).applyMatrix4(transform.matrix);
-      const point = { x: vertex.x, z: vertex.z };
-      clear = roadDistance(point, map) > WORLD.roadHalfWidth + .025 && map.pads.every(pad => distance(point, pad) > PAD_RADIUS + .025);
-    }
-    if (!clear) continue;
-    stones.setMatrixAt(count, transform.matrix);
-    color.setHex(row === 3 ? 0xd3d1b1 : row === 0 ? 0xc4bba7 : 0xe0d6be).multiplyScalar(.9 + .12 * Math.sin(d * 7 + row));
-    stones.setColorAt(count++, color);
-  }
-  stones.count = count; stones.computeBoundingSphere(); scene.add(stones);
 }

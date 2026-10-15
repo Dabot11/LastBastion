@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ENEMIES, TOWERS, WORLD, towerStats, type TowerKind } from '../game/config';
 import { PAD_HEIGHT, gatePoint, padAt, placementIssue, roadHeight, type GameMap, type Point } from '../game/path';
 import { type Simulation, type Tower } from '../game/simulation';
+import { sceneryTexturesReady } from './nature';
 import { createTerrain } from './terrain';
 import { box, circle, cone, enemyModel, orb, projectileModel, towerModel } from './models';
 import { DamageLabels } from './damage-labels';
@@ -22,6 +23,7 @@ export class GameView {
   private readonly effects: Effects;
   private readonly upgradeEffects: Effects;
   private lastVisualTime = 0;
+  private foliageShadowsReady = false;
   private readonly damageLabels: DamageLabels;
   private door: THREE.Group; private gateRecoil = 0;
   private castleFraming: THREE.Vector3[] = [];
@@ -52,9 +54,9 @@ export class GameView {
     this.renderer.domElement.tabIndex = 0;
     container.append(this.renderer.domElement);
     this.scene.fog = new THREE.Fog(0xb7cfcc, 40, 92);
-    this.scene.add(new THREE.HemisphereLight(0xc4e3ef, 0x385e39, 1.25));
+    this.scene.add(new THREE.HemisphereLight(0xc4e3ef, 0x779465, 1.45));
     const rim = new THREE.DirectionalLight(0xb5dbe9, .8); rim.position.set(20, 15, -24); this.scene.add(rim);
-    const sun = new THREE.DirectionalLight(0xffe8c0, 3.3); sun.position.set(-18, 32, 14); sun.castShadow = true;
+    const sun = new THREE.DirectionalLight(0xffe8c9, 2.8); sun.position.set(-18, 32, 14); sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = -25; sun.shadow.camera.right = 25;
     sun.shadow.camera.top = 25; sun.shadow.camera.bottom = -25; sun.shadow.camera.far = 80; sun.shadow.normalBias = .06; sun.shadow.bias = .00025; this.scene.add(sun); this.renderer.shadowMap.autoUpdate = false; this.renderer.shadowMap.needsUpdate = true;
     this.effects = new Effects(this.scene);
@@ -162,6 +164,7 @@ export class GameView {
     return new THREE.Vector3(x, WORLD.elevation + 2.5, z);
   }
   update(sim: Simulation, visualDt: number, time: number): void {
+    if (!this.foliageShadowsReady && sceneryTexturesReady()) { this.foliageShadowsReady = true; this.renderer.shadowMap.needsUpdate = true; }
     if (sim.map !== this.map) this.loadMap(sim.map);
     const enemyIds = new Set(sim.enemies.filter(e => e.hp > 0).map(e => e.id));
     for (const [id, v] of this.enemies) if (!enemyIds.has(id)) { this.scene.remove(v.group); this.enemies.delete(id); }

@@ -8,8 +8,8 @@ import { fortressModel, caveModel } from './fortress';
 import { landscape } from './landscape';
 import { surroundingWorld } from './scenery';
 import { contactShadowMaterial, groundMaterial } from './surfaces';
-import { naturalScenery, naturalPine, naturalRock } from './nature';
-import { modelFramingPoints } from './framing';
+import { naturalScenery, naturalTree, naturalRock, orientFoliage } from './nature';
+import { CAMERA_OFFSET, modelFramingPoints } from './framing';
 export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): { surfaces: THREE.Object3D[]; castle: THREE.Group; door: THREE.Group; castleFraming: THREE.Vector3[] } {
   const detailed = naturalScenery(map);
   const group = new THREE.Group(); scene.add(group);
@@ -17,7 +17,7 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
   surroundingWorld(group, map);
   const shadeGeometry = new THREE.PlaneGeometry(1, 1); shadeGeometry.rotateX(-Math.PI / 2);
   map.obstacles.forEach((o, i) => {
-    if (o.type === 'tree') { const tree = detailed ? naturalPine(.78 + (i % 5) * .06, i) : pine(.78 + (i % 5) * .06); tree.position.set(o.x, WORLD.elevation, o.z); tree.rotation.y = i * 2.4; group.add(tree); }
+    if (o.type === 'tree') { const tree = detailed ? naturalTree(.78 + (i % 5) * .06, i) : pine(.78 + (i % 5) * .06); tree.position.set(o.x, WORLD.elevation, o.z); tree.rotation.y = i * 2.4; group.add(tree); }
     else if (o.type === 'house') { const house = cottage(map.theme === 'citadel'); house.position.set(o.x, WORLD.elevation, o.z); house.rotation.y = i * .8; group.add(house); }
     else if (detailed) { const rock = naturalRock(i); rock.position.set(o.x, WORLD.elevation + .24, o.z); rock.scale.set(.35, .30, .34); rock.rotation.y = i * 2.4; group.add(rock); }
     else { const rock = mesh(group, new THREE.DodecahedronGeometry(.46, 0), i % 2 ? 0x959b8a : 0xb4b09c, o.x, WORLD.elevation + .3, o.z); rock.scale.set(.95, .85, .9); rock.rotation.set(.1, i, .2); }
@@ -109,6 +109,7 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
     }
   }
   // Merge static props into one draw call per material. Tiny flora does not cast shadows.
+  orientFoliage(group, CAMERA_OFFSET);
   group.updateMatrixWorld(true);
   // Preserve camera landmarks before the static castle meshes join the scenery batches.
   const castleFraming = modelFramingPoints(castle);

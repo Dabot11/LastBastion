@@ -1,9 +1,14 @@
 import * as THREE from 'three';
 import { castleSpace, distance, roadDistance, type GameMap } from '../game/path';
 import { box, cylinder, mesh, pine } from './models';
-import { naturalScenery, naturalPine, naturalRock } from './nature';
+import { naturalScenery, naturalTree, naturalRock } from './nature';
 import { valleyHeight } from './surfaces';
 
+const RIDGES = [
+  [-22, -16, 5, 7], [-12, -20, 5, 6], [-3, -21, 6, 9], [8, -20, 5, 7], [20, -17, 5, 8],
+  [-27, 1, 5, 6], [26, -4, 5, 7], [-23, 19, 5, 4], [27, 16, 5, 5],
+  [-38, -28, 9, 14], [-20, -43, 11, 18], [4, -48, 13, 21], [28, -38, 10, 19], [42, -15, 8, 15],
+];
 function ridgeGeometry(): THREE.BufferGeometry {
   const geo = new THREE.IcosahedronGeometry(1, 2), vertices = geo.getAttribute('position');
   for (let i = 0; i < vertices.count; i++) {
@@ -25,21 +30,18 @@ export function surroundingWorld(group: THREE.Group, map: GameMap): void {
     const outside = Math.max(Math.abs(x) - 15, Math.abs(z) - 13);
     if (outside < 2.2 || outside > 35 || castleSpace({ x, z }, map, 3) || roadDistance({ x, z }, map) < 3.2 || distance({ x, z }, map.path[0]) < 6) continue;
     const grove = Math.sin(x * .31 + z * .17) + Math.cos(z * .42 - x * .10);
+    if (RIDGES.some(([rx, rz, width]) => Math.hypot((x - rx) / (width + .8), (z - rz) / (width * .8 + .8)) < 1)) continue;
     if (grove < -.9 || random() > (outside < 8 ? .95 : .65)) continue;
     const scale = (outside < 8 ? 1.1 : 1.5) + random() * .8;
-    const tree = detailed ? naturalPine(scale, i, outside > 8) : pine(scale); tree.position.set(x, valleyHeight(x, z), z); tree.rotation.y = random() * Math.PI * 2; group.add(tree);
+    const tree = detailed ? naturalTree(scale, i, outside > 8) : pine(scale); tree.position.set(x, valleyHeight(x, z), z); tree.rotation.y = random() * Math.PI * 2; group.add(tree);
   }
   // Irregular rocky ridges, with grassy ledges and trees on their shoulders.
-  for (const [x, z, width, height] of [
-    [-22, -16, 5, 7], [-12, -20, 5, 6], [-3, -21, 6, 9], [8, -20, 5, 7], [20, -17, 5, 8],
-    [-27, 1, 5, 6], [26, -4, 5, 7], [-23, 19, 5, 4], [27, 16, 5, 5],
-    [-38, -28, 9, 14], [-20, -43, 11, 18], [4, -48, 13, 21], [28, -38, 10, 19], [42, -15, 8, 15],
-  ]) {
+  for (const [x, z, width, height] of RIDGES) {
     if (castleSpace({ x, z }, map, width + 1) || distance({ x, z }, map.path[0]) < width + 5) continue;
     const base = valleyHeight(x, z);
-    const rock = detailed ? naturalRock(Math.abs(Math.round(x)), false) : mesh(group, ridgeGeometry(), stone, x, base + height * .27, z);
-    if (detailed) { rock.position.set(x, base + height * .27, z); group.add(rock); }
-    rock.scale.set(width, height * .67, width * .8); rock.rotation.set(.08, random() * 6, -.1);
+    const rock = detailed ? naturalRock(Math.abs(Math.round(x)), false) : mesh(group, ridgeGeometry(), stone, x, base + height * .12, z);
+    if (detailed) { rock.position.set(x, base + height * .12, z); group.add(rock); }
+    rock.scale.set(width * .82, height * .40, width * .72); rock.rotation.set(.08, random() * 6, -.1);
     if (!detailed) for (let j = 0; j < 4; j++) {
       const px = x + (random() - .5) * width * 1.4, pz = z + (random() - .5) * width;
       const shelf = mesh(group, cylinder(width * .24, .48, 7), map.grass, px, base + height * (.38 + j * .055), pz);

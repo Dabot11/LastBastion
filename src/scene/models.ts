@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ART, roundedForm, tiledRoof } from './art';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { ENEMIES, TOWERS, towerStats, type EnemyKind, type TowerKind } from '../game/config';
@@ -24,8 +25,8 @@ export function material(color: number, emissive = 0): THREE.MeshStandardMateria
   if (!m) {
     const metal = [0xe9b849, 0x303f46, 0x626174, 0x9692a4, 0x454c4b].includes(color);
     m = new THREE.MeshStandardMaterial({ color, roughness: metal ? .38 : .86, metalness: metal ? .55 : 0, flatShading: false, emissive, emissiveIntensity: emissive ? .9 : 0 });
-    const wood = [0x805737, 0xae8146, 0x513d2e, 0x674629, 0x93633b].includes(color);
-    if (wood || [0xbebdab, 0xe1dac0, 0x95988a, 0x858d82, 0xa4afb5, 0xe8e0c7].includes(color)) { m.map = m.bumpMap = grainTexture(wood); m.bumpScale = wood ? .025 : .035; }
+    const wood = [0x805737, 0xae8146, 0x513d2e, 0x674629, 0x93633b, ART.wood, ART.woodLight].includes(color);
+    if (wood || [0xbebdab, 0xe1dac0, 0x95988a, 0x858d82, 0xa4afb5, 0xe8e0c7, ART.stone, ART.edge, ART.mortar].includes(color)) { m.map = m.bumpMap = grainTexture(wood); m.bumpScale = wood ? .025 : .035; }
     mats.set(key, m);
   } return m;
 }
@@ -81,7 +82,7 @@ function compact(group: THREE.Group, exclude: string[] = []): void {
     const batch = new THREE.Mesh(geo, m); batch.castShadow = batch.receiveShadow = true; group.add(batch); parts.forEach(p => p.dispose());
   }
 }
-const STONE = 0xbebdab, EDGE = 0xe1dac0, MORTAR = 0x95988a, DARK = 0x454c4b, WOOD = 0x805737, WOOD_LIGHT = 0xae8146, BLUE = 0x2457a3, GOLD = 0xe9b849;
+const STONE = ART.stone, EDGE = ART.edge, MORTAR = ART.mortar, DARK = 0x454c4b, WOOD = ART.wood, WOOD_LIGHT = ART.woodLight, BLUE = ART.blue, GOLD = ART.gold;
 export function banner(group: THREE.Group, x: number, y: number, z: number, scale = 1): void {
   const g = new THREE.Group(); g.position.set(x, y, z); g.scale.setScalar(scale); group.add(g);
   const geo = geometry('banner', () => { const shape = new THREE.Shape(); shape.moveTo(-.19, .34); shape.lineTo(.19, .34); shape.lineTo(.19, -.22); shape.lineTo(0, -.4); shape.lineTo(-.19, -.22); shape.closePath(); return new THREE.ShapeGeometry(shape); });
@@ -107,11 +108,6 @@ function stoneBands(g: THREE.Group, width: number, depth: number, bottom: number
     for (const x of [-width * .28 + shift, width * .23 + shift]) if (Math.abs(x) < width / 2 - .03) mesh(g, box(.016, .27, .009), MORTAR, x, y - .14, depth / 2 + .01);
   }
 }
-function crenellations(g: THREE.Group, width: number, y: number): void {
-  mesh(g, box(width + .12, .12, width + .12), EDGE, 0, y - .14, 0);
-  for (const x of [-width / 2, 0, width / 2]) for (const z of [-width / 2, width / 2]) mesh(g, box(.22, .29, .22), EDGE, x, y, z);
-  for (const x of [-width / 2, width / 2]) mesh(g, box(.22, .29, .22), EDGE, x, y, 0);
-}
 const levelShields = new Map<number, THREE.SpriteMaterial>();
 function levelShield(level: number): THREE.Sprite {
   if (!levelShields.has(level)) {
@@ -129,18 +125,26 @@ function levelShield(level: number): THREE.Sprite {
 }
 function makeTower(kind: TowerKind, level: number): THREE.Group {
   const g = new THREE.Group();
-  const stone = level === 3 ? 0xe8e0c7 : level === 2 ? 0xa4afb5 : STONE;
+  const stone = level === 3 ? EDGE : STONE;
   const base = mesh(g, cylinder(.70 + (level - 1) * .07, .14 + (level - 1) * .04, 6), level === 3 ? GOLD : level === 2 ? DARK : 0x858c80, 0, .07 + (level - 1) * .02, 0); base.rotation.y = Math.PI / 2;
   if (level >= 2) mesh(g, cylinder(.68, .08, 6), level === 3 ? EDGE : 0x9692a4, 0, .20, 0).rotation.y = Math.PI / 2;
   mesh(g, softBox(.99, .17, .99), EDGE, 0, .22, 0);
   const height = 1.5;
-  mesh(g, softBox(.86, height, .86), stone, 0, .31 + height / 2, 0); stoneBands(g, .86, .86, .31, height);
-  for (const x of [-.44, .44]) for (const z of [-.44, .44]) mesh(g, softBox(.14, height, .14), EDGE, x, .31 + height / 2, z);
-  for (const x of [-.29, .29]) mesh(g, softBox(.17, .045, .017), 0x678562, x, .37, .447);
-  crenellations(g, .87, height + .60);
-  mesh(g, box(.16, .40, .025), DARK, 0, .93, .44);
-  mesh(g, torus(.085, .025, 4, 8, Math.PI), EDGE, 0, 1.13, .45);
-  banner(g, .29, .99, .475, .78);
+  mesh(g, softBox(.92, .32, .92), stone, 0, .40, 0); stoneBands(g, .92, .92, .25, .32);
+  mesh(g, softBox(.48, 1.18, .48), WOOD, 0, 1.1, 0);
+  for (const x of [-.39, .39]) for (const z of [-.39, .39]) {
+    mesh(g, softBox(.17, 1.38, .17), WOOD_LIGHT, x, 1.13, z);
+    mesh(g, softBox(.23, .14, .23), EDGE, x, .51, z);
+    mesh(g, roundedForm(.035, 8), DARK, x, 1.61, z + .09);
+  }
+  for (const z of [-.43, .43]) for (const side of [-1, 1]) {
+    const brace = mesh(g, softBox(.12, 1.15, .10), WOOD_LIGHT, side * .18, 1.1, z);
+    brace.rotation.z = side * -.40;
+  }
+  mesh(g, softBox(1.08, .18, 1.08), WOOD_LIGHT, 0, 1.83, 0);
+  for (const z of [-.49, .49]) mesh(g, softBox(1.07, .13, .13), WOOD, 0, 1.99, z);
+  for (const x of [-.49, .49]) mesh(g, softBox(.13, .13, 1.07), WOOD, x, 1.99, 0);
+  banner(g, 0, 1.04, .48, 1.05);
   const turret = new THREE.Group(); turret.name = 'turret'; turret.position.y = height + .43; turret.userData.restY = turret.position.y; g.add(turret);
   const accent = TOWERS[kind].color;
   mesh(g, box(.46, .16, .055), accent, 0, 1.35, .48);
@@ -166,11 +170,12 @@ function makeTower(kind: TowerKind, level: number): THREE.Group {
   }
   if (kind === 'poison') {
     for (const x of [-.29, .29]) {
-      mesh(turret, cylinder(.08, .23, 10), 0x447b46, x, .34, -.22);
+      mesh(turret, roundedForm(.12), 0x447b46, x, .34, -.22);
       mesh(turret, cylinder(.065, .13, 10), accent, x, .39, -.22, 0x17380b);
       mesh(turret, cylinder(.048, .07, 8), WOOD, x, .50, -.22);
     }
   }
+  const canopy = new THREE.Group(); canopy.position.set(0, .64, -.34); canopy.scale.set(1, 1, .62); turret.add(canopy); tiledRoof(canopy, .41, .30, 0, 3, 4); canopy.rotation.y = Math.PI / 4;
   const muzzle = new THREE.Object3D(); muzzle.name = 'muzzle'; muzzle.position.set(0, .55, .74); turret.add(muzzle);
   for (let i = 1; i < level; i++) { mesh(g, box(1.03, .06, 1.03), GOLD, 0, .48 + i * .36, 0); mesh(g, octa(.055), GOLD, -.14 + i * .14, height + .30, .53); }
   if (level >= 2) {
@@ -200,28 +205,30 @@ export function towerModel(kind: TowerKind, level = 1): THREE.Group {
 }
 function makeEnemy(kind: EnemyKind): THREE.Group {
   const g = new THREE.Group(), heavy = kind === 'beast' || kind === 'guardian', runner = kind === 'runner';
-  const skin = runner ? 0x6d596b : heavy ? 0x687566 : 0x79916d, armor = heavy ? 0x626174 : 0x674629;
-  const torso = mesh(g, softBox(heavy ? .58 : .43, heavy ? .47 : .4, .33), armor, 0, .51, 0); torso.rotation.x = runner ? .16 : .035;
-  mesh(g, orb(.17), skin, 0, .87, .075).scale.set(1.12, 1.16, 1);
-  mesh(g, softBox(.3, .11, .13), skin, 0, .78, .18);
-  mesh(g, softBox(.22, .042, .016), 0x302d35, 0, .777, .252);
+  const skin = ART.enemySkin, armor = heavy ? 0x626174 : 0x674629;
+  g.name = `adventure-enemy-${kind}`; g.userData.skinColor = skin;
+  const torso = mesh(g, roundedForm(.25), skin, 0, .52, 0); torso.scale.set(heavy ? 1.32 : .92, heavy ? 1.2 : 1.02, .80); torso.rotation.x = runner ? .16 : .035;
+  mesh(g, roundedForm(.20, 16), skin, 0, .89, .075).scale.set(1.12, 1.10, 1);
+  mesh(g, roundedForm(.075), skin, 0, .87, .28).scale.set(.8, .7, 1.1);
+  mesh(g, softBox(.33, .14, .15), skin, 0, .77, .19);
+  mesh(g, softBox(.22, .042, .016), 0x302d35, 0, .777, .282);
   for (const x of [-.082, .082]) {
-    mesh(g, softBox(.054, .034, .025), 0xff704e, x, .89, .225, 0xc72545);
-    const brow = mesh(g, softBox(.12, .043, .06), skin, x, .931, .21); brow.rotation.z = -x * 1.3;
-    mesh(g, cone(.021, .08, 6), 0xe1dac0, x, .777, .26);
-    const ear = mesh(g, cone(.05, .14, 6), skin, x * 2.5, .90, .03); ear.rotation.z = -Math.sign(x) * 1.2;
+    mesh(g, softBox(.054, .034, .025), 0xffdf83, x, .90, .254);
+    const brow = mesh(g, softBox(.12, .043, .06), skin, x, .948, .24); brow.rotation.z = -x * 1.3;
+    mesh(g, cone(.021, .08, 6), 0xe1dac0, x, .777, .30);
+    const ear = mesh(g, cone(.075, .24, 10), skin, x * 3, .92, .03); ear.rotation.z = -Math.sign(x) * 1.2;
   }
   mesh(g, softBox(.48, .055, .37), 0x303f46, 0, .35, 0);
   mesh(g, softBox(.075, .075, .022), GOLD, .025, .35, .201);
   for (const x of [-.12, .12]) {
-    const skirt = mesh(g, softBox(.17, .19, .08), runner ? 0x513d62 : 0x805737, x, .28, .14); skirt.rotation.z = -x * .3;
+    const skirt = mesh(g, softBox(.17, .19, .08), runner ? 0x633f36 : WOOD, x, .28, .14); skirt.rotation.z = -x * .3;
   }
   for (const side of [-1, 1]) {
     const arm = new THREE.Group(); arm.name = side < 0 ? 'armL' : 'armR'; arm.position.set(side * (heavy ? .36 : .29), .67, 0); g.add(arm);
-    mesh(arm, orb(heavy ? .15 : .10), armor, 0, -.01, 0);
-    mesh(arm, softBox(.12, .29, .14), skin, 0, -.18, .025);
+    mesh(arm, roundedForm(heavy ? .16 : .12), armor, 0, -.01, 0);
+    mesh(arm, roundedForm(.11), skin, 0, -.18, .025).scale.set(.85, 1.65, .9);
     mesh(arm, softBox(.14, .1, .17), 0x454c4b, 0, -.27, .055);
-    mesh(arm, orb(.071), skin, 0, -.34, .09);
+    mesh(arm, roundedForm(.085), skin, 0, -.34, .09);
     if (side > 0) {
       mesh(arm, cylinder(.025, .53, 8), WOOD, 0, -.17, .15);
       if (kind === 'guardian' || kind === 'beast') {
@@ -229,16 +236,24 @@ function makeEnemy(kind: EnemyKind): THREE.Group {
         mesh(arm, cone(.065, .18, 6), 0xd3d6d1, .25, .05, .15).rotation.z = -Math.PI / 2;
       } else if (runner) { mesh(arm, cone(.053, .37, 4), 0x9692a4, 0, .14, .15); }
       else { mesh(arm, orb(.11), 0x674629, 0, .095, .15); }
+    } else if (kind === 'minion') {
+      mesh(arm, cylinder(.17, .065, 16), WOOD_LIGHT, 0, -.2, .21).rotation.x = Math.PI / 2;
+      mesh(arm, torus(.16, .025, 6, 16), DARK, 0, -.2, .255);
+      mesh(arm, roundedForm(.045), 0x9692a4, 0, -.2, .28);
     } else if (heavy) {
       mesh(arm, softBox(.23, .31, .075), 0x303f46, 0, -.2, .21);
       mesh(arm, orb(.055), 0x9692a4, 0, -.2, .26);
     }
     const leg = new THREE.Group(); leg.name = side < 0 ? 'legL' : 'legR'; leg.position.set(side * .14, .34, 0); g.add(leg);
-    mesh(leg, softBox(.14, .24, .16), 0x343943, 0, -.12, 0);
+    mesh(leg, softBox(.15, .24, .17), skin, 0, -.12, 0);
     mesh(leg, softBox(.18, .12, .25), 0x252a33, 0, -.285, .035);
   }
   if (heavy) {
-    mesh(g, softBox(.52, .34, .085), 0x626174, 0, .54, .18);
+    if (kind === 'beast') mesh(g, softBox(.52, .30, .085), 0x626174, 0, .54, .18);
+    for (const side of [-1, 1]) {
+      mesh(g, roundedForm(.17), 0x626174, side * .33, .73, 0).scale.set(1.2, .60, 1.15);
+      for (const j of [-1, 1]) { const spike = mesh(g, cone(.045, .17, 8), EDGE, side * .35, .86, j * .10); spike.rotation.z = -side * .30; }
+    }
     for (const x of [-.18, .18]) for (const y of [.41, .66]) mesh(g, orb(.028), 0xe1dac0, x, y, .239);
     mesh(g, softBox(.08, .28, .035), kind === 'guardian' ? 0x9c3f5c : 0x9692a4, 0, .54, .24);
     mesh(g, softBox(.39, .14, .32), 0x303f46, 0, 1.01, .015);
@@ -246,14 +261,14 @@ function makeEnemy(kind: EnemyKind): THREE.Group {
       const horn = mesh(g, cone(.068, kind === 'guardian' ? .36 : .20, 8), 0xd6c8a8, side * .20, 1.16, .025); horn.rotation.z = -side * .5;
     }
   } else {
-    mesh(g, orb(.188), runner ? 0x513d62 : 0x454c4b, 0, 1.00, -.009).scale.y = .47;
+    mesh(g, roundedForm(.20), runner ? 0x942d25 : 0x454c4b, 0, 1.00, -.009).scale.y = .47;
     const strap = mesh(g, softBox(.05, .4, .022), WOOD_LIGHT, -.06, .53, .185); strap.rotation.z = .35;
-    if (runner) { const cape = mesh(g, softBox(.31, .43, .06), 0x513d62, 0, .48, -.22); cape.rotation.x = .3; }
+    if (runner) { const cape = mesh(g, softBox(.31, .43, .06), 0x942d25, 0, .48, -.22); cape.rotation.x = .3; }
   }
   if (kind === 'guardian') mesh(g, octa(.074), 0xa35df1, 0, .57, .28, 0x622fc1);
   compact(g, ['legL', 'legR', 'armL', 'armR']);
   for (const name of ['legL', 'legR', 'armL', 'armR']) compact(g.getObjectByName(name) as THREE.Group);
-  g.scale.setScalar(ENEMIES[kind].scale * 1.35); g.userData.healthHeight = kind === 'guardian' ? 1.62 : 1.43;
+  g.scale.setScalar(ENEMIES[kind].scale * 1.35); g.userData.healthHeight = 1.43;
   return g;
 }
 export function enemyModel(kind: EnemyKind): THREE.Group {

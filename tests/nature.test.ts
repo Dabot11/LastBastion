@@ -1,16 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { naturalPine, naturalRockGeometry, naturalScenery } from '../src/scene/nature';
+import { naturalPine, naturalTree, naturalRockGeometry, naturalScenery } from '../src/scene/nature';
 import { MISSIONS } from '../src/game/missions';
 
-test('the visual sample is confined to the first mission', () => {
-  assert.deepEqual(MISSIONS.map(m => naturalScenery(m.map)), [true, false, false, false, false, false, false, false, false, false]);
+test('the approved scenery is available throughout the ten-mission campaign', () => {
+  assert.deepEqual(MISSIONS.map(m => naturalScenery(m.map)), Array(10).fill(true));
 });
 test('natural trees and rocks fit the existing solid obstacle clearances', () => {
   const point = new THREE.Vector3();
-  for (let variant = 0; variant < 5; variant++) {
-    const tree = naturalPine(1, variant); tree.updateMatrixWorld(true);
+  for (const makeTree of [naturalPine, naturalTree]) for (let variant = 0; variant < 5; variant++) {
+    const tree = makeTree(1, variant); tree.updateMatrixWorld(true);
     tree.traverse(o => {
       if (!(o instanceof THREE.Mesh)) return;
       const vertices = o.geometry.getAttribute('position');

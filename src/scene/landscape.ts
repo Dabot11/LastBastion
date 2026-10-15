@@ -34,8 +34,8 @@ function makeGeometry(positions: number[], colors: number[], vertical = false): 
 export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.Object3D[] } {
   const group = new THREE.Group();
   const topPositions: number[] = [], topColors: number[] = [], wallPositions: number[] = [], wallColors: number[] = [];
-  const baseGrass = new THREE.Color(map.theme === 'forest' ? 0x62954c : map.theme === 'village' ? 0x8d9d50 : 0x58966a);
-  const rockColor = new THREE.Color(map.theme === 'citadel' ? 0x8a99a3 : 0x9c9c8e);
+  const baseGrass = new THREE.Color(map.theme === 'forest' ? 0x719b43 : map.theme === 'village' ? 0x96a54f : 0x669953);
+  const rockColor = new THREE.Color(map.theme === 'citadel' ? 0xc4a77d : 0xc59b64);
   const color = new THREE.Color();
   const append = (points: THREE.Vector3[], positions: number[], colors: number[], tint: THREE.Color): void => {
     for (const p of points) { positions.push(p.x, p.y, p.z); colors.push(tint.r, tint.g, tint.b); }
@@ -61,7 +61,7 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
       color.copy(i === 2 ? baseGrass : rockColor).multiplyScalar(i === 2 ? .8 : .85 + .14 * Math.sin(mid.x * 3.1 + mid.z * 2.3 + i));
       if (naturalScenery(map)) {
         for (const point of [p, r, q, q, r, s]) {
-          color.copy(i === 2 ? baseGrass : rockColor).multiplyScalar(.86 + .09 * Math.sin(point.x * .6 + point.z * .4) + .05 * Math.cos(point.y * 4));
+          color.copy(i === 2 ? baseGrass : rockColor).multiplyScalar(.97 + .06 * Math.sin(point.x * .6 + point.z * .4) + .04 * Math.cos(point.y * 4));
           append([point], wallPositions, wallColors, color);
         }
       } else append([p, r, q, q, r, s], wallPositions, wallColors, color);
@@ -116,7 +116,7 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
     positions.setY(i, roadHeight({ x, z }, map)); uvs.setXY(i, x * .32, z * .32);
   }
   floorGeometry.computeVertexNormals();
-  const floorMesh = owned(floorGeometry, map.theme === 'citadel' ? 0xd5b793 : 0xe1bc83, false, 'road');
+  const floorMesh = owned(floorGeometry, map.theme === 'citadel' ? 0xe3c59a : 0xeac88c, false, 'road');
   group.add(floorMesh);
   return { group, surfaces: [tops, floorMesh] };
 }

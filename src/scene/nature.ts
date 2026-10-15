@@ -1,34 +1,20 @@
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { DEFAULT_MAP, type GameMap } from '../game/path';
+import { type GameMap } from '../game/path';
 
-export const naturalScenery = (map: GameMap): boolean => map === DEFAULT_MAP;
-type Skin = 'bark' | 'needles' | 'stone';
+// The approved art direction is shared by the entire ten-mission campaign.
+export const naturalScenery = (_map: GameMap): boolean => true;
+type Skin = 'bark' | 'stone';
 const materials = new Map<string, THREE.MeshStandardMaterial>();
 const textures = new Map<Skin, { color: THREE.DataTexture; height: THREE.DataTexture; roughness: THREE.DataTexture }>();
 const rocks = new Map<string, THREE.BufferGeometry>();
 const trees = new Map<string, THREE.Group>();
-const up = new THREE.Vector3(0, 1, 0);
 function noise(x: number, y: number): number {
   const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
   const hash = (a: number, b: number) => { let n = Math.imul(a, 374761393) + Math.imul(b, 668265263); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
   const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
   return THREE.MathUtils.lerp(THREE.MathUtils.lerp(hash(ix, iy), hash(ix + 1, iy), u), THREE.MathUtils.lerp(hash(ix, iy + 1), hash(ix + 1, iy + 1), u), v);
 }
-const fronds = Array.from({ length: 32 }, (_, i) => {
-  const t = .06 + Math.floor(i / 2) * .055, side = i % 2 ? 1 : -1;
-  return { y: t, x: side * (.82 * (1 - t) + .03), dy: .10 };
-});
-function needleAlpha(x: number, y: number): number {
-  if (y < .025 || y > .98) return 0;
-  if (Math.abs(x) < .32 * (1 - y) + .015) return 255;
-  for (const branch of fronds) {
-    const t = THREE.MathUtils.clamp((x * branch.x + (y - branch.y) * branch.dy) / (branch.x ** 2 + branch.dy ** 2), 0, 1);
-    if (Math.hypot(x - branch.x * t, y - branch.y - branch.dy * t) < .030 * (1 - t * .3)) return 255;
-  }
-  return 0;
-}
-
 function surfaceTextures(kind: Skin) {
   const known = textures.get(kind); if (known) return known;
   const size = 512, color = new Uint8Array(size * size * 4), height = new Uint8Array(color.length), roughness = new Uint8Array(color.length);
@@ -42,14 +28,14 @@ function surfaceTextures(kind: Skin) {
       : Math.abs(Math.sin(u * 51 + Math.sin(v * 17) * 2));
     const crack = Math.max(0, 1 - vein / (kind === 'stone' ? .025 : .2));
     const shade = .83 + cloud * .13 + (grain - .5) * .16 - crack * .35;
-    const pigment = kind === 'bark' ? [137, 111, 80] : kind === 'needles' ? [111, 140, 90] : [192, 184, 161];
+    const pigment = kind === 'bark' ? [137, 111, 80] : [207, 198, 173];
     const i = (y * size + x) * 4;
     for (let c = 0; c < 3; c++) {
       color[i + c] = Math.round(pigment[c] * shade);
       height[i + c] = Math.round(150 + cloud * 20 + grain * 24 - crack * 105);
       roughness[i + c] = Math.round(210 + cloud * 15 + grain * 25 - crack * 12);
     }
-    color[i + 3] = kind === 'needles' ? needleAlpha(x / size * 2 - 1, y / size) : 255;
+    color[i + 3] = 255;
     height[i + 3] = roughness[i + 3] = 255;
   }
   const texture = (data: Uint8Array, srgb = false) => {
@@ -63,11 +49,10 @@ function surfaceTextures(kind: Skin) {
 export function natureMaterial(kind: Skin, variant = 0): THREE.MeshStandardMaterial {
   const key = `${kind}-${variant % 3}`; const known = materials.get(key); if (known) return known;
   const skin = surfaceTextures(kind);
-  const color = kind === 'needles' ? [0xd2ddb9, 0xedf0cc, 0xbacba4][variant % 3] : kind === 'bark' ? 0xb7a181 : 0xffffff;
+  const color = kind === 'bark' ? 0xd9b17a : 0xffffff;
   const material = new THREE.MeshStandardMaterial({ color, map: skin.color, bumpMap: skin.height,
     bumpScale: kind === 'bark' ? .09 : kind === 'stone' ? .035 : .045, roughnessMap: skin.roughness,
     roughness: 1, vertexColors: kind === 'stone' });
-  if (kind === 'needles') { material.alphaTest = .32; material.side = THREE.DoubleSide; material.alphaToCoverage = true; }
   materials.set(key, material); return material;
 }
 
@@ -100,41 +85,49 @@ export function naturalRock(variant = 0, distant = false): THREE.Mesh {
   rock.castShadow = rock.receiveShadow = true; rock.name = 'weathered-natural-rock'; return rock;
 }
 
-// Crossed, cutout needle sprays give an airy silhouette without solid geometric crowns.
-const foliage = new THREE.PlaneGeometry(1, 1);
-foliage.userData.shared = true;
-export function naturalPine(scale = 1, variant = 0, distant = false): THREE.Group {
-  const key = `${variant % 5}-${distant}`;
-  if (!trees.has(key)) {
-    const tree = new THREE.Group(); tree.name = 'natural-pine';
-    const add = (geo: THREE.BufferGeometry, material: THREE.Material) => {
-      geo.userData.shared = true; const m = new THREE.Mesh(geo, material); m.castShadow = !distant; m.receiveShadow = true; tree.add(m); return m;
-    };
-    const bark = natureMaterial('bark');
-    const trunk = add(new THREE.CylinderGeometry(.025, .095, 2.5, distant ? 6 : 10, 3), bark); trunk.position.y = 1.25;
-    trunk.rotation.z = Math.sin(variant * 4) * .025;
-    const branchGeometry = new THREE.CylinderGeometry(.008, .027, 1, 5);
-    for (let tier = 0; tier < 4; tier++) for (let j = 0; j < 3; j++) {
-      const angle = j * Math.PI * 2 / 3 + tier * 1.8 + variant * .8;
-      const radius = .28 - tier * .048, y = .78 + tier * .45 + .055 * Math.sin(j * 4 + variant);
-      const start = new THREE.Vector3(0, y - .06, 0), end = new THREE.Vector3(Math.cos(angle) * radius, y + .04, Math.sin(angle) * radius);
-      const direction = end.clone().sub(start), branch = add(branchGeometry, bark);
-      branch.position.copy(start).add(end).multiplyScalar(.5); branch.quaternion.setFromUnitVectors(up, direction.clone().normalize()); branch.scale.y = direction.length();
-      for (let spray = 0; spray < (distant ? 2 : 3); spray++) {
-        const tuft = add(foliage, natureMaterial('needles', (tier + j + variant) % 3));
-        tuft.position.copy(end); tuft.position.y += .10;
-        tuft.scale.set(.55 - tier * .05, .68 - tier * .055, 1);
-        tuft.rotation.set(-.6 - spray * .28, angle + spray * Math.PI / 3, .1 * Math.cos(angle));
-      }
-    }
-    const leader = add(foliage, natureMaterial('needles', variant % 3)); leader.position.y = 2.48; leader.scale.set(.26, .72, 1); leader.rotation.y = variant;
-    if (!distant) for (let j = 0; j < 4; j++) {
-      const a = j * Math.PI / 2 + variant;
-      const root = add(branchGeometry, bark); root.position.set(Math.cos(a) * .10, .065, Math.sin(a) * .10);
-      root.quaternion.setFromUnitVectors(up, new THREE.Vector3(Math.cos(a), -.35, Math.sin(a)).normalize()); root.scale.set(1.4, .24, 1.4);
-    }
-    tree.scale.set(.92, 1, .92);
-    trees.set(key, tree);
+// Painted foliage preserves the approved leaf detail with two triangles per tree.
+// The camera supports pan/zoom with a fixed angle, so cards are oriented once before baking.
+let textureReady = false;
+const treeMaterials = new Map<string, THREE.MeshBasicMaterial>();
+let treeAtlas: THREE.Texture | undefined;
+export const sceneryTexturesReady = (): boolean => textureReady;
+function treeMaterial(variant: number): THREE.MeshBasicMaterial {
+  const key = String(variant % 3);
+  if (!treeAtlas) {
+    treeAtlas = typeof window === 'undefined' ? new THREE.Texture() : new THREE.TextureLoader().load(new URL('../assets/art/adventure-trees.png', import.meta.url).href, () => { textureReady = true; });
+    treeAtlas.colorSpace = THREE.SRGBColorSpace; treeAtlas.anisotropy = 4;
   }
-  const result = trees.get(key)!.clone(true); result.scale.multiplyScalar(scale); return result;
+  if (!treeMaterials.has(key)) treeMaterials.set(key, new THREE.MeshBasicMaterial({
+    map: treeAtlas, color: [0xffffff, 0xe0edce, 0xe7efdd][variant % 3], alphaTest: .4, side: THREE.DoubleSide,
+  }));
+  return treeMaterials.get(key)!;
 }
+const treeCards = new Map<boolean, THREE.BufferGeometry>();
+function treeModel(scale: number, variant: number, distant: boolean, broadleaf: boolean): THREE.Group {
+  const key = `${broadleaf}-${variant % 3}-${distant}`;
+  if (!trees.has(key)) {
+    const tree = new THREE.Group(); tree.name = broadleaf ? 'adventure-oak' : 'adventure-pine'; tree.userData.artStyle = 'animated-adventure';
+    if (!treeCards.has(broadleaf)) {
+      const height = 2.45;
+      const geometry = new THREE.PlaneGeometry(broadleaf ? 1.3 : 1.15, height); geometry.translate(0, height / 2, 0);
+      const uv = geometry.getAttribute('uv');
+      // Atlas crops are selected through UVs; original artwork stays intact.
+      const left = broadleaf ? 0 : .585, right = broadleaf ? .58 : 1;
+      for (let i = 0; i < uv.count; i++) uv.setX(i, left + uv.getX(i) * (right - left));
+      geometry.userData.shared = true; treeCards.set(broadleaf, geometry);
+    }
+    const card = new THREE.Mesh(treeCards.get(broadleaf)!, treeMaterial(variant));
+    card.castShadow = !distant; card.userData.foliageCard = true; tree.add(card); trees.set(key, tree);
+  }
+  const result = trees.get(key)!.clone(true); result.scale.setScalar(scale); return result;
+}
+export function orientFoliage(root: THREE.Object3D, cameraOffset: readonly [number, number, number]): void {
+  const facing = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(cameraOffset[0], cameraOffset[2]));
+  root.updateMatrixWorld(true);
+  root.traverse(object => {
+    if (!object.userData.foliageCard || !object.parent) return;
+    object.quaternion.copy(object.parent.getWorldQuaternion(new THREE.Quaternion()).invert()).multiply(facing);
+  });
+}
+export function naturalPine(scale = 1, variant = 0, distant = false): THREE.Group { return treeModel(scale, variant, distant, false); }
+export function naturalTree(scale = 1, variant = 0, distant = false): THREE.Group { return treeModel(scale, variant, distant, variant % 3 === 0); }

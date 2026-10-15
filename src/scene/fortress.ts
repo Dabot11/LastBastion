@@ -1,8 +1,9 @@
+import { ART, tiledRoof } from './art';
 import { naturalPine, naturalRock } from './nature';
 import * as THREE from 'three';
 import { banner, box, cone, cylinder, mesh, orb, pine, softBox, torch, torus, weatheredRock } from './models';
 
-const STONE = 0xbebdab, EDGE = 0xe1dac0, MORTAR = 0x95988a, WOOD = 0x805737, IRON = 0x454c4b, BLUE = 0x2457a3;
+const STONE = ART.stone, EDGE = ART.edge, MORTAR = ART.mortar, WOOD = ART.wood, IRON = 0x454c4b, BLUE = ART.blue;
 
 function masonry(group: THREE.Group, width: number, height: number, depth: number): void {
   mesh(group, softBox(width, height, depth), MORTAR, 0, height / 2, 0);
@@ -70,7 +71,7 @@ export function fortressModel(): THREE.Group {
   for (const x of [-4.8, 4.8]) for (const z of [-.65, -8.55]) {
     const tower = new THREE.Group(); tower.position.set(x, 0, z); g.add(tower);
     mesh(tower, cylinder(1.25, .25, 16), EDGE, 0, .16, 0);
-    mesh(tower, cylinder(1.04, 5.05, 16), STONE, 0, 2.66, 0);
+    mesh(tower, cylinder(1.04, 5.05, 24), STONE, 0, 2.66, 0);
     for (let y = .55; y < 5.3; y += .5) {
       mesh(tower, torus(1.045, .024, 4, 24), MORTAR, 0, y, 0).rotation.x = Math.PI / 2;
       for (let j = 0; j < 8; j++) {
@@ -84,7 +85,10 @@ export function fortressModel(): THREE.Group {
     }
     for (const y of [1.2, 3.6]) mesh(tower, softBox(.16, .65, .02), 0x303d42, 0, y, 1.051);
     if (z > -1) banner(tower, 0, 2.6, 1.095, 2);
-    torch(tower, 0, 5.9, 0);
+    tiledRoof(tower, 1.46, 1.95, 5.84);
+    mesh(tower, orb(.10), ART.gold, 0, 7.82, 0);
+    mesh(tower, cylinder(.035, .75), ART.gold, 0, 8.12, 0);
+    mesh(tower, softBox(.65, .29, .025), BLUE, .31, 8.31, 0);
   }
   const keep = new THREE.Group(); keep.position.z = -5.7; g.add(keep);
   masonry(keep, 3.3, 5.9, 3.1);
@@ -92,18 +96,14 @@ export function fortressModel(): THREE.Group {
     mesh(keep, softBox(.32, .61, .06), 0x354852, x, y, 1.66);
     mesh(keep, torus(.16, .055, 5, 16, Math.PI), EDGE, x, y + .29, 1.72);
   }
-  const roof = mesh(keep, cone(2.6, 1.65, 4), BLUE, 0, 7.08, 0); roof.rotation.y = Math.PI / 4;
-  for (let y = 6.43; y <= 7.5; y += .22) {
-    const r = (7.9 - y) / 1.65 * 2.6;
-    const seam = mesh(keep, cylinder(r, .035, 4), 0x3567aa, 0, y, 0); seam.rotation.y = Math.PI / 4;
-  }
+  const roof = new THREE.Group(); roof.rotation.y = Math.PI / 4; keep.add(roof); tiledRoof(roof, 2.6, 1.65, 6.25, 8, 4);
   mesh(keep, cylinder(.045, .91, 8), 0xe9b849, 0, 8.25, 0);
   mesh(keep, softBox(.98, .46, .032), BLUE, .46, 8.51, 0); banner(keep, .47, 8.41, .032, .48);
   banner(keep, 0, 4, 1.75, 2.2);
   // Small courtyard buildings, paving and barrels make the fortress feel inhabited.
   for (const x of [-3.25, 3.25]) {
     mesh(g, softBox(1.55, 1.72, 2.3), STONE, x, .89, -5.1);
-    const roof = mesh(g, cone(1.65, .85, 4), 0x536a80, x, 2.13, -5.1); roof.rotation.y = Math.PI / 4; roof.scale.x = .8;
+    const roof = mesh(g, cone(1.65, .85, 4), BLUE, x, 2.13, -5.1); roof.rotation.y = Math.PI / 4; roof.scale.x = .8;
     mesh(g, cylinder(.19, .44, 12), WOOD, x, .24, -2.6);
   }
   for (let z = -1.5; z > -4; z -= .55) for (const x of [-.52, 0, .52]) mesh(g, softBox(.48, .025, .5), EDGE, x, .105, z);

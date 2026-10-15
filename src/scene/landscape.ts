@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { WORLD } from '../game/config';
 import { castleSpace, gateLocal, roadDistance, roadHeight, type GameMap, type Point } from '../game/path';
+import { naturalScenery, natureMaterial } from './nature';
 import { groundMaterial, valleyHeight, type SurfaceKind } from './surfaces';
 interface Sample extends Point { value: number; }
 const TOP = WORLD.elevation + .05;
@@ -18,10 +19,16 @@ function owned(geometry: THREE.BufferGeometry, color: number, vertexColors = fal
   const mat = groundMaterial(color, vertexColors, surface);
   const mesh = new THREE.Mesh(geometry, mat); mesh.receiveShadow = true; return mesh;
 }
-function makeGeometry(positions: number[], colors: number[]): THREE.BufferGeometry {
+function makeGeometry(positions: number[], colors: number[], vertical = false): THREE.BufferGeometry {
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  const uv: number[] = []; for (let i = 0; i < positions.length; i += 3) uv.push(positions[i] * .22, positions[i + 2] * .22);
+  const uv: number[] = [];
+  for (let face = 0; face < positions.length; face += 9) {
+    const ax = positions[face + 3] - positions[face], ay = positions[face + 4] - positions[face + 1], az = positions[face + 5] - positions[face + 2];
+    const bx = positions[face + 6] - positions[face], by = positions[face + 7] - positions[face + 1], bz = positions[face + 8] - positions[face + 2];
+    const horizontal = Math.abs(ay * bz - az * by) > Math.abs(ax * by - ay * bx) ? 2 : 0;
+    for (let i = face; i < face + 9; i += 3) uv.push(vertical ? positions[i + horizontal] * .65 : positions[i] * .22, vertical ? positions[i + 1] * .9 : positions[i + 2] * .22);
+  }
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.computeVertexNormals(); return geo;
 }
 export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.Object3D[] } {
@@ -85,7 +92,11 @@ export function landscape(map: GameMap): { group: THREE.Group; surfaces: THREE.O
     clip([a, d, c]); clip([a, c, b]);
   }
   const tops = owned(makeGeometry(topPositions, topColors), 0xffffff, true); tops.castShadow = true;
-  const walls = owned(makeGeometry(wallPositions, wallColors), 0xffffff, true, 'stone'); (walls.material as THREE.Material).side = THREE.DoubleSide; walls.castShadow = true;
+  const walls = owned(makeGeometry(wallPositions, wallColors, naturalScenery(map)), 0xffffff, true, 'stone');
+  if (naturalScenery(map)) {
+    (walls.material as THREE.Material).dispose(); walls.material = natureMaterial('stone').clone(); walls.material.userData.owned = true;
+  }
+  (walls.material as THREE.Material).side = THREE.DoubleSide; walls.castShadow = true;
   group.add(tops, walls);
   // A continuous earthen floor runs below the same route; elevated surfaces occlude it elsewhere.
   const floorGeometry = new THREE.PlaneGeometry(46, 42, 103, 94); floorGeometry.rotateX(-Math.PI / 2);

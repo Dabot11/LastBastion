@@ -1,3 +1,4 @@
+import { naturalPine, naturalRock } from './nature';
 import * as THREE from 'three';
 import { banner, box, cone, cylinder, mesh, orb, pine, softBox, torch, torus, weatheredRock } from './models';
 
@@ -109,27 +110,32 @@ export function fortressModel(): THREE.Group {
   return g;
 }
 
-export function caveModel(): THREE.Group {
+export function caveModel(natural = false): THREE.Group {
   const g = new THREE.Group(); g.name = 'enemy-cave';
+  const stone = (radius: number, variant: number, tint: number, x: number, y: number, z: number): THREE.Object3D => {
+    if (!natural) return mesh(g, weatheredRock(radius, variant), tint, x, y, z);
+    const holder = new THREE.Group(), rock = naturalRock(variant); rock.scale.setScalar(radius);
+    holder.add(rock); holder.position.set(x, y, z); g.add(holder); return holder;
+  };
   const shape = new THREE.Shape(); shape.moveTo(-1.48, 0); shape.lineTo(1.48, 0); shape.lineTo(1.48, 1.22); shape.absellipse(0, 1.22, 1.48, 1.5, 0, Math.PI, false); shape.lineTo(-1.48, 0);
   const opening = new THREE.Mesh(new THREE.ShapeGeometry(shape, 24), new THREE.MeshBasicMaterial({ color: 0x10181b })); opening.position.z = .74; g.add(opening);
   const inner = mesh(g, torus(1.43, .17, 8, 24, Math.PI), 0x454c4b, 0, 1.2, .84); inner.scale.y = 1.1;
   for (let i = 0; i < 17; i++) {
     const a = i / 16 * Math.PI, x = Math.cos(a) * 1.95, y = 1.17 + Math.sin(a) * 1.92;
-    const rock = mesh(g, weatheredRock(.83, i % 3), i % 3 ? 0x95988a : 0xbebdab, x, y, .10 + Math.sin(i * 3) * .17); rock.scale.set(.92, .76 + .15 * Math.sin(i), .88); rock.rotation.set(i * .3, i * .6, a);
+    const rock = stone(.83, i % 3, i % 3 ? 0x95988a : 0xbebdab, x, y, .10 + Math.sin(i * 3) * .17); rock.scale.set(.92, .76 + .15 * Math.sin(i), .88); rock.rotation.set(i * .3, i * .6, a);
   }
   for (const side of [-1, 1]) {
     for (let j = 0; j < 5; j++) {
-      const rock = mesh(g, weatheredRock(1.32, j % 3), j % 2 ? 0x7f8c83 : 0x95988a, side * (2.75 + j * .17), .65 + j * .3, -1.1 - j * .52); rock.scale.set(1.2, 1.0, 1.25); rock.rotation.y = j * 1.1;
+      const rock = stone(1.32, j % 3, j % 2 ? 0x7f8c83 : 0x95988a, side * (2.75 + j * .17), .65 + j * .3, -1.1 - j * .52); rock.scale.set(1.2, 1.0, 1.25); rock.rotation.y = j * 1.1;
     }
-    const tree = pine(1.24); tree.position.set(side * 3.7, 2.1, -2.5); g.add(tree);
+    const tree = natural ? naturalPine(1.24, side > 0 ? 1 : 0) : pine(1.24); tree.position.set(side * 3.7, 2.1, -2.5); g.add(tree);
     for (let j = 0; j < 3; j++) {
       const stone = mesh(g, orb(.14), 0x95988a, side * (1.3 + j * .31), .09, .8 + Math.sin(j) * .4); stone.scale.y = .5;
     }
     const strut = mesh(g, softBox(.18, 1.56, .2), 0x805737, side * 1.47, .74, .4); strut.rotation.z = side * .08;
   }
   for (let j = 0; j < 6; j++) {
-    const rock = mesh(g, weatheredRock(1.13, j % 3), 0x7f8c83, (j - 2.5) * .88, 3.6 + Math.sin(j * 2) * .27, -1.6); rock.scale.set(1.2, .7, 1.5);
+    const rock = stone(1.13, j % 3, 0x7f8c83, (j - 2.5) * .88, 3.6 + Math.sin(j * 2) * .27, -1.6); rock.scale.set(1.2, .7, 1.5);
   }
   mesh(g, softBox(3.25, .19, .22), 0x674629, 0, 2.67, .38).rotation.z = -.045;
   return g;

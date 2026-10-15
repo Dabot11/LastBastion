@@ -8,15 +8,18 @@ import { fortressModel, caveModel } from './fortress';
 import { landscape } from './landscape';
 import { surroundingWorld } from './scenery';
 import { contactShadowMaterial, groundMaterial } from './surfaces';
+import { naturalScenery, naturalPine, naturalRock, naturalBanks } from './nature';
 import { modelFramingPoints } from './framing';
 export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): { surfaces: THREE.Object3D[]; castle: THREE.Group; door: THREE.Group; castleFraming: THREE.Vector3[] } {
+  const detailed = naturalScenery(map);
   const group = new THREE.Group(); scene.add(group);
   const land = landscape(map); scene.add(land.group);
   surroundingWorld(group, map);
   const shadeGeometry = new THREE.PlaneGeometry(1, 1); shadeGeometry.rotateX(-Math.PI / 2);
   map.obstacles.forEach((o, i) => {
-    if (o.type === 'tree') { const tree = pine(.78 + (i % 5) * .06); tree.position.set(o.x, WORLD.elevation, o.z); tree.rotation.y = i * 2.4; group.add(tree); }
+    if (o.type === 'tree') { const tree = detailed ? naturalPine(.78 + (i % 5) * .06, i) : pine(.78 + (i % 5) * .06); tree.position.set(o.x, WORLD.elevation, o.z); tree.rotation.y = i * 2.4; group.add(tree); }
     else if (o.type === 'house') { const house = cottage(map.theme === 'citadel'); house.position.set(o.x, WORLD.elevation, o.z); house.rotation.y = i * .8; group.add(house); }
+    else if (detailed) { const rock = naturalRock(i); rock.position.set(o.x, WORLD.elevation + .24, o.z); rock.scale.set(.35, .30, .34); rock.rotation.y = i * 2.4; group.add(rock); }
     else { const rock = mesh(group, new THREE.DodecahedronGeometry(.46, 0), i % 2 ? 0x959b8a : 0xb4b09c, o.x, WORLD.elevation + .3, o.z); rock.scale.set(.95, .85, .9); rock.rotation.set(.1, i, .2); }
     const shade = new THREE.Mesh(shadeGeometry, contactShadowMaterial()); shade.position.set(o.x, WORLD.elevation + .065, o.z);
     const radius = o.type === 'house' ? 1.7 : o.type === 'tree' ? 1.2 : .9; shade.scale.set(radius, 1, radius); shade.receiveShadow = false; group.add(shade);
@@ -36,7 +39,7 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
   }
   const castle = fortressModel(); castle.position.set(map.path.at(-1)!.x, WORLD.elevation + .05, map.path.at(-1)!.z); castle.rotation.y = map.gateAngle; group.add(castle);
   const door = castle.getObjectByName('castle-door') as THREE.Group;
-  const cave = caveModel(); cave.position.set(map.path[0].x, roadHeight(map.path[0], map), map.path[0].z); cave.rotation.y = samplePath(0, map).angle; group.add(cave);
+  const cave = caveModel(detailed); cave.position.set(map.path[0].x, roadHeight(map.path[0], map), map.path[0].z); cave.rotation.y = samplePath(0, map).angle; group.add(cave);
   // Worn cart tracks and tiny stones belong to the same route, without adding collision surfaces.
   for (let progress = 2; progress < map.length - 3; progress += .85) {
     const p = samplePath(progress, map);
@@ -54,32 +57,35 @@ export function createTerrain(scene: THREE.Group, map: GameMap = DEFAULT_MAP): {
     const x = p.x + Math.cos(p.angle) * 1.3 * side, z = p.z - Math.sin(p.angle) * 1.3 * side;
     const rock = mesh(group, new THREE.DodecahedronGeometry(.13, 0), 0xa5a48f, x, roadHeight({ x, z }, map) + .07, z); rock.scale.set(1.2, .5, .8);
   }
-  const cliffGeometry = new RoundedBoxGeometry(2, 2, 2, 1, .19), vertices = cliffGeometry.getAttribute('position');
-  const cliffColors: number[] = [], tint = new THREE.Color();
-  for (let i = 0; i < vertices.count; i++) {
-    const x = vertices.getX(i), y = vertices.getY(i), z = vertices.getZ(i);
-    vertices.setXYZ(i, x * (1 + .09 * Math.sin(y * 4 + z * 3)), y + .055 * Math.sin(x * 5 + z * 2), z * (1 + .06 * Math.cos(y * 4 - x * 3)));
-    tint.setHex(y > .75 ? 0xa6bd84 : 0xffffff).multiplyScalar(.88 + .12 * Math.sin(x * 5 + y * 4 + z * 3)); cliffColors.push(tint.r, tint.g, tint.b);
-  }
-  cliffGeometry.setAttribute('color', new THREE.Float32BufferAttribute(cliffColors, 3)); cliffGeometry.computeVertexNormals();
-  const canyonRocks = new THREE.InstancedMesh(cliffGeometry, groundMaterial(0xffffff, true, 'stone'), Math.ceil(map.length / 1.15) * 2);
-  const slab = new THREE.Object3D(), slabColor = new THREE.Color(); let slabCount = 0;
-  for (let progress = 2; progress < map.length - 3; progress += 1.15) for (const side of [-1, 1]) {
-    const p = samplePath(progress, map);
-    const floor = roadHeight(p, map), cliffHeight = Math.max(.04, WORLD.elevation - floor);
-    slab.position.set(p.x + Math.cos(p.angle) * 1.49 * side, floor + cliffHeight * .48, p.z - Math.sin(p.angle) * 1.49 * side);
-    slab.rotation.set(.025, p.angle + .065 * Math.sin(progress), .02 * Math.cos(progress * 2));
-    slab.scale.set(.24 + .07 * Math.sin(progress * 2), cliffHeight * (.44 + .05 * Math.cos(progress * 1.3)), .45 + .14 * Math.sin(progress * 2.6)); slab.updateMatrix(); canyonRocks.setMatrixAt(slabCount, slab.matrix);
-    slabColor.setHex([0x939b96, 0xa5aaa0, 0x858f92, 0xb2b2a5][slabCount % 4]); canyonRocks.setColorAt(slabCount++, slabColor);
-    if (Math.sin(progress * 4.3) > -.3) {
-      const x = p.x + Math.cos(p.angle) * 1.82 * side, z = p.z - Math.sin(p.angle) * 1.82 * side;
-      const bush = mesh(group, orb(.16), 0x568c34, x, WORLD.elevation + .13, z); bush.scale.set(1.6, .7, 1.1); bush.castShadow = false;
-      for (let j = 0; j < 3; j++) {
-        const leaf = mesh(group, cone(.06, .25 + j * .04, 4), j % 2 ? 0x6b9b38 : 0x3c7f38, x + Math.cos(j * 2) * .13, WORLD.elevation + .18, z + Math.sin(j * 2) * .13); leaf.rotation.z = (j - 1) * .5; leaf.castShadow = false;
+  if (detailed) naturalBanks(scene, map);
+  else {
+    const cliffGeometry = new RoundedBoxGeometry(2, 2, 2, 1, .19), vertices = cliffGeometry.getAttribute('position');
+    const cliffColors: number[] = [], tint = new THREE.Color();
+    for (let i = 0; i < vertices.count; i++) {
+      const x = vertices.getX(i), y = vertices.getY(i), z = vertices.getZ(i);
+      vertices.setXYZ(i, x * (1 + .09 * Math.sin(y * 4 + z * 3)), y + .055 * Math.sin(x * 5 + z * 2), z * (1 + .06 * Math.cos(y * 4 - x * 3)));
+      tint.setHex(y > .75 ? 0xa6bd84 : 0xffffff).multiplyScalar(.88 + .12 * Math.sin(x * 5 + y * 4 + z * 3)); cliffColors.push(tint.r, tint.g, tint.b);
+    }
+    cliffGeometry.setAttribute('color', new THREE.Float32BufferAttribute(cliffColors, 3)); cliffGeometry.computeVertexNormals();
+    const canyonRocks = new THREE.InstancedMesh(cliffGeometry, groundMaterial(0xffffff, true, 'stone'), Math.ceil(map.length / 1.15) * 2);
+    const slab = new THREE.Object3D(), slabColor = new THREE.Color(); let slabCount = 0;
+    for (let progress = 2; progress < map.length - 3; progress += 1.15) for (const side of [-1, 1]) {
+      const p = samplePath(progress, map);
+      const floor = roadHeight(p, map), cliffHeight = Math.max(.04, WORLD.elevation - floor);
+      slab.position.set(p.x + Math.cos(p.angle) * 1.49 * side, floor + cliffHeight * .48, p.z - Math.sin(p.angle) * 1.49 * side);
+      slab.rotation.set(.025, p.angle + .065 * Math.sin(progress), .02 * Math.cos(progress * 2));
+      slab.scale.set(.24 + .07 * Math.sin(progress * 2), cliffHeight * (.44 + .05 * Math.cos(progress * 1.3)), .45 + .14 * Math.sin(progress * 2.6)); slab.updateMatrix(); canyonRocks.setMatrixAt(slabCount, slab.matrix);
+      slabColor.setHex([0x939b96, 0xa5aaa0, 0x858f92, 0xb2b2a5][slabCount % 4]); canyonRocks.setColorAt(slabCount++, slabColor);
+      if (Math.sin(progress * 4.3) > -.3) {
+        const x = p.x + Math.cos(p.angle) * 1.82 * side, z = p.z - Math.sin(p.angle) * 1.82 * side;
+        const bush = mesh(group, orb(.16), 0x568c34, x, WORLD.elevation + .13, z); bush.scale.set(1.6, .7, 1.1); bush.castShadow = false;
+        for (let j = 0; j < 3; j++) {
+          const leaf = mesh(group, cone(.06, .25 + j * .04, 4), j % 2 ? 0x6b9b38 : 0x3c7f38, x + Math.cos(j * 2) * .13, WORLD.elevation + .18, z + Math.sin(j * 2) * .13); leaf.rotation.z = (j - 1) * .5; leaf.castShadow = false;
+        }
       }
     }
+    canyonRocks.count = slabCount; canyonRocks.receiveShadow = true; canyonRocks.castShadow = true; scene.add(canyonRocks);
   }
-  canyonRocks.count = slabCount; canyonRocks.receiveShadow = true; canyonRocks.castShadow = true; scene.add(canyonRocks);
   // Grass, ferns and flowers are small non-solid scenery on valid raised land.
   let seed = 1947;
   const rand = (): number => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
